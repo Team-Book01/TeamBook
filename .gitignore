@@ -1,0 +1,12 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor / IDE (레포 전체 공통)
+.idea/
+.vscode/
+*.iml
+
+# 루트에서 스크립트/도구를 돌릴 경우의 로그·환경파일
+.env
+*.log
