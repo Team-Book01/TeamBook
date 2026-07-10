@@ -39,7 +39,6 @@ public class BookReview extends BaseTimeEntity {
   private BigDecimal rating;
 
   @Column(name = "content", nullable = true)
-  @Lob
   private String content;
 
   @Column(name = "status", nullable = false, length = 20)

@@ -40,7 +40,6 @@ public class Book extends BaseTimeEntity {
   @Column(name = "pubdate", nullable = true)
   private String pubdate;
 
-  @Lob
   @Column(name = "description", nullable = true)
   private String description;
 

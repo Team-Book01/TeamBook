@@ -48,6 +48,9 @@ public class User extends BaseTimeEntity{
   @Column(nullable = true)
   private String email;
 
+  @Column(name = "email_verified", nullable = false)
+  private boolean emailVerified;
+
   @Column(name = "profile_image_url", nullable = true)
   private String profileImageUrl;
 
@@ -110,5 +113,13 @@ public class User extends BaseTimeEntity{
 
   public void delete() {
       this.status = Status.DELETED;
+  }
+
+  public void veryfyEmail(){
+    this.emailVerified = true;
+  }
+
+  public void updatePassword(String encodedPassword){
+    this.password = encodedPassword;
   }
 }
