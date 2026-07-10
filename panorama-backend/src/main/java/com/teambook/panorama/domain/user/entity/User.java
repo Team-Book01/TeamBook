@@ -32,7 +32,7 @@ public class User extends BaseTimeEntity{
   @Column(name = "user_id")
   private Long id;
 
-  @Column(name = "login_id", nullable = false, unique = true, length = 20)
+  @Column(name = "login_id", nullable = true, unique = true, length = 20)
   private String loginId;
 
   @Column(nullable = true, columnDefinition = "CHAR(60)")

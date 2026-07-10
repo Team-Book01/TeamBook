@@ -21,7 +21,7 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(name = "social_accounts",
        uniqueConstraints = @UniqueConstraint(
-        name = "uk_social_provider_user",
+        name = "UK_SOCIAL_PROVIDER_USER",
         columnNames = {"provider", "provider_user_id"})
        )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
