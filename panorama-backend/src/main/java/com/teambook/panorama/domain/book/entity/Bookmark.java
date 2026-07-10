@@ -1,7 +1,5 @@
 package com.teambook.panorama.domain.book.entity;
 
-import org.hibernate.annotations.ManyToAny;
-
 import com.teambook.panorama.global.entity.BaseTimeEntity;
 
 import jakarta.persistence.Column;
