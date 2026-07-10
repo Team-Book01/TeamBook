@@ -7,6 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import com.teambook.panorama.domain.user.entity.User;
 
 public interface UserRepository extends JpaRepository<User, Long>{
-  Optional<User> findByloginId(String loginId);
-  boolean existsByloginId(String loginId);
+  Optional<User> findById(Long id);
+  Optional<User> findByLoginId(String loginId);
+  boolean existsByLoginId(String loginId);
+  boolean existsByNickname(String nickname);
 }
