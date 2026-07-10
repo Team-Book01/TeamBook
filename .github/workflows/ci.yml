@@ -7,6 +7,10 @@ on:
   pull_request:
     branches: [ main, develop ]
 
+defaults:
+  run:
+    working-directory: panorama-backend
+
 jobs:
   build:
     runs-on: ubuntu-latest
