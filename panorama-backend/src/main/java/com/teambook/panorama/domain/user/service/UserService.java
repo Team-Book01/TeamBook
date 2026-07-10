@@ -4,6 +4,9 @@ import com.teambook.panorama.domain.user.dto.SignUpDto;
 import com.teambook.panorama.domain.user.dto.UserDto;
 import com.teambook.panorama.domain.user.entity.User;
 import com.teambook.panorama.domain.user.repository.UserRepository;
+import com.teambook.panorama.global.exception.BusinessException;
+import com.teambook.panorama.global.exception.ErrorCode;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -20,10 +23,10 @@ public class UserService {
     public Long signupLocal(SignUpDto.Request request) {
         // 1. 중복 검증
         if (userRepository.existsByLoginId(request.loginId())) {
-            // throw new CustomException(ErrorCode.DUPLICATE_LOGIN_ID);
+            throw new BusinessException(ErrorCode.DUPLICATE_LOGIN_ID);
         }
         if (userRepository.existsByNickname(request.nickname())) {
-            // throw new CustomException(ErrorCode.DUPLICATE_NICKNAME);
+            throw new BusinessException(ErrorCode.DUPLICATE_NICKNAME);
         }
 
         // 2. 비밀번호 인코딩

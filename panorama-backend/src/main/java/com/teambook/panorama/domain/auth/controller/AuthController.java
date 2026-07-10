@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.teambook.panorama.domain.auth.dto.LoginDto;
 import com.teambook.panorama.domain.auth.service.AuthService;
+import com.teambook.panorama.global.exception.BusinessException;
+import com.teambook.panorama.global.exception.ErrorCode;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -39,8 +41,12 @@ public class AuthController {
 
   @PostMapping("/reissue")
   public ResponseEntity<LoginDto.AccessResponse> reissue(
-      @CookieValue(name = REFRESH_COOKIE) String refreshToken) {
-    // 방식 A: refresh는 쿠키에서 읽음. Rotation 미적용 → 새 access만 반환(쿠키 미변경)
+      @CookieValue(name = REFRESH_COOKIE, required = false) String refreshToken) {
+    // 로그아웃해서 쿠기가 없는 경우
+    if (refreshToken == null){
+      throw new BusinessException(ErrorCode.REFRESH_TOKEN_MISSING);
+    }
+    // refresh는 쿠키에서 읽음. Rotation 미적용 → 새 access만 반환(쿠키 미변경)
     String accessToken = authService.reissue(refreshToken);
 
     return ResponseEntity.ok(LoginDto.AccessResponse.of(accessToken));

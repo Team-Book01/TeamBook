@@ -19,6 +19,8 @@ import com.teambook.panorama.domain.user.entity.User;
 import com.teambook.panorama.domain.user.enums.Provider;
 import com.teambook.panorama.domain.user.enums.Role;
 import com.teambook.panorama.domain.user.repository.UserRepository;
+import com.teambook.panorama.global.exception.BusinessException;
+import com.teambook.panorama.global.exception.ErrorCode;
 import com.teambook.panorama.global.security.jwt.JwtProperties;
 import com.teambook.panorama.global.security.jwt.JwtProvider;
 import com.teambook.panorama.global.security.jwt.TokenHashUtil;
@@ -68,7 +70,7 @@ public class AuthService {
                     .map(User::getId)
                     .orElse(null);
             loginHistoryService.recordFailLocal(userId, request.loginId(), Provider.LOCAL);
-            throw e; // 예외는 그대로 전파 → 401
+            throw new BusinessException(ErrorCode.LOGIN_FAILED); // login 실패 기록 남기고 예외는 컨트롤러로
         }
     }
 
@@ -76,19 +78,26 @@ public class AuthService {
     public String reissue(String rawRefresh) {
         // 1. 토큰 유효성 검증
         if (!jwtProvider.validateToken(rawRefresh)) {
-            // throw new CustomException(ErrorCode.INVALID_TOKEN);
+            throw new BusinessException(ErrorCode.INVALID_TOKEN);
         }
         Long userId = jwtProvider.getUserId(rawRefresh);
 
         // 2. 저장된 해시와 대조
         String hash = tokenHashUtil.sha256Hex(rawRefresh);
         RefreshToken saved = refreshTokenRepository.findByTokenHash(hash)
-                .orElseThrow(() -> null /* new CustomException(ErrorCode.INVALID_TOKEN) */);
+                .orElseThrow(() -> 
+                    new BusinessException(ErrorCode.REFRESH_TOKEN_NOT_FOUND));
         // saved.getExpiresAt() 만료 확인 등
+        if (saved.isExpired()){
+            throw new BusinessException(ErrorCode.EXPIRED_TOKEN);
+        }
 
         // 3. 새 access 발급 (Rotation이면 새 refresh도)
-        // Role role = ... ;
-        return jwtProvider.createAccessToken(userId, null /* role */);
+        User user = userRepository.findById(userId)
+        .orElseThrow(() -> 
+            new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        return jwtProvider.createAccessToken(userId, user.getRole());
     }
 
     @Transactional
