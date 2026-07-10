@@ -7,7 +7,6 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
@@ -40,8 +39,8 @@ public class Book extends BaseTimeEntity {
   @Column(name = "pubdate", nullable = true)
   private String pubdate;
 
-  @Lob
-  @Column(name = "description", nullable = true)
+  
+  @Column(name = "description", nullable = true, columnDefinition = "TEXT")
   private String description;
 
   @Column(name = "image", nullable = true)
