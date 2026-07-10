@@ -1,15 +1,19 @@
 package com.teambook.panorama.domain.user.controller;
 
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.teambook.panorama.domain.user.dto.SignUpDto;
 import com.teambook.panorama.domain.user.dto.UserDto;
 import com.teambook.panorama.domain.user.service.UserService;
-import com.teambook.panorama.global.security.userdetails.CustomUserDetails;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/users")
@@ -35,8 +39,8 @@ public class UserController {
      */
     @GetMapping("/me")
     public ResponseEntity<UserDto.Response> getMyInfo(
-            @AuthenticationPrincipal CustomUserDetails principal) {
-        UserDto.Response response = userService.getMyInfo(principal.getUserId());
+            @AuthenticationPrincipal Long userId) {
+        UserDto.Response response = userService.getMyInfo(userId);
         return ResponseEntity.ok(response);
     }
 }

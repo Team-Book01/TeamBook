@@ -1,17 +1,22 @@
 package com.teambook.panorama.domain.auth.controller;
 
-import com.teambook.panorama.domain.auth.dto.LoginDto;
-import com.teambook.panorama.domain.auth.service.AuthService;
-import com.teambook.panorama.global.security.userdetails.CustomUserDetails;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
+import java.time.Duration;
+
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CookieValue;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.time.Duration;
+import com.teambook.panorama.domain.auth.dto.LoginDto;
+import com.teambook.panorama.domain.auth.service.AuthService;
+
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -42,8 +47,8 @@ public class AuthController {
   }
 
   @PostMapping("/logout")
-  public ResponseEntity<Void> logout(@AuthenticationPrincipal CustomUserDetails principal) {
-    authService.logout(principal.getUserId());
+  public ResponseEntity<Void> logout(@AuthenticationPrincipal Long userId) {
+    authService.logout(userId);
 
     // 서버가 refresh 쿠키를 만료시켜 제거
     return ResponseEntity.noContent()
