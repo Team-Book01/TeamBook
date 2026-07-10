@@ -11,7 +11,6 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.Getter;
@@ -38,7 +37,7 @@ public class BookReview extends BaseTimeEntity {
   @Column(name = "rating", nullable = false)
   private BigDecimal rating;
 
-  @Column(name = "content", nullable = true)
+  @Column(name = "content", nullable = true, columnDefinition = "TEXT")
   private String content;
 
   @Column(name = "status", nullable = false, length = 20)
