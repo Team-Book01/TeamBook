@@ -10,3 +10,6 @@ Thumbs.db
 # 루트에서 스크립트/도구를 돌릴 경우의 로그·환경파일
 .env
 *.log
+
+# claude.md
+CLAUDE.md
