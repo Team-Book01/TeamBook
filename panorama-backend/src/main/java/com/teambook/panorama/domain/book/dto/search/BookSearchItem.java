@@ -16,6 +16,7 @@ public record BookSearchItem(
   //shop_url
   String link,
   String discount,
+  String discription,
   BigDecimal avgRating,
   Integer reviewCount,
   Integer bookmarkCount,

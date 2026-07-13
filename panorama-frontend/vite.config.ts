@@ -1,10 +1,17 @@
 import { defineConfig } from 'vite'
+import path from 'node:path'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  resolve: {
+    alias: {
+      // '@' 를 src 디렉터리로 매핑한다. (예: import Header from '@/components/layout/Header')
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
   server: {
     proxy: {
       // 개발 중 /api 로 시작하는 요청을 스프링 부트(localhost:8080)로 전달해 CORS를 피한다.
