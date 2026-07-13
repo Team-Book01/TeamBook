@@ -1,11 +1,13 @@
 package com.teambook.panorama.domain.auth.service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.teambook.panorama.domain.auth.dto.LoginHistoryDto;
 import com.teambook.panorama.domain.auth.entity.LoginHistory;
 import com.teambook.panorama.domain.auth.enums.LoginResult;
 import com.teambook.panorama.domain.auth.repository.LoginHistoryRepository;
@@ -37,6 +39,14 @@ public class LoginHistoryService {
         return loginHistoryRepository
                 .findFirstByUserIdAndResultOrderByAttemptedAtDesc(userId, LoginResult.SUCCESS)
                 .map(LoginHistory::getAttemptedAt);   // 컬럼은 attempted_at, 프로퍼티는 createdAt
+    }
+
+    // 로그인 기록
+    @Transactional(readOnly = true)
+    public List<LoginHistoryDto.Response> getMyHistories(Long userId) {
+        return loginHistoryRepository.findByUserIdOrderByAttemptedAtDesc(userId).stream()
+                .map(LoginHistoryDto.Response::from)
+                .toList();
     }
 
     private String truncate20(String s) {

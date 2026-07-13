@@ -51,12 +51,12 @@ public class SecurityConfig {
 
         /**
          * 인증 없이 접근을 허용할 인증 관련 경로들.
-         * - /api/auth/**   : 로그인, 토큰 재발급 등 (토큰을 발급받기 전 단계라 인증 불가)
-         * - /api/users     : 회원가입 (로그인 전에 계정을 만드는 단계)
+         * - /api/v1/auth/**   : 로그인, 토큰 재발급 등 (토큰을 발급받기 전 단계라 인증 불가)
+         * - /api/v1/users     : 회원가입 (로그인 전에 계정을 만드는 단계)
          */
         private static final String[] AUTH_WHITELIST = {
-                "/api/auth/**",
-                "/api/users"
+                "/api/v1/auth/**",
+                "/api/v1/users"
         };
 
         @Bean
