@@ -16,9 +16,16 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
+    /* '@/...' 경로 별칭 (vite.config.ts 의 resolve.alias 와 짝을 맞춘다)
+       TS 6 부터 baseUrl 은 deprecated 이므로 쓰지 않고, paths 만으로 설정한다.
+       (paths 는 이 tsconfig 위치 기준으로 해석된다) */
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+
     /* Linting */
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },

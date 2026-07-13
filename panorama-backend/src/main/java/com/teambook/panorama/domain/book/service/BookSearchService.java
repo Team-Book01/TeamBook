@@ -59,6 +59,7 @@ public class BookSearchService {
       .isBookmarked(isBookmarked)
       .publisher(naverBook.publisher())
       .pubdate(naverBook.pubdate())
+      .discription(naverBook.description())
       .build();
     }).toList();
     BookSearchResponse response = BookSearchResponse.builder()
