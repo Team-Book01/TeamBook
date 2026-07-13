@@ -34,7 +34,7 @@ public class UserServiceImpl implements UserService {
   @Override
   public UserDetailResponse getUserDetail(Long userId) {
     return userMapper.selectUserDetail(userId)
-        .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
+        .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
   }
 
   @Override
@@ -42,7 +42,7 @@ public class UserServiceImpl implements UserService {
   public void processUser(Long userId, UserProcessRequest request) {
     // 존재 확인 (현재 상태는 필요 시 재처리 가드에 활용 가능)
     userMapper.selectUserStatus(userId)
-        .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
+        .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
     String newStatus = toStatus(request.action());
     userMapper.updateUserStatus(userId, newStatus);
