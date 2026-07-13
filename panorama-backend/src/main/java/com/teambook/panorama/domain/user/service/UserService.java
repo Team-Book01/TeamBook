@@ -1,5 +1,10 @@
 package com.teambook.panorama.domain.user.service;
 
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.teambook.panorama.domain.auth.service.AuthService;
 import com.teambook.panorama.domain.user.dto.SignUpDto;
 import com.teambook.panorama.domain.user.dto.UserDto;
 import com.teambook.panorama.domain.user.entity.User;
@@ -8,14 +13,12 @@ import com.teambook.panorama.global.exception.BusinessException;
 import com.teambook.panorama.global.exception.ErrorCode;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
 public class UserService {
 
+    private final AuthService authService;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
@@ -47,5 +50,24 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> null /* new CustomException(ErrorCode.USER_NOT_FOUND) */);
         return UserDto.Response.from(user);
+    }
+
+    // UserService
+    @Transactional
+    public UserDto.Response updateNickname(Long userId, String nickname) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));   // U001
+        if (userRepository.existsByNickname(nickname))
+            throw new BusinessException(ErrorCode.DUPLICATE_NICKNAME);                 // U003
+        user.updateNickname(nickname);   // 변경 감지(dirty checking)
+        return UserDto.Response.from(user);
+    }
+
+    @Transactional
+    public void withdraw(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        user.delete();   // status = DELETED (updated_at이 탈퇴시각)
+        authService.logout(userId);
     }
 }

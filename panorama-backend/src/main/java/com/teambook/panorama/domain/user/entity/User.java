@@ -97,7 +97,7 @@ public class User extends BaseTimeEntity{
   }
 
 
-  void updateNickname(String nickname) {
+  public void updateNickname(String nickname) {
     this.nickname = nickname;
   }
 
@@ -115,7 +115,7 @@ public class User extends BaseTimeEntity{
       this.status = Status.DELETED;
   }
 
-  public void veryfyEmail(){
+  public void verifyEmail(){
     this.emailVerified = true;
   }
 
