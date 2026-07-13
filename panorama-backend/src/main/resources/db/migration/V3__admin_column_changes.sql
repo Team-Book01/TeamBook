@@ -1,5 +1,5 @@
 -- ============================================================
--- V2: V1 이후 스키마 변경 통합
+-- V3: admin 컬럼 변경 + 도서관 동기화 스키마
 --   · notices.view_count : INT → BIGINT
 --   · reports            : title 제거 + (신고자,대상) 중복 신고 방지 UNIQUE
 --   · library            : phone → tel 로 rename & VARCHAR(100), fax VARCHAR(100),
