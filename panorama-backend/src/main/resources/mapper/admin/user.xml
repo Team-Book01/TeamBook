@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.teambook.panorama.domain.admin.repository.UserMapper">
+
+    <!-- ══════════════ 목록 ══════════════ -->
+    <resultMap id="userResponseMap"
+               type="com.teambook.panorama.domain.admin.dto.user.UserResponse">
+        <constructor>
+            <idArg column="user_id"    name="userId"    javaType="java.lang.Long"/>
+            <arg   column="login_id"   name="loginId"   javaType="java.lang.String"/>
+            <arg   column="nickname"   name="nickname"  javaType="java.lang.String"/>
+            <arg   column="provider"   name="provider"  javaType="java.lang.String"/>
+            <arg   column="role"       name="role"      javaType="java.lang.String"/>
+            <arg   column="status"     name="status"    javaType="java.lang.String"/>
+            <arg   column="created_at" name="createdAt" javaType="java.time.LocalDateTime"/>
+        </constructor>
+    </resultMap>
+
+    <!-- 목록/카운트 공유 검색조건 -->
+    <sql id="userSearchWhere">
+        FROM users u
+        <where>
+            <if test="searchString != null and searchString != ''">
+                AND (
+                    u.nickname LIKE CONCAT('%', #{searchString}, '%')
+                    OR u.login_id LIKE CONCAT('%', #{searchString}, '%')
+                    OR u.email LIKE CONCAT('%', #{searchString}, '%')
+                )
+            </if>
+            <if test="status != null and status != ''">
+                AND u.status = #{status}
+            </if>
+            <if test="role != null and role != ''">
+                AND u.role = #{role}
+            </if>
+            <if test="provider != null and provider != ''">
+                AND u.provider = #{provider}
+            </if>
+        </where>
+    </sql>
+
+    <select id="selectUsers"
+            parameterType="com.teambook.panorama.domain.admin.dto.user.UserSearchRequest"
+            resultMap="userResponseMap">
+        <bind name="offset" value="(page - 1) * size"/>
+        SELECT u.user_id, u.login_id, u.nickname, u.provider, u.role, u.status, u.created_at
+        <include refid="userSearchWhere"/>
+        ORDER BY u.created_at DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countUsers"
+            parameterType="com.teambook.panorama.domain.admin.dto.user.UserSearchRequest"
+            resultType="long">
+        SELECT COUNT(*)
+        <include refid="userSearchWhere"/>
+    </select>
+
+    <!-- ══════════════ 상세 ══════════════ -->
+    <resultMap id="userDetailMap"
+               type="com.teambook.panorama.domain.admin.dto.user.UserDetailResponse">
+        <constructor>
+            <idArg column="user_id"               name="userId"              javaType="java.lang.Long"/>
+            <arg   column="login_id"              name="loginId"             javaType="java.lang.String"/>
+            <arg   column="nickname"              name="nickname"            javaType="java.lang.String"/>
+            <arg   column="email"                 name="email"               javaType="java.lang.String"/>
+            <arg   column="provider"              name="provider"            javaType="java.lang.String"/>
+            <arg   column="role"                  name="role"                javaType="java.lang.String"/>
+            <arg   column="status"                name="status"              javaType="java.lang.String"/>
+            <arg   column="report_received_count" name="reportReceivedCount" javaType="java.lang.Long"/>
+            <arg   column="created_at"            name="createdAt"           javaType="java.time.LocalDateTime"/>
+            <arg   column="updated_at"            name="updatedAt"           javaType="java.time.LocalDateTime"/>
+        </constructor>
+    </resultMap>
+
+    <select id="selectUserDetail" resultMap="userDetailMap">
+        SELECT
+            u.user_id,
+            u.login_id,
+            u.nickname,
+            u.email,
+            u.provider,
+            u.role,
+            u.status,
+            (SELECT COUNT(*) FROM reports r
+                WHERE r.target_type = 'USER' AND r.target_id = u.user_id) AS report_received_count,
+            u.created_at,
+            u.updated_at
+        FROM users u
+        WHERE u.user_id = #{userId}
+    </select>
+
+    <!-- ══════════════ 처리 ══════════════ -->
+    <select id="selectUserStatus" resultType="string">
+        SELECT status FROM users WHERE user_id = #{userId}
+    </select>
+
+    <update id="updateUserStatus">
+        UPDATE users
+        SET status = #{status}, updated_at = CURRENT_TIMESTAMP(6)
+        WHERE user_id = #{userId}
+    </update>
+
+    <insert id="insertAdminActionLog">
+        INSERT INTO admin_action_log (user_id, target_type, target_id, action_type, reason)
+        VALUES (#{userId}, #{targetType}, #{targetId}, #{actionType}, #{reason})
+    </insert>
+
+</mapper>

@@ -1,0 +1,279 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.teambook.panorama.domain.admin.repository.ReportMapper">
+
+    <!-- record(ReportResponse)는 setter가 없으므로 생성자(constructor) 매핑 사용 -->
+    <resultMap id="reportResponseMap"
+               type="com.teambook.panorama.domain.admin.dto.report.ReportResponse">
+        <constructor>
+            <idArg  column="report_id"         name="reportId"         javaType="java.lang.Long"/>
+            <arg    column="target_type"       name="targetType"       javaType="java.lang.String"/>
+            <arg    column="target_id"         name="targetId"         javaType="java.lang.Long"/>
+            <arg    column="target_summary"    name="targetSummary"    javaType="java.lang.String"/>
+            <arg    column="reason_type"       name="reasonType"       javaType="java.lang.String"/>
+            <arg    column="status"            name="status"
+                    javaType="com.teambook.panorama.domain.admin.entity.type.ReportStatus"/>
+            <arg    column="reporter_nickname" name="reporterNickname" javaType="java.lang.String"/>
+            <arg    column="created_at"        name="createdAt"        javaType="java.time.LocalDateTime"/>
+        </constructor>
+    </resultMap>
+
+    <!-- 목록/카운트가 공유하는 FROM + 검색조건 (신고자 users 조인) -->
+    <sql id="reportSearchFrom">
+        FROM reports r
+        LEFT JOIN users u ON u.user_id = r.reporter_user_id
+        <where>
+            <!-- 키워드: 신고 상세 내용 또는 신고자 닉네임 -->
+            <if test="searchString != null and searchString != ''">
+                AND (
+                    r.content LIKE CONCAT('%', #{searchString}, '%')
+                    OR u.nickname LIKE CONCAT('%', #{searchString}, '%')
+                )
+            </if>
+            <if test="targetType != null and targetType != ''">
+                AND r.target_type = #{targetType}
+            </if>
+            <if test="reasonType != null and reasonType != ''">
+                AND r.reason_type = #{reasonType}
+            </if>
+            <!-- 상태: 특정 status를 콕 집으면 그것 우선, 아니면 전체보기 여부로 결정.
+                 기본(전체보기 아님)은 미처리(PENDING/REVIEWING)만 노출한다. -->
+            <choose>
+                <when test="status != null">
+                    AND r.status = #{status}
+                </when>
+                <when test="includeAll == null or includeAll == false">
+                    AND r.status IN ('PENDING', 'REVIEWING')
+                </when>
+            </choose>
+            <if test="reporterUserId != null">
+                AND r.reporter_user_id = #{reporterUserId}
+            </if>
+            <if test="startAt != null">
+                AND r.created_at &gt;= #{startAt}
+            </if>
+            <if test="endAt != null">
+                AND r.created_at &lt;= #{endAt}
+            </if>
+        </where>
+    </sql>
+
+    <!-- 신고 목록 (+검색, 페이징): 최신순 고정. 신고자 닉네임은 마스킹(앞 2글자 + ****)해서 반환. -->
+    <select id="selectReports"
+            parameterType="com.teambook.panorama.domain.admin.dto.report.ReportSearchRequest"
+            resultMap="reportResponseMap">
+        <bind name="offset" value="(page - 1) * size"/>
+        SELECT
+            r.report_id,
+            r.target_type,
+            r.target_id,
+            <!-- 원본 요약: target_type별 원본 테이블에서 상관 서브쿼리로 가져온다.
+                 PK 단건 조회라 페이지 행수(LIMIT size)만큼만 실행 → count 쿼리(reportSearchFrom)는 건드리지 않음.
+                 소프트 삭제는 조인으로 그대로 보이고, 하드 삭제/원본 없음이면 null. -->
+            CASE r.target_type
+                WHEN 'POST'    THEN (SELECT p.title            FROM posts         p  WHERE p.post_id    = r.target_id)
+                WHEN 'COMMENT' THEN (SELECT LEFT(c.content, 50) FROM post_comments c  WHERE c.comment_id = r.target_id)
+                WHEN 'REVIEW'  THEN (SELECT LEFT(br.content, 50) FROM book_reviews br WHERE br.review_id = r.target_id)
+                WHEN 'USER'    THEN (SELECT tu.nickname         FROM users         tu WHERE tu.user_id   = r.target_id)
+            END AS target_summary,
+            r.reason_type,
+            r.status,
+            CONCAT(LEFT(u.nickname, 2), '****') AS reporter_nickname,
+            r.created_at
+        <include refid="reportSearchFrom"/>
+        ORDER BY r.created_at DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <!-- 신고 전체 건수 (동일 검색조건) -->
+    <select id="countReports"
+            parameterType="com.teambook.panorama.domain.admin.dto.report.ReportSearchRequest"
+            resultType="long">
+        SELECT COUNT(*)
+        <include refid="reportSearchFrom"/>
+    </select>
+
+    <!-- ══════════════ 상세 (조립용 3조회) ══════════════ -->
+
+    <!-- ① 신고 자체 정보. 신고자 닉네임은 마스킹, 처리자 닉네임은 그대로. -->
+    <resultMap id="reportCoreMap"
+               type="com.teambook.panorama.domain.admin.dto.report.ReportCore">
+        <constructor>
+            <idArg  column="report_id"         name="reportId"         javaType="java.lang.Long"/>
+            <arg    column="reporter_user_id"  name="reporterUserId"   javaType="java.lang.Long"/>
+            <arg    column="reporter_nickname" name="reporterNickname" javaType="java.lang.String"/>
+            <arg    column="target_type"       name="targetType"       javaType="java.lang.String"/>
+            <arg    column="target_id"         name="targetId"         javaType="java.lang.Long"/>
+            <arg    column="reason_type"       name="reasonType"       javaType="java.lang.String"/>
+            <arg    column="content"           name="content"          javaType="java.lang.String"/>
+            <arg    column="status"            name="status"
+                    javaType="com.teambook.panorama.domain.admin.entity.type.ReportStatus"/>
+            <arg    column="handler_user_id"   name="handlerUserId"    javaType="java.lang.Long"/>
+            <arg    column="handler_nickname"  name="handlerNickname"  javaType="java.lang.String"/>
+            <arg    column="processed_at"      name="processedAt"      javaType="java.time.LocalDateTime"/>
+            <arg    column="created_at"        name="createdAt"        javaType="java.time.LocalDateTime"/>
+            <arg    column="updated_at"        name="updatedAt"        javaType="java.time.LocalDateTime"/>
+        </constructor>
+    </resultMap>
+
+    <select id="selectReportCore" resultMap="reportCoreMap">
+        SELECT
+            r.report_id,
+            r.reporter_user_id,
+            CONCAT(LEFT(ru.nickname, 2), '****') AS reporter_nickname,
+            r.target_type,
+            r.target_id,
+            r.reason_type,
+            r.content,
+            r.status,
+            r.handler_user_id,
+            hu.nickname AS handler_nickname,
+            r.processed_at,
+            r.created_at,
+            r.updated_at
+        FROM reports r
+        LEFT JOIN users ru ON ru.user_id = r.reporter_user_id
+        LEFT JOIN users hu ON hu.user_id = r.handler_user_id
+        WHERE r.report_id = #{reportId}
+    </select>
+
+    <!-- ② 원본 콘텐츠 다형 조회. target_type 으로 테이블을 분기하되 컬럼 별칭은 동일하게 맞춘다. -->
+    <resultMap id="reportTargetViewMap"
+               type="com.teambook.panorama.domain.admin.dto.report.ReportTargetView">
+        <constructor>
+            <arg column="target_type"     name="targetType"     javaType="java.lang.String"/>
+            <arg column="target_id"       name="targetId"       javaType="java.lang.Long"/>
+            <arg column="content"         name="content"        javaType="java.lang.String"/>
+            <arg column="author_nickname" name="authorNickname" javaType="java.lang.String"/>
+            <arg column="created_at"      name="createdAt"      javaType="java.time.LocalDateTime"/>
+            <arg column="status"          name="status"         javaType="java.lang.String"/>
+            <arg column="deleted"         name="deleted"        javaType="java.lang.Boolean"/>
+        </constructor>
+    </resultMap>
+
+    <select id="selectReportTarget" resultMap="reportTargetViewMap">
+        <choose>
+            <when test="targetType == 'POST'">
+                SELECT 'POST' AS target_type, p.post_id AS target_id, p.content,
+                       au.nickname AS author_nickname, p.created_at, p.status,
+                       (p.status = 'DELETED') AS deleted
+                FROM posts p
+                JOIN users au ON au.user_id = p.user_id
+                WHERE p.post_id = #{targetId}
+            </when>
+            <when test="targetType == 'COMMENT'">
+                SELECT 'COMMENT' AS target_type, c.comment_id AS target_id, c.content,
+                       au.nickname AS author_nickname, c.created_at, c.status,
+                       (c.status = 'DELETED') AS deleted
+                FROM post_comments c
+                JOIN users au ON au.user_id = c.user_id
+                WHERE c.comment_id = #{targetId}
+            </when>
+            <when test="targetType == 'REVIEW'">
+                SELECT 'REVIEW' AS target_type, br.review_id AS target_id, br.content,
+                       au.nickname AS author_nickname, br.created_at, br.status,
+                       (br.status = 'DELETED') AS deleted
+                FROM book_reviews br
+                JOIN users au ON au.user_id = br.user_id
+                WHERE br.review_id = #{targetId}
+            </when>
+            <when test="targetType == 'USER'">
+                SELECT 'USER' AS target_type, u.user_id AS target_id, NULL AS content,
+                       u.nickname AS author_nickname, u.created_at, u.status,
+                       (u.status = 'DELETED') AS deleted
+                FROM users u
+                WHERE u.user_id = #{targetId}
+            </when>
+            <otherwise>
+                SELECT NULL AS target_type, NULL AS target_id, NULL AS content,
+                       NULL AS author_nickname, NULL AS created_at, NULL AS status,
+                       FALSE AS deleted
+                FROM DUAL WHERE 1 = 0
+            </otherwise>
+        </choose>
+    </select>
+
+    <!-- ③ 동일 대상 누적 신고 (자기 자신 제외, 최신순) -->
+    <resultMap id="relatedReportMap"
+               type="com.teambook.panorama.domain.admin.dto.report.RelatedReport">
+        <constructor>
+            <idArg column="report_id"   name="reportId"   javaType="java.lang.Long"/>
+            <arg   column="reason_type" name="reasonType" javaType="java.lang.String"/>
+            <arg   column="status"      name="status"
+                   javaType="com.teambook.panorama.domain.admin.entity.type.ReportStatus"/>
+            <arg   column="created_at"  name="createdAt"  javaType="java.time.LocalDateTime"/>
+        </constructor>
+    </resultMap>
+
+    <select id="selectRelatedReports" resultMap="relatedReportMap">
+        SELECT report_id, reason_type, status, created_at
+        FROM reports
+        WHERE target_type = #{targetType}
+          AND target_id = #{targetId}
+          AND report_id &lt;&gt; #{reportId}
+        ORDER BY created_at DESC
+    </select>
+
+    <!-- ══════════════ 처리 (한 트랜잭션) ══════════════ -->
+
+    <resultMap id="reportTargetKeyMap"
+               type="com.teambook.panorama.domain.admin.dto.report.ReportTargetKey">
+        <constructor>
+            <arg column="target_type" name="targetType" javaType="java.lang.String"/>
+            <arg column="target_id"   name="targetId"   javaType="java.lang.Long"/>
+            <arg column="status"      name="status"
+                 javaType="com.teambook.panorama.domain.admin.entity.type.ReportStatus"/>
+        </constructor>
+    </resultMap>
+
+    <select id="selectReportTargetKey" resultMap="reportTargetKeyMap">
+        SELECT target_type, target_id, status
+        FROM reports
+        WHERE report_id = #{reportId}
+    </select>
+
+    <!-- 원본 콘텐츠 status 변경 (타입별 테이블). status 문자열은 서비스에서 확정해 전달. -->
+    <update id="updateTargetStatus">
+        <choose>
+            <when test="targetType == 'POST'">
+                UPDATE posts SET status = #{status}, updated_at = CURRENT_TIMESTAMP(6)
+                WHERE post_id = #{targetId}
+            </when>
+            <when test="targetType == 'COMMENT'">
+                UPDATE post_comments SET status = #{status}, updated_at = CURRENT_TIMESTAMP(6)
+                WHERE comment_id = #{targetId}
+            </when>
+            <when test="targetType == 'REVIEW'">
+                UPDATE book_reviews SET status = #{status}, updated_at = CURRENT_TIMESTAMP(6)
+                WHERE review_id = #{targetId}
+            </when>
+            <when test="targetType == 'USER'">
+                UPDATE users SET status = #{status}, updated_at = CURRENT_TIMESTAMP(6)
+                WHERE user_id = #{targetId}
+            </when>
+            <otherwise>
+                UPDATE reports SET report_id = report_id WHERE 1 = 0
+            </otherwise>
+        </choose>
+    </update>
+
+    <!-- 같은 대상의 미처리 신고를 모두 RESOLVED (유령 신고 방지) — §8 sanctioned 벌크 -->
+    <update id="resolveReportsByTarget">
+        UPDATE reports
+        SET status = 'RESOLVED',
+            handler_user_id = #{handlerUserId},
+            processed_at = #{processedAt},
+            updated_at = #{processedAt}
+        WHERE target_type = #{targetType}
+          AND target_id = #{targetId}
+          AND status IN ('PENDING', 'REVIEWING')
+    </update>
+
+    <!-- 관리자 조치 로그 (id/created_at 은 DB DEFAULT) -->
+    <insert id="insertAdminActionLog">
+        INSERT INTO admin_action_log (user_id, target_type, target_id, action_type, reason)
+        VALUES (#{userId}, #{targetType}, #{targetId}, #{actionType}, #{reason})
+    </insert>
+
+</mapper>

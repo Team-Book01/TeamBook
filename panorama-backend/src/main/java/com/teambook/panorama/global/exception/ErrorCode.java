@@ -13,17 +13,31 @@ public enum ErrorCode {
 
   // user (도메인 접두어 U + 3자리 일련번호)
   USER_NOT_FOUND(HttpStatus.NOT_FOUND, "U001", "존재하지 않는 회원입니다."),
-    DUPLICATE_LOGIN_ID(HttpStatus.CONFLICT, "U002", "이미 사용 중인 아이디입니다."),
-    DUPLICATE_NICKNAME(HttpStatus.CONFLICT, "U003", "이미 사용 중인 닉네임입니다."),
-    DUPLICATE_EMAIL(HttpStatus.CONFLICT, "U004", "이미 사용 중인 이메일입니다."),
+  DUPLICATE_LOGIN_ID(HttpStatus.CONFLICT, "U002", "이미 사용 중인 아이디입니다."),
+  DUPLICATE_NICKNAME(HttpStatus.CONFLICT, "U003", "이미 사용 중인 닉네임입니다."),
+  DUPLICATE_EMAIL(HttpStatus.CONFLICT, "U004", "이미 사용 중인 이메일입니다."),
 
-    // auth (A + 3자리)
-    INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "A001", "유효하지 않은 토큰입니다."),
-    EXPIRED_TOKEN(HttpStatus.UNAUTHORIZED, "A002", "만료된 토큰입니다."),
-    REFRESH_TOKEN_NOT_FOUND(HttpStatus.UNAUTHORIZED, "A003", "저장된 리프레시 토큰이 없습니다."),
-    LOGIN_FAILED(HttpStatus.UNAUTHORIZED, "A004", "아이디 또는 비밀번호가 올바르지 않습니다."),
-    ACCESS_DENIED(HttpStatus.FORBIDDEN, "A005", "접근권한이 없습니다,"),
-    REFRESH_TOKEN_MISSING(HttpStatus.UNAUTHORIZED, "A006", "쿠키에 리프레시 토큰이 없습니다.");
+  // auth (A + 3자리)
+  INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "A001", "유효하지 않은 토큰입니다."),
+  EXPIRED_TOKEN(HttpStatus.UNAUTHORIZED, "A002", "만료된 토큰입니다."),
+  REFRESH_TOKEN_NOT_FOUND(HttpStatus.UNAUTHORIZED, "A003", "저장된 리프레시 토큰이 없습니다."),
+  LOGIN_FAILED(HttpStatus.UNAUTHORIZED, "A004", "아이디 또는 비밀번호가 올바르지 않습니다."),
+  ACCESS_DENIED(HttpStatus.FORBIDDEN, "A005", "접근권한이 없습니다,"),
+  REFRESH_TOKEN_MISSING(HttpStatus.UNAUTHORIZED, "A006", "쿠키에 리프레시 토큰이 없습니다."),
+
+  // report (도메인 접두어 R)
+  REPORT_NOT_FOUND(HttpStatus.NOT_FOUND, "R001", "존재하지 않는 신고입니다."),
+  ALREADY_PROCESSED(HttpStatus.CONFLICT, "R002", "이미 처리된 신고입니다."),
+  DUPLICATE_REPORT(HttpStatus.CONFLICT, "R003", "이미 신고한 대상입니다."),
+
+  // inquiry (도메인 접두어 Q)
+  INQUIRY_NOT_FOUND(HttpStatus.NOT_FOUND, "Q001", "존재하지 않는 문의입니다."),
+
+  // community content (도메인 접두어 P)
+  CONTENT_NOT_FOUND(HttpStatus.NOT_FOUND, "P001", "존재하지 않는 콘텐츠입니다."),
+
+  // notice (도메인 접두어 N)
+  NOTICE_NOT_FOUND(HttpStatus.NOT_FOUND, "N001", "존재하지 않는 공지입니다.");
 
   private final HttpStatus status;
   private final String code;
