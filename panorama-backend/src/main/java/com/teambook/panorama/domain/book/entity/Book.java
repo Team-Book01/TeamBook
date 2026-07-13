@@ -9,6 +9,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -49,6 +50,7 @@ public class Book extends BaseTimeEntity {
   @Column(name = "link", nullable = true) 
   private String shopUrl;
 
+  @Builder
   public Book(String isbn, String title, String author, String publisher, String pubdate, String description,
       String imageUrl, String shopUrl) {
     this.isbn = isbn;
