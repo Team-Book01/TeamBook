@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.teambook.panorama.domain.admin.repository.CommunityMapper">
+
+    <!-- ══════════════ 목록 ══════════════ -->
+    <resultMap id="communityContentMap"
+               type="com.teambook.panorama.domain.admin.dto.community.CommunityContentResponse">
+        <constructor>
+            <arg   column="content_type"    name="contentType"    javaType="java.lang.String"/>
+            <idArg column="content_id"      name="contentId"      javaType="java.lang.Long"/>
+            <arg   column="author_user_id"  name="authorUserId"   javaType="java.lang.Long"/>
+            <arg   column="author_nickname" name="authorNickname" javaType="java.lang.String"/>
+            <arg   column="title"           name="title"          javaType="java.lang.String"/>
+            <arg   column="content_summary" name="contentSummary" javaType="java.lang.String"/>
+            <arg   column="status"          name="status"         javaType="java.lang.String"/>
+            <arg   column="created_at"      name="createdAt"      javaType="java.time.LocalDateTime"/>
+            <arg   column="report_count"    name="reportCount"    javaType="java.lang.Long"/>
+        </constructor>
+    </resultMap>
+
+    <!-- 목록/카운트 공유 FROM + 검색조건 (타입별) -->
+    <sql id="fromPost">
+        FROM posts p JOIN users au ON au.user_id = p.user_id
+        <where>
+            <if test="status != null and status != ''">AND p.status = #{status}</if>
+            <if test="searchString != null and searchString != ''">
+                AND (p.title LIKE CONCAT('%', #{searchString}, '%')
+                     OR p.content LIKE CONCAT('%', #{searchString}, '%')
+                     OR au.nickname LIKE CONCAT('%', #{searchString}, '%'))
+            </if>
+        </where>
+    </sql>
+    <sql id="fromComment">
+        FROM post_comments c JOIN users au ON au.user_id = c.user_id
+        <where>
+            <if test="status != null and status != ''">AND c.status = #{status}</if>
+            <if test="searchString != null and searchString != ''">
+                AND (c.content LIKE CONCAT('%', #{searchString}, '%')
+                     OR au.nickname LIKE CONCAT('%', #{searchString}, '%'))
+            </if>
+        </where>
+    </sql>
+    <sql id="fromReview">
+        FROM book_reviews br JOIN users au ON au.user_id = br.user_id
+        <where>
+            <if test="status != null and status != ''">AND br.status = #{status}</if>
+            <if test="searchString != null and searchString != ''">
+                AND (br.content LIKE CONCAT('%', #{searchString}, '%')
+                     OR au.nickname LIKE CONCAT('%', #{searchString}, '%'))
+            </if>
+        </where>
+    </sql>
+
+    <select id="selectContents"
+            parameterType="com.teambook.panorama.domain.admin.dto.community.CommunityContentSearchRequest"
+            resultMap="communityContentMap">
+        <bind name="offset" value="(page - 1) * size"/>
+        <choose>
+            <when test="contentType == 'POST'">
+                SELECT 'POST' AS content_type, p.post_id AS content_id, p.user_id AS author_user_id,
+                       au.nickname AS author_nickname, p.title, LEFT(p.content, 100) AS content_summary,
+                       p.status, p.created_at,
+                       (SELECT COUNT(*) FROM reports r WHERE r.target_type='POST' AND r.target_id=p.post_id) AS report_count
+                <include refid="fromPost"/>
+                ORDER BY p.created_at DESC
+                LIMIT #{size} OFFSET #{offset}
+            </when>
+            <when test="contentType == 'COMMENT'">
+                SELECT 'COMMENT' AS content_type, c.comment_id AS content_id, c.user_id AS author_user_id,
+                       au.nickname AS author_nickname, NULL AS title, LEFT(c.content, 100) AS content_summary,
+                       c.status, c.created_at,
+                       (SELECT COUNT(*) FROM reports r WHERE r.target_type='COMMENT' AND r.target_id=c.comment_id) AS report_count
+                <include refid="fromComment"/>
+                ORDER BY c.created_at DESC
+                LIMIT #{size} OFFSET #{offset}
+            </when>
+            <when test="contentType == 'REVIEW'">
+                SELECT 'REVIEW' AS content_type, br.review_id AS content_id, br.user_id AS author_user_id,
+                       au.nickname AS author_nickname, NULL AS title, LEFT(br.content, 100) AS content_summary,
+                       br.status, br.created_at,
+                       (SELECT COUNT(*) FROM reports r WHERE r.target_type='REVIEW' AND r.target_id=br.review_id) AS report_count
+                <include refid="fromReview"/>
+                ORDER BY br.created_at DESC
+                LIMIT #{size} OFFSET #{offset}
+            </when>
+            <otherwise>
+                SELECT NULL AS content_type, NULL AS content_id, NULL AS author_user_id,
+                       NULL AS author_nickname, NULL AS title, NULL AS content_summary,
+                       NULL AS status, NULL AS created_at, 0 AS report_count
+                FROM DUAL WHERE 1 = 0
+            </otherwise>
+        </choose>
+    </select>
+
+    <select id="countContents"
+            parameterType="com.teambook.panorama.domain.admin.dto.community.CommunityContentSearchRequest"
+            resultType="long">
+        <choose>
+            <when test="contentType == 'POST'">SELECT COUNT(*) <include refid="fromPost"/></when>
+            <when test="contentType == 'COMMENT'">SELECT COUNT(*) <include refid="fromComment"/></when>
+            <when test="contentType == 'REVIEW'">SELECT COUNT(*) <include refid="fromReview"/></when>
+            <otherwise>SELECT 0 FROM DUAL</otherwise>
+        </choose>
+    </select>
+
+    <!-- ══════════════ 상세 ══════════════ -->
+    <resultMap id="communityContentDetailMap"
+               type="com.teambook.panorama.domain.admin.dto.community.CommunityContentDetailResponse">
+        <constructor>
+            <arg   column="content_type"    name="contentType"    javaType="java.lang.String"/>
+            <idArg column="content_id"      name="contentId"      javaType="java.lang.Long"/>
+            <arg   column="author_user_id"  name="authorUserId"   javaType="java.lang.Long"/>
+            <arg   column="author_nickname" name="authorNickname" javaType="java.lang.String"/>
+            <arg   column="title"           name="title"          javaType="java.lang.String"/>
+            <arg   column="content"         name="content"        javaType="java.lang.String"/>
+            <arg   column="status"          name="status"         javaType="java.lang.String"/>
+            <arg   column="parent_post_id"  name="parentPostId"   javaType="java.lang.Long"/>
+            <arg   column="book_id"         name="bookId"         javaType="java.lang.Long"/>
+            <arg   column="category"        name="category"       javaType="java.lang.String"/>
+            <arg   column="report_count"    name="reportCount"    javaType="java.lang.Long"/>
+            <arg   column="created_at"      name="createdAt"      javaType="java.time.LocalDateTime"/>
+            <arg   column="updated_at"      name="updatedAt"      javaType="java.time.LocalDateTime"/>
+        </constructor>
+    </resultMap>
+
+    <select id="selectContentDetail" resultMap="communityContentDetailMap">
+        <choose>
+            <when test="contentType == 'POST'">
+                SELECT 'POST' AS content_type, p.post_id AS content_id, p.user_id AS author_user_id,
+                       au.nickname AS author_nickname, p.title, p.content, p.status,
+                       NULL AS parent_post_id, p.book_id, p.category,
+                       (SELECT COUNT(*) FROM reports r WHERE r.target_type='POST' AND r.target_id=p.post_id) AS report_count,
+                       p.created_at, p.updated_at
+                FROM posts p JOIN users au ON au.user_id = p.user_id
+                WHERE p.post_id = #{contentId}
+            </when>
+            <when test="contentType == 'COMMENT'">
+                SELECT 'COMMENT' AS content_type, c.comment_id AS content_id, c.user_id AS author_user_id,
+                       au.nickname AS author_nickname, NULL AS title, c.content, c.status,
+                       c.post_id AS parent_post_id, NULL AS book_id, NULL AS category,
+                       (SELECT COUNT(*) FROM reports r WHERE r.target_type='COMMENT' AND r.target_id=c.comment_id) AS report_count,
+                       c.created_at, c.updated_at
+                FROM post_comments c JOIN users au ON au.user_id = c.user_id
+                WHERE c.comment_id = #{contentId}
+            </when>
+            <when test="contentType == 'REVIEW'">
+                SELECT 'REVIEW' AS content_type, br.review_id AS content_id, br.user_id AS author_user_id,
+                       au.nickname AS author_nickname, NULL AS title, br.content, br.status,
+                       NULL AS parent_post_id, br.book_id, NULL AS category,
+                       (SELECT COUNT(*) FROM reports r WHERE r.target_type='REVIEW' AND r.target_id=br.review_id) AS report_count,
+                       br.created_at, br.updated_at
+                FROM book_reviews br JOIN users au ON au.user_id = br.user_id
+                WHERE br.review_id = #{contentId}
+            </when>
+            <otherwise>
+                SELECT NULL AS content_type, NULL AS content_id, NULL AS author_user_id,
+                       NULL AS author_nickname, NULL AS title, NULL AS content, NULL AS status,
+                       NULL AS parent_post_id, NULL AS book_id, NULL AS category,
+                       0 AS report_count, NULL AS created_at, NULL AS updated_at
+                FROM DUAL WHERE 1 = 0
+            </otherwise>
+        </choose>
+    </select>
+
+    <!-- ══════════════ 처리 ══════════════ -->
+    <select id="selectContentStatus" resultType="string">
+        <choose>
+            <when test="contentType == 'POST'">SELECT status FROM posts WHERE post_id = #{contentId}</when>
+            <when test="contentType == 'COMMENT'">SELECT status FROM post_comments WHERE comment_id = #{contentId}</when>
+            <when test="contentType == 'REVIEW'">SELECT status FROM book_reviews WHERE review_id = #{contentId}</when>
+            <otherwise>SELECT NULL FROM DUAL WHERE 1 = 0</otherwise>
+        </choose>
+    </select>
+
+    <update id="updateContentStatus">
+        <choose>
+            <when test="contentType == 'POST'">
+                UPDATE posts SET status = #{status}, updated_at = CURRENT_TIMESTAMP(6) WHERE post_id = #{contentId}
+            </when>
+            <when test="contentType == 'COMMENT'">
+                UPDATE post_comments SET status = #{status}, updated_at = CURRENT_TIMESTAMP(6) WHERE comment_id = #{contentId}
+            </when>
+            <when test="contentType == 'REVIEW'">
+                UPDATE book_reviews SET status = #{status}, updated_at = CURRENT_TIMESTAMP(6) WHERE review_id = #{contentId}
+            </when>
+            <otherwise>
+                UPDATE posts SET post_id = post_id WHERE 1 = 0
+            </otherwise>
+        </choose>
+    </update>
+
+    <!-- 같은 대상의 미처리 신고를 모두 RESOLVED (신고 처리 플로우와 동일) -->
+    <update id="resolveReportsByTarget">
+        UPDATE reports
+        SET status = 'RESOLVED',
+            handler_user_id = #{handlerUserId},
+            processed_at = #{processedAt},
+            updated_at = #{processedAt}
+        WHERE target_type = #{targetType}
+          AND target_id = #{targetId}
+          AND status IN ('PENDING', 'REVIEWING')
+    </update>
+
+    <insert id="insertAdminActionLog">
+        INSERT INTO admin_action_log (user_id, target_type, target_id, action_type, reason)
+        VALUES (#{userId}, #{targetType}, #{targetId}, #{actionType}, #{reason})
+    </insert>
+
+</mapper>
