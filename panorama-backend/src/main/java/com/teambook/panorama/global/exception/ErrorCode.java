@@ -10,6 +10,9 @@ public enum ErrorCode {
   // common
   INVALID_INPUT_VALUE(HttpStatus.BAD_REQUEST, "C001", "올바르지 않은 입력값입니다."),
   INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "S001", "서버 내부 오류가 발생했습니다."),
+  
+  HTTP_MESSAGE_NOT_READABLE(HttpStatus.BAD_REQUEST, "C002", "잘못된 요청 형식입니다."),
+  MISSING_HEADER(HttpStatus.BAD_REQUEST, "C003", "헤더가 존재하지 않습니다."),
 
   // user (도메인 접두어 U + 3자리 일련번호)
   USER_NOT_FOUND(HttpStatus.NOT_FOUND, "U001", "존재하지 않는 회원입니다."),
@@ -35,6 +38,16 @@ public enum ErrorCode {
 
   // community content (도메인 접두어 P)
   CONTENT_NOT_FOUND(HttpStatus.NOT_FOUND, "P001", "존재하지 않는 콘텐츠입니다."),
+  
+  // book(임시작업용)
+  BOOK_NOT_FOUND(HttpStatus.NOT_FOUND, "B001", "존재하지 않는 책입니다."),
+  
+  // post (도메인 접두어 P + 3자리 일련번호)
+  POST_NOT_FOUND(HttpStatus.NOT_FOUND, "P001", "존재하지 않는 게시글입니다."),
+  NOT_POST_OWNER(HttpStatus.FORBIDDEN, "P002", "게시글 소유자가 아닙니다."),
+  
+  // comment (도메인 접두어 CM + 3자리 일련번호)
+  COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "CM001", "존재하지 않는 댓글입니다."),
 
   // notice (도메인 접두어 N)
   NOTICE_NOT_FOUND(HttpStatus.NOT_FOUND, "N001", "존재하지 않는 공지입니다.");

@@ -3,7 +3,9 @@ package com.teambook.panorama.global.exception;
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -24,6 +26,20 @@ public class GlobalExceptionHandler {
         .toList();
     log.warn("Validation failed: {}", fieldErrors);
     return build(ErrorCode.INVALID_INPUT_VALUE, fieldErrors);
+  }
+  
+  // 400 - HttpMessageNotReadableException
+  @ExceptionHandler(HttpMessageNotReadableException.class)
+  public ResponseEntity<ErrorResponse> handleHttpMessageNotReadable(HttpMessageNotReadableException e) {
+    log.warn("Message not readable: {}", e.getMessage());
+    return build(ErrorCode.HTTP_MESSAGE_NOT_READABLE, List.of());
+  }
+
+  // 400 - MissingRequestHeaderException
+  @ExceptionHandler(MissingRequestHeaderException.class)
+  public ResponseEntity<ErrorResponse> handleMissingRequestHeaderException(MissingRequestHeaderException e) {
+    log.warn("Missing Header: {}", e.getMessage());
+    return build(ErrorCode.MISSING_HEADER, List.of());
   }
 
   // 비즈니스 예외 (ErrorCode 가 상태/코드를 소유).
