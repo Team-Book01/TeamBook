@@ -7,13 +7,20 @@ on:
   pull_request:
     branches: [ main, develop ]
 
-defaults:
-  run:
-    working-directory: panorama-backend
+# 같은 브랜치에 새 커밋이 오면 진행 중이던 이전 실행은 취소
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
-  build:
+  backend:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: panorama-backend
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -23,3 +30,20 @@ jobs:
           cache: gradle
       - run: chmod +x gradlew
       - run: ./gradlew build -x test
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: panorama-frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: panorama-frontend/package-lock.json
+      - run: npm ci
+      # TODO: 기존 admin 페이지 lint 에러(8건) 정리 후 활성화
+      # - run: npm run lint
+      - run: npm run build
