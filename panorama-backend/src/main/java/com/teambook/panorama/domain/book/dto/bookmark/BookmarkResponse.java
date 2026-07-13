@@ -5,5 +5,5 @@ import lombok.Builder;
 @Builder
 public record BookmarkResponse(
   boolean isBookmarked,
-  Integer bookmarkCount
+  int bookmarkCount
 ) {}
