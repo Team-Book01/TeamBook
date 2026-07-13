@@ -1,9 +1,9 @@
-package com.teambook.panorama.domain.book.dto.search;
+package com.teambook.panorama.domain.book.dto.bookmark;
 
 import lombok.Builder;
 
 @Builder
 public record BookmarkResponse(
   boolean isBookmarked,
-  int bookmarkCount
+  Integer bookmarkCount
 ) {}
