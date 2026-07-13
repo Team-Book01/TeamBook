@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.teambook.panorama.domain.admin.repository.InquiryMapper">
+
+    <!-- ══════════════ 첨부 이미지 (목록의 nested select) ══════════════ -->
+    <resultMap id="inquiryImageMap"
+               type="com.teambook.panorama.domain.admin.dto.inquiry.InquiryImageResponse">
+        <constructor>
+            <idArg column="inquiry_image_id"   name="inquiryImageId"   javaType="java.lang.Long"/>
+            <arg   column="inquiry_id"         name="inquiryId"        javaType="java.lang.Long"/>
+            <arg   column="image_url"          name="imageUrl"         javaType="java.lang.String"/>
+            <arg   column="image_key"          name="imageKey"         javaType="java.lang.String"/>
+            <arg   column="original_file_name" name="originalFileName" javaType="java.lang.String"/>
+            <arg   column="content_type"       name="contentType"      javaType="java.lang.String"/>
+            <arg   column="file_size"          name="fileSize"         javaType="java.lang.Integer"/>
+            <arg   column="sort_order"         name="sortOrder"        javaType="java.lang.Integer"/>
+            <arg   column="created_at"         name="createdAt"        javaType="java.time.LocalDateTime"/>
+        </constructor>
+    </resultMap>
+
+    <!-- InquiryResponse 는 record 라 컬렉션을 생성자로만 넣을 수 있다 → 문의 1건당 1회 조회(N+1) -->
+    <select id="selectImagesByInquiryId" resultMap="inquiryImageMap">
+        SELECT
+            i.inquiry_image_id,
+            i.inquiry_id,
+            i.image_url,
+            i.image_key,
+            i.original_file_name,
+            i.content_type,
+            i.file_size,
+            i.sort_order,
+            i.created_at
+        FROM inquiry_images i
+        WHERE i.inquiry_id = #{inquiryId}
+        ORDER BY i.sort_order ASC, i.inquiry_image_id ASC
+    </select>
+
+    <!-- ══════════════ 목록 ══════════════ -->
+    <resultMap id="inquiryResponseMap"
+               type="com.teambook.panorama.domain.admin.dto.inquiry.InquiryResponse">
+        <constructor>
+            <idArg column="inquiry_id" name="inquiryId" javaType="java.lang.Long"/>
+            <arg   column="user_id"    name="userId"    javaType="java.lang.Long"/>
+            <arg   column="category"   name="category"  javaType="java.lang.String"/>
+            <arg   column="title"      name="title"     javaType="java.lang.String"/>
+            <arg   column="content"    name="content"   javaType="java.lang.String"/>
+            <arg   column="status"     name="status"
+                   javaType="com.teambook.panorama.domain.admin.entity.type.InquiryStatus"/>
+            <!-- 첨부 이미지: inquiry_id 를 넘겨 selectImagesByInquiryId 로 채운다 -->
+            <arg   column="inquiry_id" name="images"    javaType="java.util.List"
+                   select="selectImagesByInquiryId"/>
+            <arg   column="created_at" name="createdAt" javaType="java.time.LocalDateTime"/>
+            <arg   column="updated_at" name="updatedAt" javaType="java.time.LocalDateTime"/>
+        </constructor>
+    </resultMap>
+
+    <!-- 목록/카운트 공유 검색조건 -->
+    <sql id="inquirySearchWhere">
+        FROM inquiries q
+        <where>
+            <if test="searchString != null and searchString != ''">
+                AND (
+                    q.title LIKE CONCAT('%', #{searchString}, '%')
+                    OR q.content LIKE CONCAT('%', #{searchString}, '%')
+                )
+            </if>
+            <if test="category != null and category != ''">
+                AND q.category = #{category}
+            </if>
+            <if test="status != null">
+                AND q.status = #{status}
+            </if>
+            <if test="userId != null">
+                AND q.user_id = #{userId}
+            </if>
+            <if test="startAt != null">
+                AND q.created_at &gt;= #{startAt}
+            </if>
+            <if test="endAt != null">
+                AND q.created_at &lt;= #{endAt}
+            </if>
+        </where>
+    </sql>
+
+    <select id="selectInquiries"
+            parameterType="com.teambook.panorama.domain.admin.dto.inquiry.InquirySearchRequest"
+            resultMap="inquiryResponseMap">
+        <bind name="offset" value="(page - 1) * size"/>
+        SELECT q.inquiry_id, q.user_id, q.category, q.title, q.content, q.status,
+               q.created_at, q.updated_at
+        <include refid="inquirySearchWhere"/>
+        ORDER BY q.created_at DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countInquiry"
+            parameterType="com.teambook.panorama.domain.admin.dto.inquiry.InquirySearchRequest"
+            resultType="long">
+        SELECT COUNT(*)
+        <include refid="inquirySearchWhere"/>
+    </select>
+
+</mapper>
