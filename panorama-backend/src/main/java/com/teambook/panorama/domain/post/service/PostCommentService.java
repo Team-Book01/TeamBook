@@ -29,7 +29,6 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 public class PostCommentService {
-  private final PostCommentListResponseDto postCommentListResponseDto;
   private final PostCommentRepository postCommentRepository;
   private final PostRepository postRepository;
   private final UserRepository userRepository;
