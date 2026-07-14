@@ -16,7 +16,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
-@Tag(name = "Password", description = "비밀번호 재설정 API (이메일 토큰 기반, 비로그인)")
+@Tag(name = "인증", description = "비밀번호 재설정 API (이메일 토큰 기반, 비로그인)")
 @RestController
 @RequestMapping("/api/v1/auth/password")
 @RequiredArgsConstructor
