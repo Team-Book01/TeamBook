@@ -5,6 +5,7 @@ import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.teambook.panorama.domain.user.entity.SocialAccount;
 import com.teambook.panorama.domain.user.entity.User;
@@ -12,7 +13,6 @@ import com.teambook.panorama.domain.user.repository.SocialAccountRepository;
 import com.teambook.panorama.domain.user.repository.UserRepository;
 import com.teambook.panorama.global.util.NicknameGenerator;
 
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -41,7 +41,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
 
         // 4) 우리 userId를 담은 principal 반환
         return CustomOAuth2User.of(
-                user.getId(), user.getProvider(), user.getRole(), oAuth2User.getAttributes());
+                user.getId(), attributes.getProvider(), user.getRole(), oAuth2User.getAttributes());
     }
 
     private User createSocialUser(OAuthAttributes attributes) {
