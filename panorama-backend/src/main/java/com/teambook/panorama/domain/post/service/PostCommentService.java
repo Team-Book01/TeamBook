@@ -13,6 +13,8 @@ import org.springframework.transaction.annotation.Transactional;
 import com.teambook.panorama.domain.post.dto.PostCommentListResponseDto;
 import com.teambook.panorama.domain.post.dto.PostCommentReplyResponseDto;
 import com.teambook.panorama.domain.post.dto.PostCommentRequestDto;
+import com.teambook.panorama.domain.post.dto.PostCommentResponseDto;
+import com.teambook.panorama.domain.post.dto.PostCommentUpdateRequestDto;
 import com.teambook.panorama.domain.post.entity.Post;
 import com.teambook.panorama.domain.post.entity.PostComment;
 import com.teambook.panorama.domain.post.enums.CommentStatus;
@@ -40,23 +42,12 @@ public class PostCommentService {
         .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
     // 관문 2·3: 글 존재 + ACTIVE
-    Post post = postRepository.findById(postId)
-        .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
-    if (post.getStatus() != PostStatus.ACTIVE) {
-      throw new BusinessException(ErrorCode.POST_NOT_FOUND);
-    }
+    Post post = checkAndGetPost(postId);
 
     // 관문 4~6 (replyToCommentId 있을 때만): 대상 댓글 존재 + 같은 글 + ACTIVE
     PostComment target = null;
     if (request.replyToCommentId() != null) {
-      target = postCommentRepository.findById(request.replyToCommentId())
-          .orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND));
-      if (!postId.equals(target.getPost().getPostId())) { // Long은 equals
-        throw new BusinessException(ErrorCode.COMMENT_NOT_FOUND);
-      }
-      if (target.getStatus() != CommentStatus.ACTIVE) {
-        throw new BusinessException(ErrorCode.COMMENT_NOT_FOUND);
-      }
+      target = checkAndGetComment(postId, request.replyToCommentId());
     }
 
     PostComment parent = null;
@@ -79,11 +70,7 @@ public class PostCommentService {
 
   @Transactional(readOnly = true)
   public Slice<PostCommentListResponseDto> findComments(Long postId, Pageable pageable) {
-    Post post = postRepository.findById(postId)
-        .orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
-    if (post.getStatus() != PostStatus.ACTIVE) {
-      throw new BusinessException(ErrorCode.POST_NOT_FOUND);
-    }
+    Post post = checkAndGetPost(postId);
 
     Slice<PostComment> slice = postCommentRepository.findByPostAndParentIsNullOrderByCreatedAtAsc(post, pageable);
     List<PostComment> replies = postCommentRepository.findByParentInOrderByCreatedAtAsc(slice.getContent());
@@ -95,7 +82,38 @@ public class PostCommentService {
     }
 
     // slice(루트 댓글 목록)를 루트 DTO로 변환하고, 루트가 box에서 답글 꺼내서 붙이기
-    return slice.map(rootComment -> new PostCommentListResponseDto(rootComment.getCommentId(), rootComment.getUser().getNickname(), maskComment(rootComment), rootComment.getCreatedAt(), box.getOrDefault(rootComment.getCommentId(), new ArrayList<>())));
+    return slice.map(rootComment -> new PostCommentListResponseDto(rootComment.getCommentId(),
+        rootComment.getUser().getNickname(), maskComment(rootComment), rootComment.getCreatedAt(),
+        box.getOrDefault(rootComment.getCommentId(), new ArrayList<>())));
+  }
+
+  @Transactional
+  public PostCommentResponseDto updateComment(Long postId, Long commentId, Long userId,
+      PostCommentUpdateRequestDto request) {
+    checkAndGetPost(postId);
+
+    PostComment postComment = checkAndGetComment(postId, commentId);
+
+    if(!userId.equals(postComment.getUser().getId())) {
+      throw new BusinessException(ErrorCode.NOT_COMMENT_OWNER);
+    }
+
+    postComment.updateContent(request.content());
+
+    return new PostCommentResponseDto(commentId);
+  }
+
+  @Transactional
+  public void deleteComment(Long postId, Long commentId, Long userId) {
+    checkAndGetPost(postId);
+
+    PostComment postComment = checkAndGetComment(postId, commentId);
+
+    if(!userId.equals(postComment.getUser().getId())) {
+      throw new BusinessException(ErrorCode.NOT_COMMENT_OWNER);
+    }
+
+    postComment.changeStatus(CommentStatus.DELETED);
   }
 
   private String maskComment(PostComment postComment) {
@@ -108,5 +126,29 @@ public class PostCommentService {
       commentMask = postComment.getContent();
     }
     return commentMask;
+  }
+
+  private Post checkAndGetPost(Long postId) {
+    // 글이 기존에 있던 글이었나?
+    Post post = postRepository.findById(postId).orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
+
+    // 일반 사용자가 볼 수 있는 글인가?
+    if (post.getStatus() != PostStatus.ACTIVE) {
+      throw new BusinessException(ErrorCode.POST_NOT_FOUND);
+    }
+
+    return post;
+  }
+
+  private PostComment checkAndGetComment(Long postId, Long commentId) {
+    PostComment target = postCommentRepository.findById(commentId)
+        .orElseThrow(() -> new BusinessException(ErrorCode.COMMENT_NOT_FOUND));
+    if (!postId.equals(target.getPost().getPostId())) { // Long은 equals
+      throw new BusinessException(ErrorCode.COMMENT_NOT_FOUND);
+    }
+    if (target.getStatus() != CommentStatus.ACTIVE) {
+      throw new BusinessException(ErrorCode.COMMENT_NOT_FOUND);
+    }
+    return target;
   }
 }

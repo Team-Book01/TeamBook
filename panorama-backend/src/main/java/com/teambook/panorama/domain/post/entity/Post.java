@@ -82,6 +82,7 @@ public class Post extends BaseTimeEntity {
     viewCount++;
   }
 
+  //update: 이 자원에서 사용자가 바꿀 수 있는 것
   public void update(Book book, PostCategory category, String title, String content) {
     this.book = book;
     this.category = category;

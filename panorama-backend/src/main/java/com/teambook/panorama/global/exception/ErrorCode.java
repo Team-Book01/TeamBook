@@ -48,6 +48,7 @@ public enum ErrorCode {
   
   // comment (도메인 접두어 CM + 3자리 일련번호)
   COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "CM001", "존재하지 않는 댓글입니다."),
+  NOT_COMMENT_OWNER(HttpStatus.FORBIDDEN, "CM002", "댓글 소유자가 아닙니다."),
 
   // notice (도메인 접두어 N)
   NOTICE_NOT_FOUND(HttpStatus.NOT_FOUND, "N001", "존재하지 않는 공지입니다.");
