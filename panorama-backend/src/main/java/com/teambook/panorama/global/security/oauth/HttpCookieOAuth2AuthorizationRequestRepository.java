@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.Optional;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.security.oauth2.client.web.AuthorizationRequestRepository;
@@ -21,6 +22,9 @@ public class HttpCookieOAuth2AuthorizationRequestRepository
 
     public static final String AUTH_REQUEST_COOKIE = "oauth2_auth_request";
     private static final int COOKIE_EXPIRE_SECONDS = 180;   // 3분 (핸드셰이크용 짧은 수명)
+
+    @Value("${app.https}")
+    private boolean https;
 
     @Override
     public OAuth2AuthorizationRequest loadAuthorizationRequest(HttpServletRequest request) {
@@ -41,7 +45,7 @@ public class HttpCookieOAuth2AuthorizationRequestRepository
                 .path("/")
                 .httpOnly(true)          // JS 접근 차단
                 .sameSite("Lax")         // 콜백은 top-level GET 이동이라 Lax로 전송됨
-                .secure(false)           // 로컬 HTTP면 false, 운영(HTTPS)은 true
+                .secure(https)           // 로컬 HTTP면 false, 운영(HTTPS)은 true
                 .maxAge(COOKIE_EXPIRE_SECONDS)
                 .build();
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
