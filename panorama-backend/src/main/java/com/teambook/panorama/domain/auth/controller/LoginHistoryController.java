@@ -18,7 +18,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 
-@Tag(name = "LoginHistory", description = "내 로그인 이력 조회 API")
+@Tag(name = "사용자", description = "내 로그인 이력 조회 API")
 @RestController
 @RequestMapping("/api/v1/users/me/login-histories")
 @RequiredArgsConstructor
