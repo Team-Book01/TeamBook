@@ -57,8 +57,7 @@ public class PostController {
   @GetMapping("/{id}")    // Get 요청과 매핑함
   // @PathVariable = 경로(path)의 변수(variable). @PathVariable("id")는 @GetMapping("/{id}")의 {id}에 @PathVariable이 붙은 Long id를 집어넣겠다는 의미.
   public ResponseEntity<PostDetailResponseDto> findById(@PathVariable("id") Long id) {
-    PostDetailResponseDto response = postService.findById(id);
-    postService.increaseViewCount(id);
+    PostDetailResponseDto response = postService.getDetailAndIncreaseView(id);
     return ResponseEntity.ok(response);
   }
 
