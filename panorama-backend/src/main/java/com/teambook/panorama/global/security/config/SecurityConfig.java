@@ -1,18 +1,15 @@
 package com.teambook.panorama.global.security.config;
 
+import com.teambook.panorama.global.security.oauth.HttpCookieOAuth2AuthorizationRequestRepository;
 import lombok.RequiredArgsConstructor;
 
 import java.util.List;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -22,6 +19,8 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import com.teambook.panorama.global.security.handler.JwtAccessDeniedHandler;
 import com.teambook.panorama.global.security.handler.JwtAuthenticationEntryPoint;
 import com.teambook.panorama.global.security.jwt.JwtAuthenticationFilter;
+import com.teambook.panorama.global.security.oauth.CustomOAuth2UserService;
+import com.teambook.panorama.global.security.oauth.OAuth2SuccessHandler;
 
 /**
  * Spring Security 설정 (현재 단계: JWT 필터 도입 전).
@@ -34,9 +33,12 @@ import com.teambook.panorama.global.security.jwt.JwtAuthenticationFilter;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
+        private final HttpCookieOAuth2AuthorizationRequestRepository httpCookieOAuth2AuthorizationRequestRepository;
         private final JwtAuthenticationFilter jwtAuthenticationFilter;
         private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
         private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
+        private final CustomOAuth2UserService customOAuth2UserService;
+        private final OAuth2SuccessHandler oAuth2SuccessHandler;
 
         /**
          * 인증 없이 접근을 허용할 Swagger / OpenAPI 관련 경로들.
@@ -57,7 +59,9 @@ public class SecurityConfig {
         private static final String[] AUTH_WHITELIST = {
                 "/api/v1/auth/**",
                 "/api/v1/users",
-                "/api/v1/books/search"
+                "/api/v1/books/search",
+                "/oauth2/**",          // 로그인 시작: /oauth2/authorization/google
+                "/login/oauth2/**"     // 구글 콜백: /login/oauth2/code/google
         };
 
         @Bean
@@ -85,25 +89,18 @@ public class SecurityConfig {
                                 .authenticationEntryPoint(jwtAuthenticationEntryPoint)
                                 .accessDeniedHandler(jwtAccessDeniedHandler)
                         )
+                        // 소셜 로그인
+                        .oauth2Login(oauth2 -> oauth2
+                                .authorizationEndpoint(a -> a
+                                        .authorizationRequestRepository(httpCookieOAuth2AuthorizationRequestRepository)
+                                )
+                                .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
+                                .successHandler(oAuth2SuccessHandler)
+                        )
                         // JWT 인증 필터를 폼 인증 필터 앞에 등록 (요청의 Bearer 토큰을 먼저 검사)
                         .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
                 return http.build();
-        }
-
-        @Bean
-        public PasswordEncoder passwordEncoder() {
-                return new BCryptPasswordEncoder();
-        }
-
-                /**
-         * AuthenticationManager. 로그인 시 loginId/비밀번호 검증을 수행한다.
-         * (내부적으로 UserDetailsService + PasswordEncoder를 호출)
-         */
-        @Bean
-        public AuthenticationManager authenticationManager(AuthenticationConfiguration config)
-                throws Exception {
-                return config.getAuthenticationManager();
         }
 
         /**
