@@ -30,8 +30,9 @@ export interface BookItem {
   link: string
   /** 네이버 판매가(숫자 문자열, 없으면 빈 문자열) */
   discount?: string
-  /** DB에 없는 책은 0 */
-  discription: string
+  /** 책 소개 본문 (검색 응답에도 포함 → 상세 initialData 로 그대로 재사용) */
+  description: string
+  /** 아래 3개는 DB에 없는 책이면 0 */
   avgRating: number
   reviewCount: number
   bookmarkCount: number

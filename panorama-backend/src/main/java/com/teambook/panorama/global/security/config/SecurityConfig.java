@@ -89,6 +89,7 @@ public class SecurityConfig {
                                 // 메서드를 안 가리면 나중에 같은 경로에 POST/DELETE 가 붙는 순간 함께 열린다.
                                 .requestMatchers(HttpMethod.GET, "/api/v1/libraries").permitAll()
                                 .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                                .requestMatchers(HttpMethod.GET, "/api/v1/books/**").permitAll()
                                 .anyRequest().authenticated()
                         )
                         // 인증/인가 실패 처리: 인증 안 됨 → 401, 권한 부족 → 403

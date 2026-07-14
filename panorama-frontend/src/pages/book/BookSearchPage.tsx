@@ -93,7 +93,7 @@ export default function BookSearchPage() {
       pubdate: book.pubdate,
       image: book.image,
       link: book.link,
-      description: book.discription,
+      description: book.description,
     });
   };
 

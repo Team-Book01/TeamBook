@@ -12,9 +12,11 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query'
+import type { InfiniteData, QueryClient } from '@tanstack/react-query'
 import { client } from './client'
 import type {
   BookDetail,
+  BookItem,
   BookmarkRequest,
   BookmarkResponse,
   BookSearchParams,
@@ -162,6 +164,43 @@ export async function getLibraries(
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+//  캐시 유틸 (검색 캐시 → 상세 initialData 재사용)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * 검색 무한스크롤 캐시(useInfiniteQuery)를 전부 뒤져 isbn 이 일치하는 항목을 찾는다.
+ *
+ * - 검색 쿼리는 keyword/sort 조합마다 별도 캐시라, bookKeys.search(=['books','search',...])
+ *   프리픽스로 매칭되는 모든 쿼리를 순회한다.
+ * - 무한스크롤이라 데이터 구조는 { pages: [{ items: [...] }, ...] } 형태.
+ * - 반환에 dataUpdatedAt 을 함께 실어, 상세 훅이 initialDataUpdatedAt 으로 쓰게 한다.
+ *   (그래야 캐시가 오래됐으면 상세 진입 시 백그라운드 refetch 가 일어난다)
+ *
+ * 검색 → 클릭 진입: 캐시 히트 → 즉시 렌더(로딩 없음).
+ * 새로고침/URL 직접 접근/공유 링크: 캐시 미스 → undefined → 평소대로 API 호출.
+ */
+export function findBookInSearchCache(
+  queryClient: QueryClient,
+  isbn: string,
+): { data: BookItem; updatedAt: number } | undefined {
+  if (!isbn) return undefined
+
+  const queries = queryClient
+    .getQueryCache()
+    .findAll({ queryKey: [...bookKeys.all, 'search'] })
+
+  for (const query of queries) {
+    const data = query.state.data as InfiniteData<BookSearchResponse> | undefined
+    if (!data?.pages) continue
+    for (const page of data.pages) {
+      const hit = page.items.find((item) => item.isbn === isbn)
+      if (hit) return { data: hit, updatedAt: query.state.dataUpdatedAt }
+    }
+  }
+  return undefined
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 //  Query 훅 (조회)
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -191,12 +230,22 @@ export function useBookSearch(params: BookSearchParams) {
 /**
  * 도서 상세.
  * isbn 이 없으면(빈 문자열) 요청하지 않는다 → 상세 진입 비활성화 처리와 짝을 맞춘다.
+ *
+ * initialData: 검색 목록에서 클릭해 들어오면 이미 받아둔 항목이 캐시에 있으므로
+ * 그 데이터로 즉시 화면을 렌더한다(로딩 없음). 검색 응답에도 description 이 포함돼
+ * 상세와 필드가 동일하므로 그대로 재사용할 수 있다.
+ * - 캐시 히트: initialData + initialDataUpdatedAt(원본 수신 시각) → 오래됐으면 백그라운드 refetch.
+ * - 캐시 미스: undefined → 로딩 표시 후 API 호출.
  */
 export function useBook(isbn: string) {
+  const queryClient = useQueryClient()
+  const cached = findBookInSearchCache(queryClient, isbn)
   return useQuery({
     queryKey: bookKeys.detail(isbn),
     queryFn: () => getBook(isbn),
     enabled: isbn.length > 0,
+    initialData: cached?.data,
+    initialDataUpdatedAt: cached?.updatedAt,
   })
 }
 
@@ -224,14 +273,45 @@ export function useBookLibraries(isbn: string, params: LibraryParams) {
 
 /**
  * 북마크 토글.
- * 성공 시 검색 목록/상세 쿼리를 invalidate 해서 북마크 상태·카운트를 갱신한다.
+ *
+ * - 낙관적 업데이트: 클릭 즉시 상세 캐시의 하트 상태·카운트를 뒤집어 UI 가 바로 반응한다.
+ *   실패하면 이전 값으로 롤백한다.
+ * - 성공 시 서버가 준 확정값(isBookmarked/bookmarkCount)으로 상세 캐시를 덮어쓴다.
+ * - 마지막에 검색 목록(여러 keyword 조합) + 상세를 invalidate 해서 서버 기준으로 재동기화한다.
  */
 export function useBookmarkMutation() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (body: BookmarkRequest) => toggleBookmark(body),
-    onSuccess: (_data, variables) => {
-      // 검색 결과 전체(여러 keyword 조합) + 해당 도서 상세를 갱신
+    onMutate: async (variables) => {
+      const detailKey = bookKeys.detail(variables.isbn)
+      // 진행 중인 상세 refetch 를 취소해 낙관적 값이 덮이지 않게 한다.
+      await queryClient.cancelQueries({ queryKey: detailKey })
+      const prevDetail = queryClient.getQueryData<BookDetail>(detailKey)
+      if (prevDetail) {
+        queryClient.setQueryData<BookDetail>(detailKey, {
+          ...prevDetail,
+          isBookmarked: !prevDetail.isBookmarked,
+          bookmarkCount: prevDetail.bookmarkCount + (prevDetail.isBookmarked ? -1 : 1),
+        })
+      }
+      return { prevDetail }
+    },
+    onError: (_err, variables, context) => {
+      if (context?.prevDetail) {
+        queryClient.setQueryData(bookKeys.detail(variables.isbn), context.prevDetail)
+      }
+    },
+    onSuccess: (data, variables) => {
+      // 서버 확정값으로 상세 캐시 동기화 (하트 상태 + 정확한 카운트)
+      queryClient.setQueryData<BookDetail>(bookKeys.detail(variables.isbn), (old) =>
+        old
+          ? { ...old, isBookmarked: data.isBookmarked, bookmarkCount: data.bookmarkCount }
+          : old,
+      )
+    },
+    onSettled: (_data, _err, variables) => {
+      // 검색 결과 전체 + 해당 도서 상세를 서버 기준으로 재동기화
       queryClient.invalidateQueries({ queryKey: [...bookKeys.all, 'search'] })
       queryClient.invalidateQueries({ queryKey: bookKeys.detail(variables.isbn) })
     },
