@@ -20,6 +20,7 @@ public enum ErrorCode {
   DUPLICATE_NICKNAME(HttpStatus.CONFLICT, "U003", "이미 사용 중인 닉네임입니다."),
   DUPLICATE_EMAIL(HttpStatus.CONFLICT, "U004", "이미 사용 중인 이메일입니다."),
 
+  
   // auth (A + 3자리)
   INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "A001", "유효하지 않은 토큰입니다."),
   EXPIRED_TOKEN(HttpStatus.UNAUTHORIZED, "A002", "만료된 토큰입니다."),
@@ -27,6 +28,7 @@ public enum ErrorCode {
   LOGIN_FAILED(HttpStatus.UNAUTHORIZED, "A004", "아이디 또는 비밀번호가 올바르지 않습니다."),
   ACCESS_DENIED(HttpStatus.FORBIDDEN, "A005", "접근권한이 없습니다,"),
   REFRESH_TOKEN_MISSING(HttpStatus.UNAUTHORIZED, "A006", "쿠키에 리프레시 토큰이 없습니다."),
+  UNSUPPORTED_PROVIDER(HttpStatus.BAD_REQUEST, "A007", "지원하지 않은 소셜로그인 입니다."),
 
   // report (도메인 접두어 R)
   REPORT_NOT_FOUND(HttpStatus.NOT_FOUND, "R001", "존재하지 않는 신고입니다."),
@@ -51,6 +53,7 @@ public enum ErrorCode {
 
   // notice (도메인 접두어 N)
   NOTICE_NOT_FOUND(HttpStatus.NOT_FOUND, "N001", "존재하지 않는 공지입니다.");
+    
 
   private final HttpStatus status;
   private final String code;
