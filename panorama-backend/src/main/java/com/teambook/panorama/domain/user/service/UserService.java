@@ -63,6 +63,16 @@ public class UserService {
         return UserDto.Response.from(user);
     }
 
+    @Transactional(readOnly = true)
+    public boolean isLoginIdTaken(String loginId) {
+        return userRepository.existsByLoginId(loginId);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean isNicknameTaken(String nickname) {
+        return userRepository.existsByNickname(nickname);
+    }
+
     @Transactional
     public void withdraw(Long userId) {
         User user = userRepository.findById(userId)

@@ -40,7 +40,13 @@ public class UserDto {
     public record UpdateNicknameRequest(
         @Size(min = 1, max = 10, message = "닉네임은 1~10자여야 합니다.")
         String nickname) {
-            
+
         }
+
+    @Schema(name = "UserExistsResponse", description = "아이디·닉네임 중복 확인 결과")
+    public record ExistsResponse(
+            @Schema(description = "이미 사용 중이면 true (가입 불가), 사용 가능하면 false", example = "false")
+            boolean exists
+    ) {}
 
 }
