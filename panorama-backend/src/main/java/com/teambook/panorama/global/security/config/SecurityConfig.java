@@ -83,6 +83,7 @@ public class SecurityConfig {
                         .authorizeHttpRequests(auth -> auth
                                 .requestMatchers(SWAGGER_WHITELIST).permitAll()
                                 .requestMatchers(AUTH_WHITELIST).permitAll()
+                                .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                                 .anyRequest().authenticated()
                         )
                         // 인증/인가 실패 처리: 인증 안 됨 → 401, 권한 부족 → 403
