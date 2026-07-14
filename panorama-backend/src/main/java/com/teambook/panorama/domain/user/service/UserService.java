@@ -48,7 +48,7 @@ public class UserService {
     @Transactional(readOnly = true)
     public UserDto.Response getMyInfo(Long userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> null /* new CustomException(ErrorCode.USER_NOT_FOUND) */);
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));   // U001
         return UserDto.Response.from(user);
     }
 
