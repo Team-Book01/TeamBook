@@ -3,14 +3,14 @@ import axios from 'axios'
 /**
  * 백엔드(Spring Boot) 호출용 공통 axios 인스턴스.
  *
- * - baseURL 은 .env 의 VITE_API_BASE_URL 을 사용한다.
- *   · 개발: '/api'  → vite.config.ts 의 proxy 가 http://localhost:8080 으로 전달(CORS 회피)
- *   · 직접 호출/프로덕션: 'http://localhost:8080' 또는 실제 도메인
+ * - baseURL 은 .env 의 VITE_API_BASE_URL 을 사용한다. (백엔드는 모두 /api/v1 로 매핑)
+ *   · 개발: '/api/v1'  → vite.config.ts 의 proxy 가 http://localhost:8080 으로 전달(CORS 회피)
+ *   · 직접 호출/프로덕션: 'http://localhost:8080/api/v1' 또는 실제 도메인
  * - 실제 API 연동은 각 도메인 페이지에서 이 인스턴스를 import 해서 사용한다.
  *   예) import { api } from '@/lib/api'
  */
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL ?? '/api',
+  baseURL: import.meta.env.VITE_API_BASE_URL ?? '/api/v1',
   timeout: 10_000,
   headers: { 'Content-Type': 'application/json' },
 })

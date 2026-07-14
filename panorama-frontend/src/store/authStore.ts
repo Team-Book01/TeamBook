@@ -9,14 +9,19 @@ import type { User } from '@/types'
  */
 interface AuthState {
   user: User | null
+  token: string | null
   isAuthenticated: boolean
   setUser: (user: User | null) => void
+  /** 로그인 성공 시 사용자 + JWT 토큰을 함께 세팅한다. */
+  login: (user: User, token: string) => void
   logout: () => void
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
+  token: null,
   isAuthenticated: false,
   setUser: (user) => set({ user, isAuthenticated: !!user }),
-  logout: () => set({ user: null, isAuthenticated: false }),
+  login: (user, token) => set({ user, token, isAuthenticated: true }),
+  logout: () => set({ user: null, token: null, isAuthenticated: false }),
 }))

@@ -17,5 +17,4 @@ public record BookmarkRequest(
   String link,
   String description
 ) {
-
 }

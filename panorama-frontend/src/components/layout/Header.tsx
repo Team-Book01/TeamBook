@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { BookOpen, Search, Bell } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
+
 /**
  * 사이트 공통 상단 GNB (통합 Header).
  *
@@ -27,6 +28,7 @@ export default function Header() {
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
   const [focused, setFocused] = useState(false)
+  const isHome = location.pathname === '/'
 
   // 현재 경로 기준 활성 메뉴 판정 ('/' 는 정확히 일치, 나머지는 prefix)
   const isActive = (to: string) =>
@@ -68,27 +70,29 @@ export default function Header() {
         </nav>
 
         {/* 검색창 */}
-        <form onSubmit={onSearch} className="flex-1 min-w-0 max-w-sm hidden sm:block">
-          <div
-            className={cn(
-              'flex items-center gap-2 border rounded-full px-4 py-2 bg-white transition-all',
-              focused
-                ? 'border-[#2E7D6B] shadow-[0_0_0_3px_rgba(46,125,107,0.1)]'
-                : 'border-[#EAEAEA]',
-            )}
-          >
-            <Search size={14} className="text-[#aaa] flex-shrink-0" />
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onFocus={() => setFocused(true)}
-              onBlur={() => setFocused(false)}
-              placeholder="책 제목, 저자, 주제…"
-              className="flex-1 text-[13px] outline-none bg-transparent text-[#1A1A1A] placeholder:text-[#bbb] min-w-0"
-            />
-          </div>
-        </form>
+     {!isHome && (
+  <form onSubmit={onSearch} className="flex-1 min-w-0 max-w-sm hidden sm:block">
+    <div
+      className={cn(
+        'flex items-center gap-2 border rounded-full px-4 py-2 bg-white transition-all',
+        focused
+          ? 'border-[#2E7D6B] shadow-[0_0_0_3px_rgba(46,125,107,0.1)]'
+          : 'border-[#EAEAEA]',
+      )}
+    >
+      <Search size={14} className="text-[#aaa] flex-shrink-0" />
+      <input
+        type="text"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        placeholder="책 제목, 저자, 주제…"
+        className="flex-1 text-[13px] outline-none bg-transparent text-[#1A1A1A] placeholder:text-[#bbb] min-w-0"
+      />
+    </div>
+  </form>
+)}
 
         {/* 우측: 알림 + 로그인 (로그인 연동 전 상태) */}
         <div className="flex items-center gap-2 ml-auto flex-shrink-0">
