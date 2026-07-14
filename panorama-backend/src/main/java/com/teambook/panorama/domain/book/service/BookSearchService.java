@@ -70,7 +70,7 @@ public class BookSearchService {
       .isBookmarked(isBookmarked)
       .publisher(naverBook.publisher())
       .pubdate(naverBook.pubdate())
-      .discription(naverBook.description())
+      .description(naverBook.description())
       .build();
     }).toList();
     BookSearchResponse response = BookSearchResponse.builder()
@@ -82,6 +82,36 @@ public class BookSearchService {
 
     return response;
   }
-  
 
-}
+  //책 단건 상세 조회
+  public BookSearchItem findBookByIsbn(String isbn, Long userId){
+    //네이버 단건 조회 -> 없는 isbn 예외 처리
+    var items = naverBookClient.search(isbn, 1, 1, "sim").items();
+    if (items.isEmpty()) {
+      //예외 수정필요
+      throw new RuntimeException();
+    }
+    NaverBookItem item = items.getFirst();
+    //DB stats조회
+    BookStatsDto stats = bookStatsMapper.selectBookStatsByIsbns(List.of(isbn)).stream().findFirst().orElse(null);
+    //북마크 여부
+    boolean isBookmarked = !bookStatsMapper.selectBookmarkedIsbns(userId, List.of(isbn)).isEmpty();
+
+
+    return BookSearchItem.builder()
+    .author(item.author())
+    .avgRating(stats != null ? stats.avgRating() : BigDecimal.ZERO)
+    .reviewCount(stats != null ? stats.reviewCount() : 0)
+    .bookmarkCount(stats != null ? stats.bookmarkCount() : 0)
+    .image(item.image())
+    .link(item.link())
+    .discount(item.discount())
+    .title(item.title())
+    .isBookmarked(isBookmarked)
+    .publisher(item.publisher())
+    .pubdate(item.pubdate())
+    .description(item.description())
+    .build();
+    }
+
+  }

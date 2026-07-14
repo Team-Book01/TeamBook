@@ -1,25 +1,41 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Star, Heart, ChevronLeft, ChevronUp, FileText } from "lucide-react";
+import { Star, Heart, ChevronLeft, ChevronUp, BookOpen } from "lucide-react";
 
-import type { Book } from "./data";
-import { ALL_BOOKS, MORE_BOOKS, BOOK_DESCRIPTIONS, DEFAULT_DESCRIPTION, BOOK_EXTRA } from "./data";
-import { BookCoverLarge, PurchaseBtn, LibraryFinder, ReviewSection } from "./components";
+import { useBook, useBookmarkMutation } from "@/api/book";
+import { getErrorMessage } from "@/api/client";
+import { LibraryFinder, ReviewSection } from "./components";
+
+/** yyyymmdd → yyyy.mm.dd (형식이 아니면 원본 그대로) */
+function formatPubdate(pubdate: string): string {
+  if (!pubdate || pubdate.length < 8) return pubdate ?? "";
+  return `${pubdate.slice(0, 4)}.${pubdate.slice(4, 6)}.${pubdate.slice(6, 8)}`;
+}
+
+/** 네이버 판매가(숫자 문자열) → "12,600원" (없으면 null) */
+function formatPrice(discount?: string): string | null {
+  if (!discount) return null;
+  const n = Number(discount);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return `${n.toLocaleString()}원`;
+}
 
 export default function BookDetailPage() {
-  const { isbn } = useParams();
+  const { isbn = "" } = useParams();
   const navigate = useNavigate();
 
-  const found = [...ALL_BOOKS, ...MORE_BOOKS].find(b => String(b.id) === isbn) ?? ALL_BOOKS[0];
-  const [book, setBook] = useState<Book>(found);
-  const [prevIsbn, setPrevIsbn] = useState(isbn);
+  const { data: book, isLoading, isError, error, isFetching } = useBook(isbn);
+  const bookmark = useBookmarkMutation();
+
   const [showTop, setShowTop] = useState(false);
+  const [imgError, setImgError] = useState(false);
+  const [prevIsbn, setPrevIsbn] = useState(isbn);
   const reviewRef = useRef<HTMLDivElement>(null);
 
-  // URL(:isbn) 이 바뀌면 렌더 중 상태를 교체한다. (React 권장 패턴)
+  // URL(:isbn) 이 바뀌면 렌더 중 이미지 에러 상태를 초기화한다. (React 권장 패턴)
   if (isbn !== prevIsbn) {
     setPrevIsbn(isbn);
-    setBook(found);
+    setImgError(false);
   }
 
   // URL(:isbn) 이 바뀌면 맨 위로 스크롤한다.
@@ -33,34 +49,82 @@ export default function BookDetailPage() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const extra = BOOK_EXTRA[book.id] ?? { isbn: "978-89-000-0000-0", pages: 256, category: "한국소설", postCount: 87 };
-  const description = BOOK_DESCRIPTIONS[book.id] ?? DEFAULT_DESCRIPTION;
-
-  const toggleBookmark = () => {
-    setBook(prev => ({ ...prev, bookmarked: !prev.bookmarked }));
-  };
-
   const scrollToReview = () => {
     reviewRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  const avgRating = book.rating ?? 4.2;
-  const reviewCount = book.reviewCount ?? 128;
+  const handleToggleBookmark = () => {
+    if (!book) return;
+    bookmark.mutate({
+      isbn: book.isbn,
+      title: book.title,
+      author: book.author,
+      publisher: book.publisher,
+      pubdate: book.pubdate,
+      image: book.image,
+      link: book.link,
+      description: book.description,
+    });
+  };
+
+  // const BackButton = (
+  //   <button
+  //     onClick={() => navigate("/books")}
+  //     className="flex items-center gap-1.5 text-[13px] text-[#777] hover:text-[#2E7D6B] transition-colors mb-6 group"
+  //   >
+  //     <ChevronLeft size={15} className="group-hover:-translate-x-0.5 transition-transform" />
+  //     검색 결과로 돌아가기
+  //   </button>
+  // );
+
+  // ── 로딩 (캐시 미스: 새로고침/URL 직접 접근/공유 링크) ──
+  if (isLoading) {
+    return (
+      <main className="max-w-[1440px] mx-auto px-10 py-8">
+        {/* {BackButton} */}
+        <div className="flex justify-center py-40">
+          <div className="w-7 h-7 border-2 border-[#2E7D6B] border-t-transparent rounded-full animate-spin" />
+        </div>
+      </main>
+    );
+  }
+
+  // ── 에러 ──
+  if (isError || !book) {
+    return (
+      <main className="max-w-[1440px] mx-auto px-10 py-8">
+        {/* {BackButton} */}
+        <p className="text-center text-[14px] text-rose-500 py-40">
+          {getErrorMessage(error, "도서 정보를 불러오지 못했습니다.")}
+        </p>
+      </main>
+    );
+  }
+
+  const price = formatPrice(book.discount);
+  const bookmarking = bookmark.isPending;
 
   return (
     <main className="max-w-[1440px] mx-auto px-10 py-8">
-      {/* Back */}
-      <button onClick={() => navigate("/books")} className="flex items-center gap-1.5 text-[13px] text-[#777] hover:text-[#2E7D6B] transition-colors mb-6 group">
-        <ChevronLeft size={15} className="group-hover:-translate-x-0.5 transition-transform" />
-        검색 결과로 돌아가기
-      </button>
+      {/* {BackButton} */}
 
       {/* ── Hero ── */}
       <section className="bg-white border border-[#EAEAEA] rounded-2xl p-6 mb-4">
         <div className="flex gap-6">
-          {/* Large cover */}
+          {/* Cover */}
           <div className="flex-shrink-0">
-            <BookCoverLarge color={book.coverColor} accent={book.coverAccent} title={book.title} size="lg" />
+            {book.image && !imgError ? (
+              <img
+                src={book.image}
+                alt={book.title}
+                onError={() => setImgError(true)}
+                className="w-[180px] h-[252px] object-cover rounded-[10px] shadow-[0_4px_20px_rgba(0,0,0,0.22)]"
+              />
+            ) : (
+              <div className="w-[180px] h-[252px] rounded-[10px] bg-[#EAEAEA] flex items-center justify-center shadow-[0_4px_20px_rgba(0,0,0,0.15)]">
+                <BookOpen size={44} className="text-[#bbb]" />
+              </div>
+            )}
           </div>
 
           {/* Info */}
@@ -72,11 +136,11 @@ export default function BookDetailPage() {
                 {[
                   ["저자", book.author],
                   ["출판사", book.publisher],
-                  ["출판일", book.publishDate],
+                  ["출판일", formatPubdate(book.pubdate)],
                 ].map(([label, value]) => (
                   <tr key={label}>
                     <td className="py-1.5 pr-6 text-[#aaa] font-medium w-16 flex-shrink-0">{label}</td>
-                    <td className="py-1.5 text-[#1A1A1A]">{value}</td>
+                    <td className="py-1.5 text-[#1A1A1A]">{value || "–"}</td>
                   </tr>
                 ))}
               </tbody>
@@ -88,53 +152,81 @@ export default function BookDetailPage() {
               className="flex items-center gap-2 group cursor-pointer hover:opacity-80 transition-opacity self-start"
             >
               <div className="flex gap-0.5">
-                {[1,2,3,4,5].map(n => (
-                  <Star key={n} size={15}
-                    fill={n <= Math.round(avgRating) ? "#F5B301" : "#E5E5E5"}
-                    stroke={n <= Math.round(avgRating) ? "#F5B301" : "#E5E5E5"} />
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <Star
+                    key={n}
+                    size={15}
+                    fill={n <= Math.round(book.avgRating) ? "#F5B301" : "#E5E5E5"}
+                    stroke={n <= Math.round(book.avgRating) ? "#F5B301" : "#E5E5E5"}
+                  />
                 ))}
               </div>
-              <span className="text-[14px] font-bold text-[#1A1A1A]">{avgRating.toFixed(1)}</span>
-              <span className="text-[12px] text-[#aaa]">({reviewCount.toLocaleString()})</span>
-              <span className="text-[11px] text-[#2E7D6B] underline underline-offset-2 opacity-0 group-hover:opacity-100 transition-opacity">리뷰 보기</span>
+              <span className="text-[14px] font-bold text-[#1A1A1A]">
+                {book.avgRating > 0 ? book.avgRating.toFixed(1) : "–"}
+              </span>
+              <span className="text-[12px] text-[#aaa]">({book.reviewCount.toLocaleString()})</span>
+              <span className="text-[11px] text-[#2E7D6B] underline underline-offset-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                리뷰 보기
+              </span>
             </button>
 
-            {/* Book description inside hero */}
-            <p className="text-[13px] text-[#555] leading-[1.85] line-clamp-4 border-t border-[#F5F5F5] pt-3">{description}</p>
+            {/* Book description */}
+            <p className="text-[13px] text-[#555] leading-[1.85] border-t border-[#F5F5F5] pt-3 whitespace-pre-line">
+              {book.description || "등록된 책 소개가 없습니다."}
+            </p>
 
             {/* Actions row */}
             <div className="flex items-center gap-3 flex-wrap pt-1">
-              <PurchaseBtn price={book.price} />
+              {book.link && (
+                <a
+                  href={book.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-[13px] font-medium transition-all bg-[#F0FAF4] text-[#03C75A] border border-[#D0EFD8] hover:bg-[#03C75A] hover:text-white hover:shadow-sm"
+                >
+                  <span className="w-5 h-5 rounded-sm flex items-center justify-center text-xs font-black bg-[#03C75A] text-white">
+                    N
+                  </span>
+                  구매
+                  {price && <span className="font-semibold">{price}</span>}
+                </a>
+              )}
 
               <button
-                onClick={toggleBookmark}
-                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-[13px] font-medium transition-all ${
-                  book.bookmarked
+                onClick={handleToggleBookmark}
+                disabled={bookmarking}
+                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl border text-[13px] font-medium transition-all disabled:opacity-60 ${
+                  book.isBookmarked
                     ? "bg-[#FFF0F2] border-rose-300 text-rose-500"
                     : "border-[#EAEAEA] text-[#555] hover:bg-[#FFF0F2] hover:border-rose-200 hover:text-rose-400"
                 }`}
               >
-                <Heart size={15} className={`transition-colors ${book.bookmarked ? "fill-rose-500 stroke-rose-500" : "fill-transparent"}`} />
-                {book.bookmarked ? "저장됨" : "저장"}
-                <span className="text-[12px] opacity-60">({(book.likes + (book.bookmarked ? 1 : 0)).toLocaleString()})</span>
+                <Heart
+                  size={15}
+                  className={`transition-colors ${book.isBookmarked ? "fill-rose-500 stroke-rose-500" : "fill-transparent"}`}
+                />
+                {book.isBookmarked ? "저장됨" : "저장"}
+                <span className="text-[12px] opacity-60">({book.bookmarkCount.toLocaleString()})</span>
               </button>
 
-              <button className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-[#EAEAEA] text-[13px] font-medium text-[#555] hover:bg-[#EFF6F2] hover:border-[#2E7D6B] hover:text-[#2E7D6B] transition-all">
-                <FileText size={15} />
-                게시글
-                <span className="text-[12px] opacity-60">({extra.postCount.toLocaleString()})</span>
-              </button>
+              {/* 백그라운드 갱신 표시 (initialData 재사용 후 최신화 중) */}
+              {isFetching && (
+                <span className="flex items-center gap-1.5 text-[12px] text-[#aaa]">
+                  <span className="w-3 h-3 border-2 border-[#2E7D6B] border-t-transparent rounded-full animate-spin" />
+                  최신 정보 확인 중
+                </span>
+              )}
             </div>
           </div>
         </div>
       </section>
 
-      {/* ── Library finder ── */}
+      {/* ── Library finder (준비 중 — 목업) ── */}
       <LibraryFinder />
 
-      {/* ── Reviews ── */}
+      {/* ── Reviews (요약만 실데이터, 목록은 준비 중 — 목업) ── */}
       <div ref={reviewRef}>
-        <ReviewSection book={book} />
+        <ReviewSection avgRating={book.avgRating} reviewCount={book.reviewCount} />
       </div>
 
       <button

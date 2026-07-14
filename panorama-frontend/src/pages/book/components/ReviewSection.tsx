@@ -1,13 +1,23 @@
 import { useState } from "react";
 import { Star, ChevronLeft, ChevronRight } from "lucide-react";
 
-import type { Book, Review } from "../data";
+import type { Review } from "../data";
 import { SAMPLE_REVIEWS } from "../data";
 import { StarRating } from "./primitives";
 
-export function ReviewSection({ book }: { book: Book }) {
-  const avgRating = book.rating ?? 4.2;
-  const totalCount = book.reviewCount ?? 128;
+/**
+ * 평점 & 리뷰 섹션.
+ * ⚠️ 리뷰 목록/작성은 이번 작업 범위가 아니라 아직 목업(SAMPLE_REVIEWS)이다.
+ * 상단 요약(평균 별점/참여 수)만 상세 API 값(avgRating/reviewCount)을 받아 표시한다.
+ */
+export function ReviewSection({
+  avgRating = 4.2,
+  reviewCount = 128,
+}: {
+  avgRating?: number;
+  reviewCount?: number;
+}) {
+  const totalCount = reviewCount;
 
   const [myRating, setMyRating] = useState(0);
   const [myReview, setMyReview] = useState("");

@@ -2,6 +2,8 @@ package com.teambook.panorama.domain.book.dto.detail;
 
 import java.math.BigDecimal;
 
+import com.teambook.panorama.domain.book.dto.search.BookSearchItem;
+
 public record BookDetailResponse(
   String isbn,
   String title,
@@ -19,5 +21,7 @@ public record BookDetailResponse(
   int postCount,
   boolean isBookmarked
 ) {
-
+  public static BookDetailResponse of(BookSearchItem item) {
+   return new BookDetailResponse(item.isbn(), item.title(), item.author(), item.publisher(), item.pubdate(), item.image(), item.link(), item.description(), item.avgRating(), item.reviewCount(), item.bookmarkCount(), 0, item.isBookmarked()); 
+  }
 }
