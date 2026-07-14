@@ -16,6 +16,7 @@ import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
 import lombok.Builder;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
@@ -25,6 +26,7 @@ import lombok.NoArgsConstructor;
         columnNames = {"provider", "provider_user_id"})
        )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@Getter
 public class SocialAccount extends BaseTimeEntity{
 
   @Id
