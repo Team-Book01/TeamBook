@@ -28,7 +28,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/v1")
 @RequiredArgsConstructor
 public class PostCommentController {
     private final PostCommentService postCommentService;
@@ -48,5 +48,4 @@ public class PostCommentController {
         Slice<PostCommentListResponseDto> slice = postCommentService.findComments(postId, pageable);
         return ResponseEntity.ok(SliceResponse.of(slice));
     }
-    
 }
