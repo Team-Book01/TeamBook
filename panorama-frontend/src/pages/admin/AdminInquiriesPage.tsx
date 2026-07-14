@@ -10,9 +10,9 @@ import { INQUIRIES, STATS, CAT_STYLE, STAT_STYLE } from "./inquiriesData";
 
 // ─── Colors ──────────────────────────────────────────────────────────────────
 
-const G_DARK = "#1B3829";
-const G_MED  = "#2D5E42";
-const G_LBG  = "#F0FDF4";
+const G_DARK = "var(--color-admin)";
+const G_MED  = "var(--color-admin-point)";
+const G_LBG  = "var(--color-admin-light)";
 
 // ─── Shared Badges ────────────────────────────────────────────────────────────
 
@@ -75,7 +75,7 @@ interface ListPanelProps {
 }
 
 const SEL_CLS =
-  "text-[11px] border border-gray-200 rounded-lg px-2 py-1 bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-green-700 cursor-pointer";
+  "text-[11px] border border-gray-200 rounded-lg px-2 py-1 bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-admin cursor-pointer";
 
 function ListPanel({ selectedId, onSelect }: ListPanelProps) {
   const [search,   setSearch]   = useState("");
@@ -106,7 +106,7 @@ function ListPanel({ selectedId, onSelect }: ListPanelProps) {
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="제목 / 내용 / 작성자 닉네임 검색"
-              className="w-full pl-8 pr-3 py-1.5 text-[11px] border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-1 focus:ring-green-700 focus:border-green-700 placeholder-gray-300"
+              className="w-full pl-8 pr-3 py-1.5 text-[11px] border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-1 focus:ring-admin focus:border-admin placeholder-gray-300"
             />
           </div>
           <button
@@ -139,7 +139,7 @@ function ListPanel({ selectedId, onSelect }: ListPanelProps) {
       <div className="bg-gray-50 border-b border-gray-100 flex-shrink-0">
         <div className="flex items-center text-[10px] font-semibold text-gray-500 px-1 py-2">
           <div className="w-8 flex items-center justify-center flex-shrink-0">
-            <input type="checkbox" checked={allChk} onChange={toggleAll} className="w-3.5 h-3.5 accent-green-800 rounded" />
+            <input type="checkbox" checked={allChk} onChange={toggleAll} className="w-3.5 h-3.5 accent-admin rounded" />
           </div>
           <div className="w-11 flex-shrink-0 px-1">ID</div>
           <div className="w-[88px] flex-shrink-0 px-1">분류</div>
@@ -179,7 +179,7 @@ function ListPanel({ selectedId, onSelect }: ListPanelProps) {
                   type="checkbox"
                   checked={checked.has(inq.id)}
                   onChange={e => { e.stopPropagation(); toggleOne(inq.id); }}
-                  className="w-3.5 h-3.5 accent-green-800 rounded"
+                  className="w-3.5 h-3.5 accent-admin rounded"
                 />
               </div>
 
@@ -419,7 +419,7 @@ function DetailPanel({ inquiry }: { inquiry: Inquiry | null }) {
                 onChange={e => editMode ? setEditText(e.target.value) : setAnswerText(e.target.value)}
                 placeholder="답변을 입력하세요"
                 rows={6}
-                className="w-full text-[13px] border border-gray-200 rounded-xl p-3.5 focus:outline-none focus:ring-1 focus:ring-green-700 focus:border-green-700 resize-none placeholder-gray-300 leading-relaxed"
+                className="w-full text-[13px] border border-gray-200 rounded-xl p-3.5 focus:outline-none focus:ring-1 focus:ring-admin focus:border-admin resize-none placeholder-gray-300 leading-relaxed"
               />
               <div className="flex items-center justify-end gap-2 mt-2.5">
                 {editMode && (

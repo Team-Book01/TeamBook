@@ -23,7 +23,7 @@ function StatusBadge({ status }: { status: Status }) {
 
 function RoleBadge({ role }: { role: Role }) {
   return role === "ADMIN" ? (
-    <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-700 text-white tracking-wide">
+    <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-admin text-white tracking-wide">
       ADMIN
     </span>
   ) : (
@@ -94,7 +94,7 @@ function UserListPanel({
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="이름 / 아이디로 검색"
-            className="w-full pl-8 pr-3 py-1.5 text-[12px] border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition"
+            className="w-full pl-8 pr-3 py-1.5 text-[12px] border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-admin/20 focus:border-admin transition"
           />
         </div>
         <div className="flex items-center justify-between mt-2 px-0.5">
@@ -130,10 +130,10 @@ function UserListPanel({
               onClick={() => onSelect(u.id)}
               className={`w-full text-left flex items-center gap-2.5 px-3 py-2.5 border-b border-gray-50 transition-all duration-100 ${
                 isSelected
-                  ? "bg-emerald-50/70"
+                  ? "bg-admin-light"
                   : "hover:bg-gray-50"
               }`}
-              style={isSelected ? { borderLeft: "3px solid #2D9B56" } : { borderLeft: "3px solid transparent" }}
+              style={isSelected ? { borderLeft: "3px solid var(--color-admin-point)" } : { borderLeft: "3px solid transparent" }}
             >
               {/* Avatar */}
               <div
@@ -349,7 +349,7 @@ function ActionButtons({ user, onAdminModal }: { user: User; onAdminModal: () =>
   if (user.status === "SUSPENDED") {
     return (
       <div className="flex items-center gap-2">
-        <button className="px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition-colors shadow-sm">
+        <button className="px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-admin hover:bg-admin-hover text-white transition-colors shadow-sm">
           제한해제
         </button>
         <button className="px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-red-500 hover:bg-red-600 text-white transition-colors shadow-sm">
@@ -415,7 +415,7 @@ function TabSection({ activeTab, setActiveTab, user }: {
             onClick={() => setActiveTab(tab.id)}
             className={`flex items-center gap-1.5 px-4 py-2.5 text-[12px] font-medium whitespace-nowrap border-b-2 transition-all duration-150 ${
               activeTab === tab.id
-                ? "border-emerald-600 text-emerald-700 bg-emerald-50/60"
+                ? "border-admin text-admin bg-admin-light"
                 : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50"
             }`}
           >
@@ -455,7 +455,7 @@ function TabSection({ activeTab, setActiveTab, user }: {
             {SAMPLE_POSTS.map((p, i) => (
               <tr key={i} className="border-t border-gray-50 hover:bg-gray-50/80 transition-colors">
                 <td className="px-3 py-2.5">
-                  <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-700 text-[10px] font-semibold rounded">
+                  <span className="px-1.5 py-0.5 bg-admin-light text-admin text-[10px] font-semibold rounded">
                     {p.category}
                   </span>
                 </td>
