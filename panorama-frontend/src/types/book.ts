@@ -6,14 +6,14 @@
 // ── 검색 ────────────────────────────────────────────────────────────────────
 
 /** 검색 대상 필드 */
-export type BookSearchType = 'title' | 'author'
+//export type BookSearchType = 'title' | 'author'
 /** 정렬 기준 (sim: 정확도순, date: 최신순) */
 export type BookSort = 'sim' | 'date'
 
-/** GET /api/books/search 요청 쿼리 */
+/** GET /api/v1/books/search 요청 쿼리 */
 export interface BookSearchParams {
   keyword: string
-  searchType?: BookSearchType // 기본 title
+  //searchType?: BookSearchType // 기본 title
   sort?: BookSort // 기본 sim
   start?: number // 기본 1 (무한 스크롤: 1, 11, 21 …)
   display?: number // 기본 10
@@ -28,14 +28,17 @@ export interface BookItem {
   pubdate: string // yyyymmdd 형식 문자열
   image: string
   link: string
+  /** 네이버 판매가(숫자 문자열, 없으면 빈 문자열) */
+  discount?: string
   /** DB에 없는 책은 0 */
+  discription: string
   avgRating: number
   reviewCount: number
   bookmarkCount: number
   isBookmarked: boolean
 }
 
-/** GET /api/books/search 응답 */
+/** GET /api/v1/books/search 응답 */
 export interface BookSearchResponse {
   total: number
   start: number
@@ -45,7 +48,7 @@ export interface BookSearchResponse {
 
 // ── 상세 ────────────────────────────────────────────────────────────────────
 
-/** GET /api/books/{isbn} 응답 = 검색 item + description */
+/** GET /api/v1/books/{isbn} 응답 = 검색 item + description */
 export interface BookDetail extends BookItem {
   description: string
 }
@@ -53,7 +56,7 @@ export interface BookDetail extends BookItem {
 // ── 북마크 ──────────────────────────────────────────────────────────────────
 
 /**
- * POST /api/books/bookmark 요청 body.
+ * POST /api/v1/books/bookmark 요청 body.
  * 책이 DB에 없으면 이 정보로 생성(find-or-create).
  * ⚠️ userId 는 서버가 인증 토큰에서 추출한다 — body 에 절대 넣지 말 것.
  */
@@ -68,7 +71,7 @@ export interface BookmarkRequest {
   description?: string
 }
 
-/** POST /api/books/bookmark 응답 */
+/** POST /api/v1/books/bookmark 응답 */
 export interface BookmarkResponse {
   isBookmarked: boolean
   bookmarkCount: number
@@ -84,7 +87,7 @@ export interface Review {
   createdAt: string // ISO-8601 (예: 2026-07-01T12:00:00)
 }
 
-/** GET /api/books/{isbn}/reviews 응답 */
+/** GET /api/v1/books/{isbn}/reviews 응답 */
 export interface ReviewListResponse {
   total: number
   page: number
@@ -92,26 +95,26 @@ export interface ReviewListResponse {
   reviews: Review[]
 }
 
-/** POST /api/books/{isbn}/reviews 요청 body */
+/** POST /api/v1/books/{isbn}/reviews 요청 body */
 export interface CreateReviewRequest {
   rating: number // 필수, 0.5~5.0, 0.5 단위
   content?: string // 선택, 최대 500자
 }
 
-/** PUT /api/reviews/{reviewId} 요청 body */
+/** PUT /api/v1/reviews/{reviewId} 요청 body */
 export interface UpdateReviewRequest {
   rating: number
   content?: string
 }
 
-/** DELETE /api/reviews/{reviewId} 응답 */
+/** DELETE /api/v1/reviews/{reviewId} 응답 */
 export interface DeleteReviewResponse {
   deleted: boolean
 }
 
 // ── 소장 도서관 ──────────────────────────────────────────────────────────────
 
-/** GET /api/books/{isbn}/libraries 요청 쿼리 */
+/** GET /api/v1/books/{isbn}/libraries 요청 쿼리 */
 export interface LibraryParams {
   region: string // 서울 구 코드 (필수) — SEOUL_DISTRICTS 참고
   page?: number // 기본 1
@@ -129,7 +132,7 @@ export interface Library {
   loanAvailable: boolean | null
 }
 
-/** GET /api/books/{isbn}/libraries 응답 */
+/** GET /api/v1/books/{isbn}/libraries 응답 */
 export interface LibraryListResponse {
   total: number
   page: number

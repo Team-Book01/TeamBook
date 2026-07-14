@@ -26,7 +26,7 @@ import type {
   Review,
   ReviewListResponse,
   UpdateReviewRequest,
-} from '@/types'
+} from '@/types/book'
 
 // ── 상수: 서울시 구 지역코드 ─────────────────────────────────────────────────
 // 소장 도서관 조회(getLibraries)의 region 파라미터에 사용.
@@ -77,25 +77,25 @@ export const bookKeys = {
 //  API 함수 (얇게)
 // ═══════════════════════════════════════════════════════════════════════════
 
-/** GET /api/books/search — 도서 검색 */
+/** GET /api/v1/books/search — 도서 검색 */
 export async function searchBooks(params: BookSearchParams): Promise<BookSearchResponse> {
   const { data } = await client.get<BookSearchResponse>('/books/search', { params })
   return data
 }
 
-/** GET /api/books/{isbn} — 도서 상세 */
+/** GET /api/v1/books/{isbn} — 도서 상세 */
 export async function getBook(isbn: string): Promise<BookDetail> {
   const { data } = await client.get<BookDetail>(`/books/${isbn}`)
   return data
 }
 
-/** POST /api/books/bookmark — 북마크 토글 (로그인 필요) */
+/** POST /api/v1/books/bookmark — 북마크 토글 (로그인 필요) */
 export async function toggleBookmark(body: BookmarkRequest): Promise<BookmarkResponse> {
   const { data } = await client.post<BookmarkResponse>('/books/bookmark', body)
   return data
 }
 
-/** GET /api/books/{isbn}/reviews — 리뷰 목록 */
+/** GET /api/v1/books/{isbn}/reviews — 리뷰 목록 */
 export async function getReviews(
   isbn: string,
   page = 1,
@@ -107,7 +107,7 @@ export async function getReviews(
   return data
 }
 
-/** POST /api/books/{isbn}/reviews — 리뷰 작성 (로그인 필요) */
+/** POST /api/v1/books/{isbn}/reviews — 리뷰 작성 (로그인 필요) */
 export async function createReview(
   isbn: string,
   body: CreateReviewRequest,
@@ -116,7 +116,7 @@ export async function createReview(
   return data
 }
 
-/** PUT /api/reviews/{reviewId} — 리뷰 수정 (로그인 필요) */
+/** PUT /api/v1/reviews/{reviewId} — 리뷰 수정 (로그인 필요) */
 export async function updateReview(
   reviewId: number,
   body: UpdateReviewRequest,
@@ -125,13 +125,13 @@ export async function updateReview(
   return data
 }
 
-/** DELETE /api/reviews/{reviewId} — 리뷰 삭제 (로그인 필요) */
+/** DELETE /api/v1/reviews/{reviewId} — 리뷰 삭제 (로그인 필요) */
 export async function deleteReview(reviewId: number): Promise<DeleteReviewResponse> {
   const { data } = await client.delete<DeleteReviewResponse>(`/reviews/${reviewId}`)
   return data
 }
 
-/** GET /api/books/{isbn}/libraries — 소장 도서관 + 대출 가능 여부 */
+/** GET /api/v1/books/{isbn}/libraries — 소장 도서관 + 대출 가능 여부 */
 export async function getLibraries(
   isbn: string,
   params: LibraryParams,
