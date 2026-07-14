@@ -21,7 +21,7 @@ public class OAuthAttributes {
     public static OAuthAttributes of(String registrationId, Map<String, Object> attributes) {
         return switch (registrationId) {
             case "google" -> ofGoogle(attributes);
-            // case "naver" -> ofNaver(attributes);   // 나중에
+            case "naver" -> ofNaver(attributes);   // 나중에
             // case "kakao" -> ofKakao(attributes);
             default -> throw new BusinessException(ErrorCode.UNSUPPORTED_PROVIDER);
         };
@@ -33,4 +33,15 @@ public class OAuthAttributes {
                 (String) attributes.get("sub"),     // ★ 구글 고유 ID
                 (String) attributes.get("email"));
     }
+
+    private static OAuthAttributes ofNaver(Map<String, Object> attributes) {
+    @SuppressWarnings("unchecked")
+    Map<String, Object> response = (Map<String, Object>) attributes.get("response");
+    // response가 null이면 → OAuth2AuthenticationException으로 감싸 던지기
+    return new OAuthAttributes(
+            Provider.NAVER,
+            (String) response.get("id"),      // 구글의 sub 자리
+            (String) response.get("email")
+    );
+}
 }
