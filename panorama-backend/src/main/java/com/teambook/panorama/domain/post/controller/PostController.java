@@ -9,6 +9,7 @@ import com.teambook.panorama.domain.post.dto.PostRequestDto;
 import com.teambook.panorama.domain.post.dto.PostResponseDto;
 import com.teambook.panorama.domain.post.dto.PostSummaryResponseDto;
 import com.teambook.panorama.domain.post.service.PostService;
+import com.teambook.panorama.global.response.SliceResponse;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +19,6 @@ import java.net.URI;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.web.PageableDefault;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -62,9 +62,9 @@ public class PostController {
   }
 
   @GetMapping
-  public ResponseEntity<Slice<PostSummaryResponseDto>> findActivePosts(@PageableDefault(size = 10) Pageable pageable) {
+  public ResponseEntity<SliceResponse<PostSummaryResponseDto>> findActivePosts(@PageableDefault(size = 10) Pageable pageable) {
     Slice<PostSummaryResponseDto> postlists = postService.findActivePosts(pageable);
-      return new ResponseEntity<>(postlists, HttpStatus.OK);
+      return ResponseEntity.ok(SliceResponse.of(postlists));
   }
 
   @PutMapping("/{id}")    // Put 요청과 매핑함, 수정하려면 id값이 필요함
