@@ -79,7 +79,7 @@ function DetailPanel({ report, onClose }: { report: Report; onClose: () => void 
           <div className="mx-6 mb-5 rounded-xl border border-gray-100 bg-gray-50 p-4">
             <div className="flex items-center justify-between mb-2.5">
               <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">원본 콘텐츠</span>
-              <button className="flex items-center gap-1 text-[11px] text-[#1E4B3C] hover:underline font-medium">
+              <button className="flex items-center gap-1 text-[11px] text-admin hover:underline font-medium">
                 <ExternalLink size={10} /> 원본 이동
               </button>
             </div>
@@ -144,7 +144,7 @@ function DetailPanel({ report, onClose }: { report: Report; onClose: () => void 
                   <select
                     value={panelStatus}
                     onChange={(e) => setPanelStatus(e.target.value as ReportStatus)}
-                    className="w-full appearance-none text-xs border border-gray-200 rounded-xl px-3 py-2.5 bg-white text-gray-700 pr-8 focus:outline-none focus:ring-2 focus:ring-[#1E4B3C]/20 focus:border-[#1E4B3C]"
+                    className="w-full appearance-none text-xs border border-gray-200 rounded-xl px-3 py-2.5 bg-white text-gray-700 pr-8 focus:outline-none focus:ring-2 focus:ring-admin/20 focus:border-admin"
                   >
                     <option value="PENDING">PENDING — 대기</option>
                     <option value="REVIEWING">REVIEWING — 검토중</option>
@@ -161,7 +161,7 @@ function DetailPanel({ report, onClose }: { report: Report; onClose: () => void 
                   onChange={(e) => setNote(e.target.value)}
                   placeholder="처리 사유를 입력하세요..."
                   rows={3}
-                  className="w-full text-xs border border-gray-200 rounded-xl px-3 py-2.5 bg-white text-gray-700 resize-none focus:outline-none focus:ring-2 focus:ring-[#1E4B3C]/20 focus:border-[#1E4B3C] placeholder-gray-300"
+                  className="w-full text-xs border border-gray-200 rounded-xl px-3 py-2.5 bg-white text-gray-700 resize-none focus:outline-none focus:ring-2 focus:ring-admin/20 focus:border-admin placeholder-gray-300"
                 />
               </div>
               {/* Action buttons */}
@@ -176,7 +176,7 @@ function DetailPanel({ report, onClose }: { report: Report; onClose: () => void 
                   <ShieldAlert size={12} /> 작성자 제재
                 </button>
               </div>
-              <button className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-white text-xs font-semibold transition-colors hover:opacity-90" style={{ background: "#1E4B3C" }}>
+              <button className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-white text-xs font-semibold transition-colors hover:opacity-90" style={{ background: "var(--color-admin)" }}>
                 <Save size={13} /> 처리 완료 저장
               </button>
             </div>
@@ -189,7 +189,7 @@ function DetailPanel({ report, onClose }: { report: Report; onClose: () => void 
               {log.map((entry, i) => (
                 <div key={i} className="flex gap-3">
                   <div className="flex flex-col items-center">
-                    <div className="w-2 h-2 rounded-full mt-1 flex-shrink-0" style={{ background: "#1E4B3C" }} />
+                    <div className="w-2 h-2 rounded-full mt-1 flex-shrink-0" style={{ background: "var(--color-admin)" }} />
                     {i < log.length - 1 && <div className="w-px flex-1 bg-gray-100 my-1" />}
                   </div>
                   <div className="pb-4">
@@ -264,7 +264,7 @@ export default function AdminReportsPage() {
                 placeholder="신고 내용, 신고자 닉네임 검색..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-8 pr-3 py-2 text-xs border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:border-[#1E4B3C] placeholder-gray-300 text-gray-700"
+                className="w-full pl-8 pr-3 py-2 text-xs border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:ring-2 focus:border-admin placeholder-gray-300 text-gray-700"
                 style={{ "--tw-ring-color": "rgba(30,75,60,0.2)" } as React.CSSProperties}
               />
             </div>
@@ -306,7 +306,7 @@ export default function AdminReportsPage() {
 
             <button
               className="px-5 py-2 rounded-xl text-xs font-semibold text-white transition-opacity hover:opacity-90 flex-shrink-0"
-              style={{ background: "#1E4B3C" }}
+              style={{ background: "var(--color-admin)" }}
             >
               검색
             </button>
@@ -318,7 +318,7 @@ export default function AdminReportsPage() {
           {/* Table header */}
           <div className="px-6 py-4 border-b border-gray-50 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Flag size={13} className="text-[#1E4B3C]" />
+              <Flag size={13} className="text-admin" />
               <span className="text-sm font-semibold text-gray-700">신고 목록</span>
               <span className="text-[11px] text-gray-400 ml-1">총 {REPORTS.length}건</span>
             </div>
@@ -333,7 +333,7 @@ export default function AdminReportsPage() {
               <thead>
                 <tr style={{ background: "#F9F9F9" }}>
                   <th className="pl-5 pr-3 py-3 text-left w-8">
-                    <input type="checkbox" checked={allChecked} onChange={toggleAll} className="rounded accent-[#1E4B3C] cursor-pointer" />
+                    <input type="checkbox" checked={allChecked} onChange={toggleAll} className="rounded accent-admin cursor-pointer" />
                   </th>
                   {["ID", "대상 타입", "신고 대상", "사유", "신고 상세", "신고자", "상태", "담당자", "신고일시", ""].map((h) => (
                     <th key={h} className="px-3 py-3 text-left text-[10px] font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap">
@@ -364,7 +364,7 @@ export default function AdminReportsPage() {
                           type="checkbox"
                           checked={checked.has(r.id)}
                           onChange={() => toggleOne(r.id)}
-                          className="rounded accent-[#1E4B3C] cursor-pointer"
+                          className="rounded accent-admin cursor-pointer"
                         />
                       </td>
                       {/* ID */}
@@ -386,7 +386,7 @@ export default function AdminReportsPage() {
                           )}
                         </div>
                         <button
-                          className="mt-1 text-[9px] text-[#1E4B3C] hover:underline flex items-center gap-0.5 font-medium"
+                          className="mt-1 text-[9px] text-admin hover:underline flex items-center gap-0.5 font-medium"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <ExternalLink size={8} /> 원본 이동
@@ -462,7 +462,7 @@ export default function AdminReportsPage() {
                   onClick={() => setPage(p)}
                   className="w-8 h-8 text-xs font-semibold rounded-lg transition-colors"
                   style={page === p
-                    ? { background: "#1E4B3C", color: "white" }
+                    ? { background: "var(--color-admin)", color: "white" }
                     : { border: "1px solid #e5e7eb", color: "#6b7280" }
                   }
                 >

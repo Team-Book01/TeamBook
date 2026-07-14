@@ -20,31 +20,31 @@ export default function AdminLayout() {
   })
 
   return (
-    <div className="min-h-screen flex" style={{ backgroundColor: '#f7f8f6' }}>
+    <div className="min-h-screen flex bg-admin-bg">
       <AdminSidebar />
       <div className="flex-1 min-w-0 flex flex-col">
         {/* 상단 페이지 헤더 */}
-        <header className="flex items-center justify-between px-7 h-[60px] bg-white border-b border-[#eaeaea] shrink-0 sticky top-0 z-40">
+        <header className="flex items-center justify-between px-7 h-[60px] bg-white border-b border-border shrink-0 sticky top-0 z-40">
           <div className="flex items-baseline gap-2">
-            <span className="text-[#1e4a38] font-bold text-[16px]">{title}</span>
-            <span className="text-[#6b7e75] text-[12px]">· {today}</span>
+            <span className="text-admin font-bold text-[16px]">{title}</span>
+            <span className="text-muted-foreground text-[12px]">· {today}</span>
           </div>
           <div className="flex items-center gap-4">
             <button
               type="button"
               aria-label="알림"
-              className="relative p-2 rounded-lg hover:bg-[#f0f4f2] transition-colors"
+              className="relative p-2 rounded-lg hover:bg-admin-light transition-colors"
             >
-              <Bell size={18} className="text-[#4a6b5d]" />
+              <Bell size={18} className="text-admin-point" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
             </button>
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-full bg-[#1e4a38] flex items-center justify-center text-white text-[12px] font-bold">
+              <div className="w-8 h-8 rounded-full bg-admin flex items-center justify-center text-white text-[12px] font-bold">
                 관
               </div>
               <div>
-                <p className="text-[12px] font-semibold text-[#1a2e25] leading-tight">김관리자</p>
-                <p className="text-[10px] text-[#6b7e75]">슈퍼 어드민</p>
+                <p className="text-[12px] font-semibold text-foreground leading-tight">김관리자</p>
+                <p className="text-[10px] text-muted-foreground">슈퍼 어드민</p>
               </div>
             </div>
           </div>

@@ -31,7 +31,7 @@ import {
 // ── Shared card wrapper ─────────────────────────────────────────────────────
 function Card({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={`bg-white border border-[#eaeaea] rounded-xl shadow-sm ${className}`}>
+    <div className={`bg-white border border-border rounded-xl shadow-sm ${className}`}>
       {children}
     </div>
   )
@@ -40,7 +40,7 @@ function Card({ children, className = '' }: { children: React.ReactNode; classNa
 function CardHeader({ title, right }: { title: string; right?: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#f0f0f0]">
-      <h2 className="text-[13px] font-bold text-[#1a2e25]">{title}</h2>
+      <h2 className="text-[13px] font-bold text-foreground">{title}</h2>
       {right}
     </div>
   )
@@ -50,8 +50,8 @@ function CardHeader({ title, right }: { title: string; right?: React.ReactNode }
 function ChartTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null
   return (
-    <div className="bg-white border border-[#eaeaea] rounded-lg shadow-md px-3 py-2 text-[11px]">
-      <p className="font-bold text-[#1a2e25] mb-1">{label}</p>
+    <div className="bg-white border border-border rounded-lg shadow-md px-3 py-2 text-[11px]">
+      <p className="font-bold text-foreground mb-1">{label}</p>
       {payload.map((p: any) => (
         <p key={p.name} style={{ color: p.color }}>
           {p.name}: <span className="font-semibold">{p.value.toLocaleString()}</span>
@@ -85,20 +85,20 @@ export default function AdminDashboardPage() {
               <Icon size={18} className={color} />
             </div>
             <div className="min-w-0">
-              <p className="text-[11px] text-[#6b7e75] font-medium truncate">{label}</p>
+              <p className="text-[11px] text-muted-foreground font-medium truncate">{label}</p>
               <div className="flex items-baseline gap-0.5 mt-0.5">
                 <span
                   className={`text-[22px] font-bold leading-tight ${
-                    urgent ? 'text-[#d9534f]' : warn ? 'text-amber-600' : 'text-[#1a2e25]'
+                    urgent ? 'text-[#d9534f]' : warn ? 'text-amber-600' : 'text-foreground'
                   }`}
                 >
                   {value}
                 </span>
-                <span className="text-[11px] text-[#6b7e75] ml-0.5">{sub}</span>
+                <span className="text-[11px] text-muted-foreground ml-0.5">{sub}</span>
               </div>
               <p
                 className={`text-[10px] mt-0.5 font-medium flex items-center gap-0.5 ${
-                  urgent ? 'text-red-500' : warn ? 'text-amber-500' : 'text-[#2e7d6b]'
+                  urgent ? 'text-red-500' : warn ? 'text-amber-500' : 'text-admin-point'
                 }`}
               >
                 {urgent || warn ? <AlertTriangle size={9} /> : <TrendingUp size={9} />}
@@ -116,7 +116,7 @@ export default function AdminDashboardPage() {
           <CardHeader
             title="최근 7일 방문자 추이"
             right={
-              <span className="text-[11px] text-[#6b7e75] bg-[#f0f4f2] px-2.5 py-1 rounded-lg font-medium">
+              <span className="text-[11px] text-muted-foreground bg-admin-light px-2.5 py-1 rounded-lg font-medium">
                 최근 7일
               </span>
             }
@@ -157,7 +157,7 @@ export default function AdminDashboardPage() {
           <CardHeader
             title="콘텐츠 등록 추이"
             right={
-              <div className="flex items-center gap-3 text-[10px] text-[#6b7e75]">
+              <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <span className="w-2 h-2 rounded-sm inline-block bg-[#6b9bd1]" />
                   게시글
@@ -224,7 +224,7 @@ export default function AdminDashboardPage() {
                       key={tab}
                       onClick={() => setActiveTab(tab)}
                       className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-colors flex items-center gap-1.5 ${
-                        isActive ? 'bg-[#1e4a38] text-white' : 'text-[#6b7e75] hover:bg-[#f0f4f2]'
+                        isActive ? 'bg-admin text-white' : 'text-muted-foreground hover:bg-admin-light'
                       }`}
                     >
                       {label}
@@ -245,7 +245,7 @@ export default function AdminDashboardPage() {
             {['유형', '내용 요약', '대상', '시간'].map((h) => (
               <span
                 key={h}
-                className="text-[10px] font-semibold text-[#6b7e75] uppercase tracking-wide"
+                className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide"
               >
                 {h}
               </span>
@@ -266,22 +266,22 @@ export default function AdminDashboardPage() {
                     {item.type}
                   </span>
                 </div>
-                <p className="text-[12px] text-[#1a2e25] font-medium truncate pr-4 flex items-center">
+                <p className="text-[12px] text-foreground font-medium truncate pr-4 flex items-center">
                   {item.content}
                 </p>
                 <div className="flex flex-col justify-center min-w-0 pr-2">
-                  <p className="text-[11px] text-[#4a6b5d] truncate">{item.target}</p>
+                  <p className="text-[11px] text-muted-foreground truncate">{item.target}</p>
                   {item.reporter && (
-                    <p className="text-[10px] text-[#6b7e75] truncate">신고자: {item.reporter}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">신고자: {item.reporter}</p>
                   )}
                 </div>
-                <span className="text-[11px] text-[#6b7e75] flex items-center">{item.time}</span>
+                <span className="text-[11px] text-muted-foreground flex items-center">{item.time}</span>
               </div>
             ))}
           </div>
 
           <div className="px-5 py-3 border-t border-[#f0f0f0]">
-            <button className="flex items-center gap-1 text-[12px] text-[#2e7d6b] font-semibold hover:text-[#1e4a38] transition-colors">
+            <button className="flex items-center gap-1 text-[12px] text-admin-point font-semibold hover:text-admin transition-colors">
               전체 목록 보기
               <ChevronRight size={13} />
             </button>
@@ -292,7 +292,7 @@ export default function AdminDashboardPage() {
         <Card className="w-[280px] min-w-[280px]">
           <CardHeader
             title="도서관 데이터 동기화"
-            right={<CheckCircle2 size={15} className="text-[#2e7d6b]" />}
+            right={<CheckCircle2 size={15} className="text-admin-point" />}
           />
           <div className="px-5 py-4 space-y-2.5">
             {[
@@ -301,20 +301,20 @@ export default function AdminDashboardPage() {
               ['신규 도서 (이번 주)', '+234건'],
             ].map(([k, v]) => (
               <div key={k} className="flex justify-between items-center">
-                <span className="text-[11px] text-[#6b7e75]">{k}</span>
-                <span className="text-[11px] font-semibold text-[#1a2e25]">{v}</span>
+                <span className="text-[11px] text-muted-foreground">{k}</span>
+                <span className="text-[11px] font-semibold text-foreground">{v}</span>
               </div>
             ))}
             <div className="flex justify-between items-center">
-              <span className="text-[11px] text-[#6b7e75]">동기화 상태</span>
-              <span className="flex items-center gap-1 text-[11px] font-semibold text-[#2e7d6b]">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#2e7d6b] inline-block" />
+              <span className="text-[11px] text-muted-foreground">동기화 상태</span>
+              <span className="flex items-center gap-1 text-[11px] font-semibold text-admin-point">
+                <span className="w-1.5 h-1.5 rounded-full bg-admin-point inline-block" />
                 정상
               </span>
             </div>
           </div>
           <div className="px-5 pb-5">
-            <button className="w-full py-2.5 bg-[#1e4a38] text-white text-[12px] font-semibold rounded-lg hover:bg-[#17382b] transition-colors flex items-center justify-center gap-2">
+            <button className="w-full py-2.5 bg-admin text-white text-[12px] font-semibold rounded-lg hover:bg-admin-hover transition-colors flex items-center justify-center gap-2">
               <RefreshCw size={13} />
               지금 동기화
             </button>
@@ -329,7 +329,7 @@ export default function AdminDashboardPage() {
           <CardHeader
             title="최근 콘텐츠"
             right={
-              <button className="flex items-center gap-1 text-[11px] text-[#2e7d6b] font-semibold hover:text-[#1e4a38] transition-colors">
+              <button className="flex items-center gap-1 text-[11px] text-admin-point font-semibold hover:text-admin transition-colors">
                 더보기 <ChevronRight size={12} />
               </button>
             }
@@ -345,11 +345,11 @@ export default function AdminDashboardPage() {
                 >
                   {item.typeLabel}
                 </span>
-                <p className="flex-1 text-[12px] font-medium text-[#1a2e25] truncate">
+                <p className="flex-1 text-[12px] font-medium text-foreground truncate">
                   {item.title}
                 </p>
-                <span className="text-[11px] text-[#4a6b5d] shrink-0">{item.author}</span>
-                <span className="text-[10px] text-[#6b7e75] shrink-0 w-[56px] text-right">
+                <span className="text-[11px] text-muted-foreground shrink-0">{item.author}</span>
+                <span className="text-[10px] text-muted-foreground shrink-0 w-[56px] text-right">
                   {item.time}
                 </span>
               </div>
@@ -362,7 +362,7 @@ export default function AdminDashboardPage() {
           <CardHeader
             title="최근 가입 회원"
             right={
-              <button className="flex items-center gap-1 text-[11px] text-[#2e7d6b] font-semibold hover:text-[#1e4a38] transition-colors">
+              <button className="flex items-center gap-1 text-[11px] text-admin-point font-semibold hover:text-admin transition-colors">
                 더보기 <ChevronRight size={12} />
               </button>
             }
@@ -380,10 +380,10 @@ export default function AdminDashboardPage() {
                   {avatar}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[12px] font-semibold text-[#1a2e25] truncate">{name}</p>
-                  <p className="text-[10px] text-[#6b7e75] truncate">{email}</p>
+                  <p className="text-[12px] font-semibold text-foreground truncate">{name}</p>
+                  <p className="text-[10px] text-muted-foreground truncate">{email}</p>
                 </div>
-                <span className="text-[10px] text-[#6b7e75] shrink-0">{time}</span>
+                <span className="text-[10px] text-muted-foreground shrink-0">{time}</span>
               </div>
             ))}
           </div>

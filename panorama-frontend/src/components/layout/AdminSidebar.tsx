@@ -7,7 +7,6 @@ import {
   Flag,
   MessageSquare,
   Megaphone,
-  RefreshCw,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -34,11 +33,9 @@ export const ADMIN_NAV: AdminNavItem[] = [
   { label: '대시보드', to: '/admin', icon: LayoutDashboard, end: true },
   { label: '사용자 관리', to: '/admin/users', icon: Users },
   { label: '콘텐츠 관리', to: '/admin/content', icon: FileText },
-  { label: '독서 모임 관리', to: '/admin/clubs', icon: BookOpen },
   { label: '신고 관리', to: '/admin/reports', icon: Flag, badge: 7, badgeColor: '#ef4444' },
   { label: '문의 관리', to: '/admin/inquiries', icon: MessageSquare, badge: 4, badgeColor: '#f59e0b' },
   { label: '공지사항 관리', to: '/admin/notices', icon: Megaphone },
-  { label: '도서관 데이터 동기화', to: '/admin/sync', icon: RefreshCw },
 ]
 
 export default function AdminSidebar() {
@@ -47,10 +44,7 @@ export default function AdminSidebar() {
     end ? location.pathname === to : location.pathname.startsWith(to)
 
   return (
-    <aside
-      className="w-[240px] min-w-[240px] flex flex-col sticky top-0 h-screen text-white"
-      style={{ backgroundColor: '#1E4A38' }}
-    >
+    <aside className="w-[240px] min-w-[240px] flex flex-col sticky top-0 h-screen text-white bg-admin">
       {/* 로고 */}
       <div className="px-6 py-5 border-b border-white/10">
         <div className="flex items-center gap-2">

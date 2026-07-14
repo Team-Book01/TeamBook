@@ -72,6 +72,6 @@ export interface StatCard {
 export const statCards: StatCard[] = [
   { label: "처리 대기",  sub: "즉시 처리 필요",  val: 7,   icon: AlertTriangle, iconBg: "bg-red-50",    iconC: "text-red-400",    valC: "text-red-600",  accent: true },
   { label: "검토중",     sub: "담당자 검토 중",   val: 3,   icon: Clock,         iconBg: "bg-yellow-50", iconC: "text-yellow-500", valC: "text-yellow-600", accent: false },
-  { label: "처리 완료", sub: "이번 달 누적",     val: 128, icon: CheckCircle,   iconBg: "bg-green-50",  iconC: "text-green-500",  valC: "text-[#1E4B3C]", accent: false },
+  { label: "처리 완료", sub: "이번 달 누적",     val: 128, icon: CheckCircle,   iconBg: "bg-green-50",  iconC: "text-green-500",  valC: "text-admin", accent: false },
   { label: "반려",       sub: "증거 불충분 등",   val: 21,  icon: XCircle,       iconBg: "bg-gray-100",  iconC: "text-gray-400",   valC: "text-gray-500", accent: false },
 ];
