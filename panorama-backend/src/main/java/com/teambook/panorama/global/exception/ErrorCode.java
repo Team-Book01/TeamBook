@@ -29,6 +29,8 @@ public enum ErrorCode {
   ACCESS_DENIED(HttpStatus.FORBIDDEN, "A005", "접근권한이 없습니다,"),
   REFRESH_TOKEN_MISSING(HttpStatus.UNAUTHORIZED, "A006", "쿠키에 리프레시 토큰이 없습니다."),
   UNSUPPORTED_PROVIDER(HttpStatus.BAD_REQUEST, "A007", "지원하지 않은 소셜로그인 입니다."),
+  INVALID_RESET_TOKEN(HttpStatus.BAD_REQUEST, "A008", "유효하지 않거나 만료된 비밀번호 재설정 토큰입니다."),
+  PASSWORD_MISMATCH(HttpStatus.UNAUTHORIZED, "A009", "현재 비밀번호가 일치하지 않습니다."),
 
   // report (도메인 접두어 R)
   REPORT_NOT_FOUND(HttpStatus.NOT_FOUND, "R001", "존재하지 않는 신고입니다."),
@@ -53,7 +55,6 @@ public enum ErrorCode {
 
   // notice (도메인 접두어 N)
   NOTICE_NOT_FOUND(HttpStatus.NOT_FOUND, "N001", "존재하지 않는 공지입니다.");
-    
 
   private final HttpStatus status;
   private final String code;
