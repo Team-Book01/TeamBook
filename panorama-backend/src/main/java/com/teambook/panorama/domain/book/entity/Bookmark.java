@@ -11,6 +11,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -32,6 +33,7 @@ public class Bookmark extends BaseTimeEntity {
   @JoinColumn(name = "book_id", nullable = false)
   private Book book;
 
+  @Builder
   public Bookmark(Long userId, Book book) {
     this.userId = userId;
     this.book = book;

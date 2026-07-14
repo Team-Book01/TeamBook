@@ -15,11 +15,11 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequiredArgsConstructor
 
-@RequestMapping("/api/books")
+@RequestMapping("/api/v1/books")
 public class BookSearchController {
   private final BookSearchService bookSearchService;
 
-@Operation
+@Operation(summary = "책 검색")
 @GetMapping("/search")
 public ResponseEntity<BookSearchResponse> getBooks(
   @RequestParam(value = "keyword") String keyword,
