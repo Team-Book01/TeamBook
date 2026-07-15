@@ -26,10 +26,11 @@ public class SignUpDto {
             )
             String password,
 
-            @Schema(description = "닉네임 (1~10자, 공백 불가)", example = "테스터")
+            @Schema(description = "닉네임 (1~10자, 한글·영문·숫자·밑줄(_)만)", example = "테스터")
             @NotBlank
             @Size(min = 1, max = 10)
-            @Pattern(regexp = "^\\S+$", message = "공백을 포함할 수 없습니다")
+            @Pattern(regexp = "^[가-힣a-zA-Z0-9_]+$",
+                message = "한글, 영문, 숫자, 밑줄(_)만 사용할 수 있습니다")
             String nickname,
 
             @Schema(description = "이메일", example = "test@example.com")
