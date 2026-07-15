@@ -20,7 +20,7 @@ import { Separator } from '@/components/ui/Separator'
 import { Switch } from '@/components/ui/Switch'
 import { checkExists, logout as logoutApi } from '@/api/auth'
 import { changePassword, updateNickname, withdraw } from '@/api/user'
-import { getErrorMessage } from '@/api/client'
+import { getErrorCode, getErrorMessage } from '@/api/client'
 import { useAuthStore } from '@/store/authStore'
 import { toast } from '@/lib/toast'
 import { isValidNickname, isValidPassword, NICKNAME_MAX_LENGTH } from '@/lib/validation'
@@ -90,7 +90,9 @@ export default function SettingsPage() {
       setNickStatus('idle')
       toast.success('닉네임이 변경되었습니다.')
     } catch (err) {
-      setNickStatus('taken') // 409(U003) 등
+      // U003(닉네임 중복)일 때만 '중복' 안내. 네트워크/500 등은 일반 에러로 구분한다.
+      if (getErrorCode(err) === 'U003') setNickStatus('taken')
+      else setNickStatus('idle')
       toast.error(getErrorMessage(err, '닉네임 변경에 실패했어요.'))
     } finally {
       setSavingProfile(false)
