@@ -12,7 +12,6 @@ import {
   ChevronRight,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
-import { Badge } from '@/components/ui/Badge'
 import { useAuthStore } from '@/store/authStore'
 
 /**
@@ -103,10 +102,6 @@ export default function MyPage() {
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-semibold tracking-tight">{nickname}</h1>
-              <Badge variant="brand" className="gap-1">
-                <BookOpen className="size-3" />
-                독서가
-              </Badge>
             </div>
             <p className="mt-1 text-sm text-muted-foreground">{handle} · 책방 회원</p>
             <Button variant="outline" size="sm" className="mt-4" onClick={() => navigate('/settings')}>
