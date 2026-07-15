@@ -3,6 +3,7 @@ package com.teambook.panorama.domain.user.dto;
 import com.teambook.panorama.domain.user.entity.User;
 import com.teambook.panorama.domain.user.enums.Provider;
 import com.teambook.panorama.domain.user.enums.Role;
+import com.teambook.panorama.global.constant.ValidationPattern;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
@@ -49,9 +50,10 @@ public class UserDto {
     @Schema(name = "UserNicknameRequest", description = "닉네임 변경 요청")
     public record UpdateNicknameRequest(
         @NotBlank
-        @Size(min = 1, max = 10, message = "닉네임은 1~10자여야 합니다.")
-        @Pattern(regexp = "^[가-힣a-zA-Z0-9_]+$",
-            message = "한글, 영문, 숫자, 밑줄(_)만 사용할 수 있습니다")
+        @Size(min = ValidationPattern.NICKNAME_MIN, max = ValidationPattern.NICKNAME_MAX,
+            message = "닉네임은 1~10자여야 합니다.")
+        @Pattern(regexp = ValidationPattern.NICKNAME,
+            message = ValidationPattern.NICKNAME_MESSAGE)
         String nickname) {
 
         }
