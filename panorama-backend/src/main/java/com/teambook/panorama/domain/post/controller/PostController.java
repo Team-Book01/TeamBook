@@ -9,6 +9,7 @@ import com.teambook.panorama.domain.post.dto.PostRequestDto;
 import com.teambook.panorama.domain.post.dto.PostResponseDto;
 import com.teambook.panorama.domain.post.dto.PostSummaryResponseDto;
 import com.teambook.panorama.domain.post.service.PostService;
+import com.teambook.panorama.global.response.SliceResponse;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +19,6 @@ import java.net.URI;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.web.PageableDefault;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -31,7 +31,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 
 
 @RestController    // @Controller + @ResponseBody, 컨트롤러에 붙여야 하는 어노테이션인 @Controller과 데이터를 반환하기 위한 @ResponseBody의 기능을 합침
-@RequestMapping("/api/posts")    // 이 클래스가 담당하는 기본 주소(/api/posts)에 매핑함
+@RequestMapping("/api/v1/posts")    // 이 클래스가 담당하는 기본 주소(/api/posts)에 매핑함
 @RequiredArgsConstructor    // final이나 @NonNull이 붙은 필드를 파라미터로 받는 생성자를 자동 생성
 public class PostController {
   private final PostService postService;    // 재할당을 막아 불변성을 보장하고, @RequiredArgsConstructor가 생성자 주입 대상으로 삼도록 final 사용
@@ -62,9 +62,9 @@ public class PostController {
   }
 
   @GetMapping
-  public ResponseEntity<Slice<PostSummaryResponseDto>> findActivePosts(@PageableDefault(size = 10) Pageable pageable) {
+  public ResponseEntity<SliceResponse<PostSummaryResponseDto>> findActivePosts(@PageableDefault(size = 10) Pageable pageable) {
     Slice<PostSummaryResponseDto> postlists = postService.findActivePosts(pageable);
-      return new ResponseEntity<>(postlists, HttpStatus.OK);
+      return ResponseEntity.ok(SliceResponse.of(postlists));
   }
 
   @PutMapping("/{id}")    // Put 요청과 매핑함, 수정하려면 id값이 필요함
