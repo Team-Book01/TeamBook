@@ -1,5 +1,8 @@
 import type { ReactNode } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { startSocialLogin } from '@/lib/oauth'
+import { getRecentProvider } from '@/lib/recentLogin'
+import { savePendingRedirect } from '@/lib/authRedirect'
 import { toast } from '@/lib/toast'
 
 type Provider = 'google' | 'kakao' | 'naver'
@@ -66,9 +69,14 @@ const providers: {
  */
 export function SocialButtons({ mode }: { mode: 'login' | 'signup' }) {
   const action = mode === 'login' ? '로그인' : '회원가입'
+  const [params] = useSearchParams()
+  // 최근 로그인 수단 (재방문 강조용). 로그인 화면에서만 표시. 저장값은 대문자(GOOGLE 등).
+  const recent = mode === 'login' ? getRecentProvider() : null
 
   function handleClick(id: Provider, label: string) {
     if (id === 'google' || id === 'naver') {
+      // 외부 왕복으로 URL 쿼리가 소실되므로, 복귀 경로를 세션에 저장해두고 콜백에서 회수
+      savePendingRedirect(params.get('redirect'))
       startSocialLogin(id)
     } else {
       toast.info(`${label.replace('로 계속하기', '')} ${action}은 준비 중이에요.`)
@@ -77,17 +85,28 @@ export function SocialButtons({ mode }: { mode: 'login' | 'signup' }) {
 
   return (
     <div className="flex flex-col gap-3">
-      {providers.map((p) => (
-        <button
-          key={p.id}
-          type="button"
-          onClick={() => handleClick(p.id, p.label)}
-          className={`inline-flex h-11 w-full items-center justify-center gap-3 rounded-lg px-4 text-sm font-semibold transition-all ${p.className}`}
-        >
-          {p.icon}
-          <span>{p.label}</span>
-        </button>
-      ))}
+      {providers.map((p) => {
+        const isRecent = recent === p.id.toUpperCase()
+        return (
+          <button
+            key={p.id}
+            type="button"
+            onClick={() => handleClick(p.id, p.label)}
+            aria-label={isRecent ? `${p.label} (최근 사용)` : p.label}
+            className={`relative inline-flex h-11 w-full items-center justify-center gap-3 rounded-lg px-4 text-sm font-semibold transition-all ${p.className} ${
+              isRecent ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''
+            }`}
+          >
+            {p.icon}
+            <span>{p.label}</span>
+            {isRecent && (
+              <span className="absolute -top-2 right-3 rounded-full bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground shadow">
+                최근 사용
+              </span>
+            )}
+          </button>
+        )
+      })}
     </div>
   )
 }

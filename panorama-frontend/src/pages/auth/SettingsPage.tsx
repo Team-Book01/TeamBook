@@ -31,7 +31,10 @@ import { toast } from '@/lib/toast'
  * - 계정 삭제: 비밀번호 입력 후 DELETE /users/me
  */
 
-type NickStatus = 'idle' | 'checking' | 'available' | 'taken'
+type NickStatus = 'idle' | 'checking' | 'available' | 'taken' | 'invalid'
+
+// 닉네임 허용: 한글·영문·숫자·밑줄(_), 1~10자 (백엔드 규칙과 일치)
+const NICKNAME_RE = /^[가-힣a-zA-Z0-9_]{1,10}$/
 
 export default function SettingsPage() {
   const navigate = useNavigate()
@@ -56,6 +59,10 @@ export default function SettingsPage() {
     const trimmed = nickname.trim()
     if (trimmed === '' || trimmed === currentNickname) {
       setNickStatus('idle')
+      return
+    }
+    if (!NICKNAME_RE.test(trimmed)) {
+      setNickStatus('invalid') // 형식 위반 → 중복확인 API 호출 안 함
       return
     }
     setNickStatus('checking')
@@ -158,6 +165,11 @@ export default function SettingsPage() {
 
   const avatarInitial = (user?.nickname ?? '책').slice(0, 1)
 
+  // 닉네임 옆 읽기전용 필드: 로컬 계정은 아이디(login_id), 소셜 계정은 provider(영문 대문자)
+  const isLocalAccount = user?.provider === 'LOCAL'
+  const accountFieldLabel = isLocalAccount ? '아이디' : '소셜'
+  const accountFieldValue = isLocalAccount ? (user?.loginId ?? '') : (user?.provider ?? '')
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -209,8 +221,9 @@ export default function SettingsPage() {
           </div>
 
           <form className="mt-6 flex flex-col gap-4" onSubmit={handleProfileSave} noValidate>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="nickname">닉네임</Label>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="nickname">닉네임</Label>
               <Input
                 id="nickname"
                 name="nickname"
@@ -238,6 +251,17 @@ export default function SettingsPage() {
                     중복된 닉네임입니다
                   </span>
                 )}
+                {nickStatus === 'invalid' && (
+                  <span className="flex items-center gap-1 text-destructive">
+                    <XCircle className="size-3" />
+                    한글·영문·숫자·밑줄(_)만, 1~10자
+                  </span>
+                )}
+              </div>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="account">{accountFieldLabel}</Label>
+                <Input id="account" value={accountFieldValue} disabled />
               </div>
             </div>
             <div className="flex justify-end">
