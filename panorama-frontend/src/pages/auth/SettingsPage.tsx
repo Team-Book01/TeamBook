@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
-  ArrowLeft,
+  BookOpen,
   LogOut,
   User,
   Lock,
@@ -175,12 +175,11 @@ export default function SettingsPage() {
       {/* Header */}
       <header className="border-b border-border bg-card/60 backdrop-blur">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-4">
-          <Link
-            to="/mypage"
-            className="flex items-center gap-2 font-display text-xl font-semibold tracking-tight"
-          >
-            <ArrowLeft className="size-5" />
-            책방<span className="text-accent">.</span>
+          <Link to="/" className="flex items-center gap-2">
+            <BookOpen size={19} className="text-brand" />
+            <span className="text-brand font-bold text-[17px] tracking-tight whitespace-nowrap">
+              파노라마북스
+            </span>
           </Link>
           <Button variant="ghost" size="sm" onClick={handleLogout}>
             <LogOut className="size-4" />
