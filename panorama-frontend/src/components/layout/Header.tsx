@@ -33,6 +33,9 @@ export default function Header() {
   const [focused, setFocused] = useState(false)
   const isHome = location.pathname === '/'
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  // 부팅 시 세션 복원(reissue)이 끝났는지. false 인 동안은 로그인/마이페이지 판단을 보류해
+  // 새로고침 직후 "로그인" → "마이페이지" 로 바뀌는 깜빡임을 막는다. (RequireAuth 와 동일한 기준)
+  const authReady = useAuthStore((s) => s.authReady)
   const storeLogout = useAuthStore((s) => s.logout)
 
   // 현재 경로 기준 활성 메뉴 판정 ('/' 는 정확히 일치, 나머지는 prefix)
@@ -120,31 +123,33 @@ export default function Header() {
             <Bell size={19} className="text-[#555]" />
             <span className="absolute top-[7px] right-[7px] w-[7px] h-[7px] bg-red-500 rounded-full border-[1.5px] border-white" />
           </button>
-          {isAuthenticated ? (
-            <>
+          {/* 세션 복원 전(!authReady)에는 렌더를 보류해 잘못된 버튼이 잠깐 보이는 깜빡임을 막는다 */}
+          {authReady &&
+            (isAuthenticated ? (
+              <>
+                <Link
+                  to="/mypage"
+                  className="flex items-center gap-1.5 text-[13px] font-semibold text-white bg-brand hover:bg-brand-point rounded-full px-4 py-2 transition-colors"
+                >
+                  <User size={15} />
+                  마이페이지
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="text-[13px] font-semibold text-[#555] hover:bg-[#F5F5F5] rounded-full px-4 py-2 transition-colors"
+                >
+                  로그아웃
+                </button>
+              </>
+            ) : (
               <Link
-                to="/mypage"
+                to="/login"
                 className="flex items-center gap-1.5 text-[13px] font-semibold text-white bg-brand hover:bg-brand-point rounded-full px-4 py-2 transition-colors"
               >
-                <User size={15} />
-                마이페이지
+                로그인
               </Link>
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="text-[13px] font-semibold text-[#555] hover:bg-[#F5F5F5] rounded-full px-4 py-2 transition-colors"
-              >
-                로그아웃
-              </button>
-            </>
-          ) : (
-            <Link
-              to="/login"
-              className="flex items-center gap-1.5 text-[13px] font-semibold text-white bg-brand hover:bg-brand-point rounded-full px-4 py-2 transition-colors"
-            >
-              로그인
-            </Link>
-          )}
+            ))}
         </div>
       </div>
     </header>
