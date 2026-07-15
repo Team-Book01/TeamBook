@@ -21,8 +21,8 @@ public class SignUpDto {
             @NotBlank
             @Size(min = 8, max = 15)
             @Pattern(
-                regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*]).+$",
-                message = "대소문자와 특수문자를 포함해야 합니다"
+                regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9\\s])\\S+$",
+                message = "대소문자와 특수문자를 포함해야 하며, 공백을 포함할 수 없습니다"
             )
             String password,
 
