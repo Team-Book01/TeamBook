@@ -10,7 +10,7 @@ import com.teambook.panorama.domain.admin.dto.report.ReportSearchRequest;
 import com.teambook.panorama.global.response.PageResponse;
 
 /**
- * 사용자 신고 등록 서비스. (관리자 조회·처리는 {@link AdminService})
+ * 신고 서비스. 사용자 신고 등록 + 관리자 신고 조회·처리를 담당한다.
  */
 public interface ReportService {
 

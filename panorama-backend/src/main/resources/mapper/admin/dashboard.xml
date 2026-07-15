@@ -1,13 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
     "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.teambook.panorama.domain.admin.repository.AdminMapper">
-
-    <!-- 관리자 조치 로그 (id/created_at 은 DB DEFAULT) -->
-    <insert id="insertAdminActionLog">
-        INSERT INTO admin_action_log (user_id, target_type, target_id, action_type, reason)
-        VALUES (#{userId}, #{targetType}, #{targetId}, #{actionType}, #{reason})
-    </insert>
+<mapper namespace="com.teambook.panorama.domain.admin.repository.DashboardMapper">
 
     <!-- ══════════════ 대시보드 ══════════════ -->
 
@@ -42,7 +36,7 @@
                   AND user_id IS NOT NULL
                   AND attempted_at &gt;= CURDATE())                          AS today_visitors,
             (SELECT COUNT(*) FROM posts
-                WHERE status = 'ACTIVE')                                    AS total_posts,
+                WHERE status &lt;&gt; 'DELETED')                              AS total_posts,
             (SELECT COUNT(*) FROM posts
                 WHERE status &lt;&gt; 'DELETED'
                   AND created_at &gt;= CURDATE())                           AS new_posts_today,
