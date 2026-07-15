@@ -1,5 +1,7 @@
 package com.teambook.panorama.domain.auth.dto;
 
+import com.teambook.panorama.global.constant.ValidationPattern;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -14,12 +16,6 @@ import jakarta.validation.constraints.Size;
  * </ul>
  */
 public class PasswordDto {
-
-    // 비밀번호 정책(회원가입과 동일): 8~15자, 대소문자·특수문자 포함
-    private static final String PASSWORD_REGEX =
-            "^(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*]).+$";
-    private static final String PASSWORD_MESSAGE =
-            "대소문자와 특수문자를 포함해야 합니다";
 
     @Schema(name = "PasswordResetRequest", description = "비밀번호 재설정 메일 발송 요청 (비로그인)")
     public record ResetRequest(
@@ -37,8 +33,8 @@ public class PasswordDto {
 
             @Schema(description = "새 비밀번호 (8~15자, 대소문자·특수문자 포함)", example = "New1234!")
             @NotBlank
-            @Size(min = 8, max = 15)
-            @Pattern(regexp = PASSWORD_REGEX, message = PASSWORD_MESSAGE)
+            @Size(min = ValidationPattern.PASSWORD_MIN, max = ValidationPattern.PASSWORD_MAX)
+            @Pattern(regexp = ValidationPattern.PASSWORD, message = ValidationPattern.PASSWORD_MESSAGE)
             String newPassword
     ) {}
 
@@ -50,8 +46,8 @@ public class PasswordDto {
 
             @Schema(description = "새 비밀번호 (8~15자, 대소문자·특수문자 포함)", example = "New1234!")
             @NotBlank
-            @Size(min = 8, max = 15)
-            @Pattern(regexp = PASSWORD_REGEX, message = PASSWORD_MESSAGE)
+            @Size(min = ValidationPattern.PASSWORD_MIN, max = ValidationPattern.PASSWORD_MAX)
+            @Pattern(regexp = ValidationPattern.PASSWORD, message = ValidationPattern.PASSWORD_MESSAGE)
             String newPassword
     ) {}
 }
