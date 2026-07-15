@@ -57,6 +57,10 @@ public class PostComment extends BaseTimeEntity {
         this.content = content;
     }
 
+    public void updateContent(String content) {
+        this.content = content;
+    }
+
     public void changeStatus(CommentStatus status) {
         this.status = status;
     }
