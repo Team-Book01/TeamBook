@@ -63,9 +63,8 @@ const providers: {
 /**
  * 소셜 로그인 버튼 묶음.
  *
- * - google / naver: 백엔드 OAuth2 엔드포인트로 이동해 실제 로그인 시작.
+ * - google / naver / kakao: 백엔드 OAuth2 엔드포인트로 이동해 실제 로그인 시작.
  *   (백엔드가 처리 후 /oauth/callback 으로 토큰을 붙여 리다이렉트 → OAuthCallbackPage)
- * - kakao: 백엔드 미지원이라 "준비 중" 안내만 띄운다.
  */
 export function SocialButtons({ mode }: { mode: 'login' | 'signup' }) {
   const action = mode === 'login' ? '로그인' : '회원가입'
@@ -74,7 +73,7 @@ export function SocialButtons({ mode }: { mode: 'login' | 'signup' }) {
   const recent = mode === 'login' ? getRecentProvider() : null
 
   function handleClick(id: Provider, label: string) {
-    if (id === 'google' || id === 'naver') {
+    if (id === 'google' || id === 'naver' || id === 'kakao') {
       // 외부 왕복으로 URL 쿼리가 소실되므로, 복귀 경로를 세션에 저장해두고 콜백에서 회수
       savePendingRedirect(params.get('redirect'))
       startSocialLogin(id)

@@ -11,8 +11,8 @@
  */
 const OAUTH_BASE = import.meta.env.VITE_OAUTH_BASE_URL ?? 'http://localhost:8080'
 
-/** 백엔드에 등록된 소셜 로그인 provider (google, naver). */
-export type SocialProvider = 'google' | 'naver'
+/** 백엔드에 등록된 소셜 로그인 provider (google, naver, kakao). */
+export type SocialProvider = 'google' | 'naver' | 'kakao'
 
 /** 소셜 로그인 시작 URL 을 만든다. */
 export function socialLoginUrl(provider: SocialProvider): string {
