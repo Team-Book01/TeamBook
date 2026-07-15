@@ -39,8 +39,8 @@ function InquiryDetailDrawer({ inquiryId, onClose }: { inquiryId: number; onClos
   const isDeleted = inquiry?.status === 'DELETED'
 
   const submitAnswer = () => {
-    if (!answerText.trim()) return
-    answerMut.mutate({ inquiryId, body: { userId: me?.id ?? 0, content: answerText } }, { onSuccess: () => setAnswerText('') })
+    if (!answerText.trim() || me?.id == null) return
+    answerMut.mutate({ inquiryId, body: { userId: me.id, content: answerText } }, { onSuccess: () => setAnswerText('') })
   }
 
   const header = inquiry ? (
