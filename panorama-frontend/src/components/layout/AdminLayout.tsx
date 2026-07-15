@@ -29,7 +29,8 @@ export default function AdminLayout() {
             <span className="text-admin font-bold text-[16px]">{title}</span>
             <span className="text-muted-foreground text-[12px]">· {today}</span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            {/* 계정은 사이드바 하단으로 이동, 상단바는 알림만 유지 */}
             <button
               type="button"
               aria-label="알림"
@@ -38,15 +39,6 @@ export default function AdminLayout() {
               <Bell size={18} className="text-admin-point" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
             </button>
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-full bg-admin flex items-center justify-center text-white text-[12px] font-bold">
-                관
-              </div>
-              <div>
-                <p className="text-[12px] font-semibold text-foreground leading-tight">김관리자</p>
-                <p className="text-[10px] text-muted-foreground">슈퍼 어드민</p>
-              </div>
-            </div>
           </div>
         </header>
 
