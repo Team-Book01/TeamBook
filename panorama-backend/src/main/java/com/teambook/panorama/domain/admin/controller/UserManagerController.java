@@ -13,7 +13,7 @@ import com.teambook.panorama.domain.admin.dto.user.UserDetailResponse;
 import com.teambook.panorama.domain.admin.dto.user.UserProcessRequest;
 import com.teambook.panorama.domain.admin.dto.user.UserResponse;
 import com.teambook.panorama.domain.admin.dto.user.UserSearchRequest;
-import com.teambook.panorama.domain.admin.service.UserService;
+import com.teambook.panorama.domain.admin.service.UserManagerService;
 import com.teambook.panorama.global.response.PageResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -27,7 +27,7 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/v1/admin/users")
 public class UserManagerController {
 
-  private final UserService userService;
+  private final UserManagerService userService;
 
   // 사용자 관리
   /** 사용자 - 목록 (+검색). body 생략 시 기본(필터 없음) */

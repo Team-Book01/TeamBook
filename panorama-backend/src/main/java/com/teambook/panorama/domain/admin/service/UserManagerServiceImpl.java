@@ -20,7 +20,7 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class UserServiceImpl implements UserService {
+public class UserManagerServiceImpl implements UserManagerService {
 
   private final UserMapper userMapper;   // User 엔티티가 없어 조회·제재 모두 MyBatis
 
