@@ -17,12 +17,13 @@ interface Props {
   detail: NoticeDetailResponse | null
   loading?: boolean
   submitting?: boolean
+  submitError?: string | null
   onClose: () => void
   onEdit: () => void
   onSubmit: (form: NoticeForm) => void
 }
 
-export default function NoticeDrawer({ mode, detail, loading, submitting, onClose, onEdit, onSubmit }: Props) {
+export default function NoticeDrawer({ mode, detail, loading, submitting, submitError, onClose, onEdit, onSubmit }: Props) {
   const [form, setForm] = useState<NoticeForm>({
     category: 'GENERAL',
     title: '',
@@ -98,13 +99,16 @@ export default function NoticeDrawer({ mode, detail, loading, submitting, onClos
               수정
             </button>
           ) : (
-            <button
-              onClick={() => onSubmit(form)}
-              disabled={submitting || !form.title.trim()}
-              className="w-full py-2.5 bg-admin text-white rounded-lg font-bold text-sm hover:bg-admin-hover transition-colors disabled:opacity-50"
-            >
-              {submitting ? '저장 중…' : mode === 'edit' ? '변경사항 저장' : '공지 등록'}
-            </button>
+            <>
+              <button
+                onClick={() => onSubmit(form)}
+                disabled={submitting || !form.title.trim()}
+                className="w-full py-2.5 bg-admin text-white rounded-lg font-bold text-sm hover:bg-admin-hover transition-colors disabled:opacity-50"
+              >
+                {submitting ? '저장 중…' : mode === 'edit' ? '변경사항 저장' : '공지 등록'}
+              </button>
+              {submitError && <p className="mt-2 text-[11px] text-red-600 text-center">{submitError}</p>}
+            </>
           )}
         </div>
       </div>

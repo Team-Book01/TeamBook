@@ -50,6 +50,7 @@ function ContentDetailDrawer({ contentType, contentId, onClose }: { contentType:
         <button onClick={() => act('HIDDEN')} disabled={processMut.isPending} className="flex-1 py-2 rounded-xl text-sm font-semibold border border-amber-500 text-amber-600 hover:bg-amber-50 disabled:opacity-50 transition-colors">숨김 처리</button>
         <button onClick={() => act('DELETED')} disabled={processMut.isPending} className="flex-1 py-2 rounded-xl text-sm font-semibold border border-red-500 text-red-600 hover:bg-red-50 disabled:opacity-50 transition-colors">삭제</button>
       </div>
+      {processMut.isError && <p className="text-[11px] text-red-600 text-center">{getErrorMessage(processMut.error, '처리에 실패했습니다. 다시 시도해 주세요.')}</p>}
       <div className="w-full py-2 rounded-xl text-xs font-medium border border-border text-muted-foreground flex items-center justify-center gap-1.5">
         <Clock size={12} /> 신고 {data.reportCount}건 · 수정 {fmt(data.updatedAt)}
       </div>
@@ -105,6 +106,7 @@ export default function AdminContentPage() {
   const [checkedRows, setCheckedRows] = useState<Set<number>>(new Set())
   const [menuId, setMenuId] = useState<number | null>(null)
   const [bulkPending, setBulkPending] = useState(false)
+  const [bulkError, setBulkError] = useState<string | null>(null)
 
   // 대시보드 등에서 ?type=POST&open=123 으로 진입 시 해당 탭 + 상세 자동 오픈
   useEffect(() => {
@@ -115,7 +117,8 @@ export default function AdminContentPage() {
       setTab(valid)
       setParams(p => ({ ...p, contentType: valid }))
     }
-    if (open) setSelected({ type: (valid ?? 'POST') as ContentType, id: Number(open) })
+    const id = open ? Number(open) : NaN
+    if (Number.isInteger(id) && id > 0) setSelected({ type: (valid ?? 'POST') as ContentType, id })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -148,10 +151,18 @@ export default function AdminContentPage() {
   const bulkAction = async (action: 'HIDDEN' | 'DELETED') => {
     if (checkedRows.size === 0) return
     setBulkPending(true)
-    await Promise.allSettled([...checkedRows].map(id => processAdminContent(tab, id, { action, handlerUserId: me?.id ?? 0 })))
+    setBulkError(null)
+    const ids = [...checkedRows]
+    const results = await Promise.allSettled(ids.map(id => processAdminContent(tab, id, { action, handlerUserId: me?.id ?? 0 })))
+    const failed = results.filter(r => r.status === 'rejected').length
     setBulkPending(false)
-    setCheckedRows(new Set())
     qc.invalidateQueries({ queryKey: [...adminKeys.all, 'contents'] })
+    if (failed > 0) {
+      // 일부/전부 실패 → 선택 유지하고 실패 건수 안내
+      setBulkError(`${ids.length}건 중 ${failed}건 처리에 실패했습니다.`)
+    } else {
+      setCheckedRows(new Set())
+    }
   }
 
   return (
@@ -264,6 +275,9 @@ export default function AdminContentPage() {
                   className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-amber-500 text-amber-600 hover:bg-amber-50 disabled:opacity-40 transition-colors">숨김 처리</button>
                 <button onClick={() => bulkAction('DELETED')} disabled={checkedRows.size === 0 || bulkPending}
                   className="px-3 py-1.5 rounded-lg text-xs font-semibold border border-red-500 text-red-600 hover:bg-red-50 disabled:opacity-40 transition-colors">삭제</button>
+                {(bulkError || processMut.isError) && (
+                  <span className="text-[11px] text-red-600 ml-1">{bulkError ?? getErrorMessage(processMut.error, '처리에 실패했습니다.')}</span>
+                )}
               </div>
               <div className="flex items-center gap-2">
                 <button onClick={() => setParams(p => ({ ...p, page: page - 1 }))} disabled={page <= 1} className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-border text-muted-foreground hover:bg-gray-50 disabled:opacity-40">이전</button>

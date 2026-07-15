@@ -129,6 +129,9 @@ function InquiryDetailDrawer({ inquiryId, onClose }: { inquiryId: number; onClos
                     <Send className="w-3 h-3" />{answerMut.isPending ? '등록 중…' : '답변 등록'}
                   </button>
                 </div>
+                {(answerMut.isError || statusMut.isError) && (
+                  <p className="text-[11px] text-red-600 text-right mt-1.5">{getErrorMessage(answerMut.error ?? statusMut.error, '처리에 실패했습니다. 다시 시도해 주세요.')}</p>
+                )}
               </div>
             )}
           </section>
@@ -146,10 +149,11 @@ export default function AdminInquiriesPage() {
   const [params, setParams] = useState<InquirySearchRequest>({ page: 1, size: 20 })
   const [selectedId, setSelectedId] = useState<number | null>(null)
 
-  // 대시보드에서 ?open=<id> 로 진입 시 해당 문의 상세 자동 오픈
+  // 대시보드에서 ?open=<id> 로 진입 시 해당 문의 상세 자동 오픈 (숫자만 허용)
   useEffect(() => {
     const open = searchParams.get('open')
-    if (open) setSelectedId(Number(open))
+    const id = open ? Number(open) : NaN
+    if (Number.isInteger(id) && id > 0) setSelectedId(id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
