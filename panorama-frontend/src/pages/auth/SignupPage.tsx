@@ -9,6 +9,14 @@ import { Checkbox } from '@/components/ui/Checkbox'
 import { checkExists, signup } from '@/api/auth'
 import { getErrorMessage } from '@/api/client'
 import { toast } from '@/lib/toast'
+import {
+  isValidLoginId,
+  isValidNickname,
+  isValidPassword,
+  LOGIN_ID_MESSAGE,
+  NICKNAME_MESSAGE,
+  PASSWORD_MESSAGE,
+} from '@/lib/validation'
 
 /**
  * 회원가입 화면.
@@ -31,12 +39,10 @@ export default function SignupPage() {
     agree: boolean
   }): Record<string, string> {
     const e: Record<string, string> = {}
-    if (!/^\S{6,15}$/.test(v.loginId)) e.loginId = '아이디는 공백 없이 6~15자로 입력해 주세요.'
-    if (!/^[가-힣a-zA-Z0-9_]{1,10}$/.test(v.nickname))
-      e.nickname = '닉네임은 1~10자, 한글·영문·숫자·밑줄(_)만 사용할 수 있어요.'
+    if (!isValidLoginId(v.loginId)) e.loginId = LOGIN_ID_MESSAGE
+    if (!isValidNickname(v.nickname)) e.nickname = NICKNAME_MESSAGE
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.email)) e.email = '올바른 이메일 주소를 입력해 주세요.'
-    if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*]).{8,15}$/.test(v.password))
-      e.password = '비밀번호는 8~15자, 대소문자·특수문자(!@#$%^&*)를 포함해야 해요.'
+    if (!isValidPassword(v.password)) e.password = PASSWORD_MESSAGE
     if (v.password !== v.confirm) e.confirm = '비밀번호가 일치하지 않아요.'
     if (!v.agree) e.agree = '약관에 동의해 주세요.'
     return e
@@ -112,12 +118,17 @@ export default function SignupPage() {
       <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="loginId">아이디</Label>
-          <Input id="loginId" name="loginId" placeholder="공백 없이 6~15자" autoComplete="username" />
+          <Input
+            id="loginId"
+            name="loginId"
+            placeholder="영문·숫자·밑줄(_), 6~15자"
+            autoComplete="username"
+          />
           {errors.loginId && <p className="text-xs text-destructive">{errors.loginId}</p>}
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="nickname">닉네임</Label>
-          <Input id="nickname" name="nickname" placeholder="공백 없이 1~10자" />
+          <Input id="nickname" name="nickname" placeholder="한글·영문·숫자·밑줄(_), 1~10자" />
           {errors.nickname && <p className="text-xs text-destructive">{errors.nickname}</p>}
         </div>
         <div className="flex flex-col gap-1.5">
