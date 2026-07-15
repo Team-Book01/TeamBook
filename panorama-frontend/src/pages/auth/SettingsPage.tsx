@@ -175,16 +175,25 @@ export default function SettingsPage() {
       {/* Header */}
       <header className="border-b border-border bg-card/60 backdrop-blur">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-4">
-          <Link to="/" className="flex items-center gap-2">
+          <Link to="/" className="flex items-center gap-2 flex-shrink-0">
             <BookOpen size={19} className="text-brand" />
             <span className="text-brand font-bold text-[17px] tracking-tight whitespace-nowrap">
               파노라마북스
             </span>
           </Link>
-          <Button variant="ghost" size="sm" onClick={handleLogout}>
-            <LogOut className="size-4" />
-            로그아웃
-          </Button>
+          <div className="flex items-center gap-1">
+            <Link
+              to="/mypage"
+              className="flex items-center gap-1.5 rounded-full bg-brand px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-brand-point"
+            >
+              <User size={15} />
+              마이페이지
+            </Link>
+            <Button variant="ghost" size="sm" onClick={handleLogout}>
+              <LogOut className="size-4" />
+              로그아웃
+            </Button>
+          </div>
         </div>
       </header>
 
