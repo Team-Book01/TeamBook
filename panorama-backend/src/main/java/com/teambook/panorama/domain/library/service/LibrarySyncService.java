@@ -29,7 +29,7 @@ import lombok.extern.slf4j.Slf4j;
  *
  * <p>
  * 흐름: libSrch 를 페이지 단위로 끝까지 조회 → lib_code 기준 upsert(있으면 update / 없으면 insert).
- * 동기화를 여러 번 돌려도 lib_code UNIQUE(V4) 덕분에 중복이 쌓이지 않는다.
+ * 동기화를 여러 번 돌려도 lib_code UNIQUE(V3) 덕분에 중복이 쌓이지 않는다.
  *
  * <p>
  * 학습/포트폴리오 단계라 단순함을 우선한다. 외부 HTTP 호출이 트랜잭션 안에서 일어나
