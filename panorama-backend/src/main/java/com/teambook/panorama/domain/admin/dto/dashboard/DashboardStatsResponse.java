@@ -17,7 +17,7 @@ public record DashboardStatsResponse(
     @Schema(description = "오늘 방문자 수(오늘 로그인 성공한 고유 회원)", example = "3291")
     Long todayVisitors,
 
-    @Schema(description = "전체 게시글 수(ACTIVE)", example = "14320")
+    @Schema(description = "전체 게시글 수(삭제 제외 = ACTIVE·HIDDEN)", example = "14320")
     Long totalPosts,
 
     @Schema(description = "오늘 신규 게시글 수", example = "47")
