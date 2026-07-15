@@ -1,17 +1,17 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   Activity,
   AlertCircle,
-  AlertTriangle,
+  ArrowRight,
   ChevronRight,
   FileText,
   Flag,
   Inbox,
   MessageSquare,
-  TrendingUp,
   Users,
 } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getErrorMessage } from '@/api/client'
 import { useAdminDashboard } from '@/api/admin'
@@ -20,6 +20,10 @@ import type { PostCategory, ReportReason } from '@/types/admin'
 // ── enum 라벨 ────────────────────────────────────────────────────────────────
 const REASON_LABEL: Record<ReportReason, string> = {
   ABUSE: '욕설·비방', SPAM: '스팸', MISINFO: '허위정보', OBSCENE: '음란성', ETC: '기타',
+}
+// 사유별 색 (신고 화면과 동일 — 전부 빨강이던 것을 사유별로 구분)
+const REASON_BADGE: Record<ReportReason, string> = {
+  ABUSE: 'bg-red-50 text-red-600', SPAM: 'bg-orange-50 text-orange-600', MISINFO: 'bg-amber-50 text-amber-700', OBSCENE: 'bg-pink-50 text-pink-600', ETC: 'bg-gray-100 text-gray-500',
 }
 const POST_CATEGORY_LABEL: Record<PostCategory, string> = { RECOMMEND: '추천', REVIEW: '리뷰', FREE: '자유' }
 const POST_CATEGORY_BADGE: Record<PostCategory, string> = {
@@ -50,6 +54,52 @@ function CardHeader({ title, right }: { title: string; right?: React.ReactNode }
   )
 }
 
+// 처리 필요 KPI — 클릭 시 해당 관리 화면으로 이동
+function ActionKpi({ to, icon: Icon, label, value, unit, tone }: {
+  to: string; icon: LucideIcon; label: string; value: number; unit: string; tone: 'danger' | 'warn'
+}) {
+  const danger = tone === 'danger'
+  return (
+    <Link
+      to={to}
+      className={cn(
+        'flex items-center gap-3 rounded-xl border px-4 py-3.5 transition-colors',
+        danger ? 'bg-red-50 border-red-200 hover:bg-red-100/60' : 'bg-amber-50 border-amber-200 hover:bg-amber-100/60',
+      )}
+    >
+      <span className="w-10 h-10 rounded-lg bg-white flex items-center justify-center shrink-0">
+        <Icon size={18} className={danger ? 'text-red-600' : 'text-amber-600'} />
+      </span>
+      <div className="min-w-0">
+        <p className={cn('text-[12px] font-medium', danger ? 'text-red-700' : 'text-amber-700')}>{label}</p>
+        <p className="flex items-baseline gap-0.5">
+          <span className={cn('text-[24px] font-bold leading-tight', danger ? 'text-red-600' : 'text-amber-600')}>{value.toLocaleString()}</span>
+          <span className={cn('text-[11px]', danger ? 'text-red-500' : 'text-amber-600')}>{unit}</span>
+        </p>
+      </div>
+      <ArrowRight size={17} className={cn('ml-auto shrink-0', danger ? 'text-red-400' : 'text-amber-400')} />
+    </Link>
+  )
+}
+
+// 현황 KPI — 정적 지표
+function InfoKpi({ icon: Icon, label, value, unit, trend }: {
+  icon: LucideIcon; label: string; value: number; unit: string; trend?: string
+}) {
+  return (
+    <div className="bg-white border border-border rounded-xl px-4 py-3.5">
+      <p className="text-[12px] text-muted-foreground font-medium flex items-center gap-1">
+        <Icon size={13} className="text-admin-point" />{label}
+      </p>
+      <p className="flex items-baseline gap-0.5 mt-1">
+        <span className="text-[22px] font-bold text-foreground leading-tight">{value.toLocaleString()}</span>
+        <span className="text-[11px] text-muted-foreground ml-0.5">{unit}</span>
+      </p>
+      {trend && <p className="text-[11px] text-admin-point font-medium mt-0.5">{trend}</p>}
+    </div>
+  )
+}
+
 export default function AdminDashboardPage() {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<'reports' | 'inquiries'>('reports')
@@ -69,42 +119,26 @@ export default function AdminDashboardPage() {
   }
 
   const s = data.stats
-  const kpis = [
-    { icon: Users, label: '전체 회원', value: s.totalUsers.toLocaleString(), sub: '명', trend: `+${s.newUsersThisWeek.toLocaleString()} 이번 주`, tone: 'normal' as const },
-    { icon: Activity, label: '오늘 방문자', value: s.todayVisitors.toLocaleString(), sub: '명', trend: '오늘 기준', tone: 'normal' as const },
-    { icon: FileText, label: '전체 게시글', value: s.totalPosts.toLocaleString(), sub: '개', trend: `+${s.newPostsToday.toLocaleString()} 오늘`, tone: 'normal' as const },
-    { icon: Flag, label: '신고 대기', value: s.pendingReports.toLocaleString(), sub: '건', trend: '즉시 처리 필요', tone: 'urgent' as const },
-    { icon: MessageSquare, label: '문의 대기', value: s.pendingInquiries.toLocaleString(), sub: '건', trend: '답변 대기 중', tone: 'warn' as const },
-  ]
 
   return (
-    <div className="p-7 space-y-5">
-      {/* ── KPI row ─────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
-        {kpis.map(({ icon: Icon, label, value, sub, trend, tone }) => (
-          <div
-            key={label}
-            className={cn(
-              'bg-white border rounded-xl px-4 py-4 flex items-center gap-3 shadow-sm',
-              tone === 'urgent' ? 'border-red-200 ring-1 ring-red-100' : tone === 'warn' ? 'border-amber-200 ring-1 ring-amber-100' : 'border-border',
-            )}
-          >
-            <div className={cn('p-2.5 rounded-lg shrink-0', tone === 'urgent' ? 'bg-red-50' : tone === 'warn' ? 'bg-amber-50' : 'bg-admin-light')}>
-              <Icon size={18} className={tone === 'urgent' ? 'text-red-500' : tone === 'warn' ? 'text-amber-500' : 'text-admin-point'} />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[11px] text-muted-foreground font-medium truncate">{label}</p>
-              <div className="flex items-baseline gap-0.5 mt-0.5">
-                <span className={cn('text-[22px] font-bold leading-tight', tone === 'urgent' ? 'text-[#d9534f]' : tone === 'warn' ? 'text-amber-600' : 'text-foreground')}>{value}</span>
-                <span className="text-[11px] text-muted-foreground ml-0.5">{sub}</span>
-              </div>
-              <p className={cn('text-[10px] mt-0.5 font-medium flex items-center gap-0.5', tone === 'urgent' ? 'text-red-500' : tone === 'warn' ? 'text-amber-500' : 'text-admin-point')}>
-                {tone === 'normal' ? <TrendingUp size={9} /> : <AlertTriangle size={9} />}
-                {trend}
-              </p>
-            </div>
-          </div>
-        ))}
+    <div className="p-6 sm:p-7 space-y-5">
+      {/* ── 처리 필요 (액션 · 클릭 이동) ───────────────────────────── */}
+      <div>
+        <p className="text-[12px] font-medium text-muted-foreground mb-2">처리 필요</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <ActionKpi to="/admin/reports" icon={Flag} label="신고 대기" value={s.pendingReports} unit="건 · 즉시 처리" tone="danger" />
+          <ActionKpi to="/admin/inquiries" icon={MessageSquare} label="문의 대기" value={s.pendingInquiries} unit="건 · 답변 대기" tone="warn" />
+        </div>
+      </div>
+
+      {/* ── 현황 (정보) ──────────────────────────────────────────── */}
+      <div>
+        <p className="text-[12px] font-medium text-muted-foreground mb-2">현황</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <InfoKpi icon={Users} label="전체 회원" value={s.totalUsers} unit="명" trend={`+${s.newUsersThisWeek.toLocaleString()} 이번 주`} />
+          <InfoKpi icon={Activity} label="오늘 방문자" value={s.todayVisitors} unit="명" />
+          <InfoKpi icon={FileText} label="전체 게시글" value={s.totalPosts} unit="개" trend={`+${s.newPostsToday.toLocaleString()} 오늘`} />
+        </div>
       </div>
 
       {/* ── 처리 대기 + 최근 콘텐츠 (넓으면 좌우 2열, 좁으면 상하) ── */}
@@ -156,7 +190,7 @@ export default function AdminDashboardPage() {
                 ? data.pendingReports.map(r => (
                     <button key={r.reportId} onClick={() => navigate(`/admin/reports?open=${r.reportId}`)}
                       className="w-full text-left flex items-center gap-3 px-5 py-3 hover:bg-[#f9faf9] transition-colors">
-                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-red-50 text-red-600 shrink-0">{REASON_LABEL[r.reasonType]}</span>
+                      <span className={cn('text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0', REASON_BADGE[r.reasonType])}>{REASON_LABEL[r.reasonType]}</span>
                       <div className="flex-1 min-w-0">
                         <p className="text-[12px] text-foreground font-medium truncate">{r.targetSummary ?? '(원본 없음)'}</p>
                         <p className="text-[11px] text-muted-foreground truncate">신고자: {r.reporterNickname}</p>
