@@ -45,8 +45,9 @@ export default function AdminNoticesPage() {
 
   const handleSubmit = (f: NoticeForm) => {
     if (drawer?.mode === 'create') {
+      if (me?.id == null) return
       createMut.mutate(
-        { userId: me?.id ?? 0, category: f.category, title: f.title, content: f.content, pinned: f.pinned, important: f.important, status: 'ACTIVE' as NoticeStatus },
+        { userId: me.id, category: f.category, title: f.title, content: f.content, pinned: f.pinned, important: f.important, status: 'ACTIVE' as NoticeStatus },
         { onSuccess: () => setDrawer(null) },
       )
     } else if (drawer?.mode === 'edit' && drawer.noticeId != null) {

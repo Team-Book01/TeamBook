@@ -63,7 +63,7 @@ function UserDetailDrawer({ userId, onClose }: { userId: number; onClose: () => 
   const [guard, setGuard] = useState(false)
 
   const run = (action: 'SUSPEND' | 'ACTIVATE' | 'DELETE') =>
-    processMut.mutate({ userId, body: { action, reason: reason || undefined, handlerUserId: me?.id ?? 0 } }, { onSuccess: () => setReason('') })
+    me?.id != null && processMut.mutate({ userId, body: { action, reason: reason || undefined, handlerUserId: me.id } }, { onSuccess: () => setReason('') })
 
   const header = data ? (
     <div className="flex items-center gap-2 flex-wrap min-w-0">

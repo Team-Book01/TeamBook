@@ -32,7 +32,7 @@ function ContentDetailDrawer({ contentType, contentId, onClose }: { contentType:
   const { data, isLoading, isError, error, refetch } = useAdminContent(contentType, contentId)
   const processMut = useProcessContent()
   const act = (action: 'HIDDEN' | 'DELETED') =>
-    processMut.mutate({ contentType, contentId, body: { action, handlerUserId: me?.id ?? 0 } }, { onSuccess: onClose })
+    me?.id != null && processMut.mutate({ contentType, contentId, body: { action, handlerUserId: me.id } }, { onSuccess: onClose })
 
   const header = data ? (
     <div className="flex items-center gap-2 flex-wrap">
@@ -145,15 +145,17 @@ export default function AdminContentPage() {
 
   const rowAction = (id: number, action: 'HIDDEN' | 'DELETED') => {
     setMenuId(null)
-    processMut.mutate({ contentType: tab, contentId: id, body: { action, handlerUserId: me?.id ?? 0 } })
+    if (me?.id == null) return
+    processMut.mutate({ contentType: tab, contentId: id, body: { action, handlerUserId: me.id } })
   }
 
   const bulkAction = async (action: 'HIDDEN' | 'DELETED') => {
-    if (checkedRows.size === 0) return
+    if (checkedRows.size === 0 || me?.id == null) return
+    const adminId = me.id
     setBulkPending(true)
     setBulkError(null)
     const ids = [...checkedRows]
-    const results = await Promise.allSettled(ids.map(id => processAdminContent(tab, id, { action, handlerUserId: me?.id ?? 0 })))
+    const results = await Promise.allSettled(ids.map(id => processAdminContent(tab, id, { action, handlerUserId: adminId })))
     const failed = results.filter(r => r.status === 'rejected').length
     setBulkPending(false)
     qc.invalidateQueries({ queryKey: [...adminKeys.all, 'contents'] })

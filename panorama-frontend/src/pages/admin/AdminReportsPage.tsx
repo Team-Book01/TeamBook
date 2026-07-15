@@ -53,11 +53,11 @@ function DetailPanel({ reportId, onClose }: { reportId: number; onClose: () => v
   const related = data?.relatedReports ?? []
 
   const doContentAction = (action: 'HIDDEN' | 'DELETED') =>
-    processMut.mutate({ reportId, body: { action, reason: note || undefined, handlerUserId: me?.id ?? 0 } }, { onSuccess: onClose })
+    me?.id != null && processMut.mutate({ reportId, body: { action, reason: note || undefined, handlerUserId: me.id } }, { onSuccess: onClose })
 
   const saveStatus = () => {
-    if (!status) return
-    bulkMut.mutate({ reportIds: [reportId], status, handlerUserId: me?.id ?? 0 }, { onSuccess: onClose })
+    if (!status || me?.id == null) return
+    bulkMut.mutate({ reportIds: [reportId], status, handlerUserId: me.id }, { onSuccess: onClose })
   }
 
   return (
@@ -232,8 +232,8 @@ export default function AdminReportsPage() {
   const toggleOne = (id: number) => setChecked(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
 
   const bulk = (status: ReportStatus) => {
-    if (checked.size === 0) return
-    bulkMut.mutate({ reportIds: [...checked], status, handlerUserId: me?.id ?? 0 }, { onSuccess: () => setChecked(new Set()) })
+    if (checked.size === 0 || me?.id == null) return
+    bulkMut.mutate({ reportIds: [...checked], status, handlerUserId: me.id }, { onSuccess: () => setChecked(new Set()) })
   }
 
   const selCls = 'appearance-none pl-3 pr-7 py-2 text-xs border border-border rounded-xl bg-white text-gray-600 outline-none cursor-pointer focus:border-admin'
