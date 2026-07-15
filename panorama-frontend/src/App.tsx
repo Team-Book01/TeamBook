@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom'
 import { useAuthBootstrap } from '@/hooks/useAuthBootstrap'
 import Layout from '@/components/layout/Layout'
 import AdminLayout from '@/components/layout/AdminLayout'
+import RequireAuth from '@/components/auth/RequireAuth'
 
 // 일반 사용자 페이지
 import HomePage from '@/pages/home/HomePage'
@@ -55,8 +56,12 @@ export default function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
       <Route path="/oauth/callback" element={<OAuthCallbackPage />} />
-      <Route path="/settings" element={<SettingsPage />} />
-      <Route path="/mypage" element={<MyPage />} />
+
+      {/* 로그인이 필요한 페이지 (비로그인 시 /login 으로 리다이렉트) */}
+      <Route element={<RequireAuth />}>
+        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/mypage" element={<MyPage />} />
+      </Route>
 
       {/* 관리자 영역 */}
       <Route path="/admin" element={<AdminLayout />}>
