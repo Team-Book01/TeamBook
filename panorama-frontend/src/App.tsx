@@ -4,6 +4,7 @@ import { useAuthBootstrap } from '@/hooks/useAuthBootstrap'
 import Layout from '@/components/layout/Layout'
 import AdminLayout from '@/components/layout/AdminLayout'
 import RequireAuth from '@/components/auth/RequireAuth'
+import RequireAdmin from '@/components/auth/RequireAdmin'
 
 // 일반 사용자 페이지
 import HomePage from '@/pages/home/HomePage'
@@ -67,16 +68,18 @@ export default function App() {
         <Route path="/settings" element={<SettingsPage />} />
       </Route>
 
-      {/* 관리자 영역 */}
-      <Route path="/admin" element={<AdminLayout />}>
-        <Route index element={<AdminDashboardPage />} />
-        <Route path="users" element={<AdminUsersPage />} />
-        <Route path="content" element={<AdminContentPage />} />
-        <Route path="clubs" element={<AdminClubsPage />} />
-        <Route path="reports" element={<AdminReportsPage />} />
-        <Route path="inquiries" element={<AdminInquiriesPage />} />
-        <Route path="notices" element={<AdminNoticesPage />} />
-        <Route path="sync" element={<AdminSyncPage />} />
+      {/* 관리자 영역 (ADMIN 권한만 접근, 그 외는 로그인/메인으로) */}
+      <Route element={<RequireAdmin />}>
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<AdminDashboardPage />} />
+          <Route path="users" element={<AdminUsersPage />} />
+          <Route path="content" element={<AdminContentPage />} />
+          <Route path="clubs" element={<AdminClubsPage />} />
+          <Route path="reports" element={<AdminReportsPage />} />
+          <Route path="inquiries" element={<AdminInquiriesPage />} />
+          <Route path="notices" element={<AdminNoticesPage />} />
+          <Route path="sync" element={<AdminSyncPage />} />
+        </Route>
       </Route>
 
       {/* 404 → 홈 대체 (간단 처리) */}

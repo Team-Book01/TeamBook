@@ -44,9 +44,11 @@ export default function LoginPage() {
       const { user, token, provider } = await loginWithPassword(loginId, password)
       setLogin(user, token) // zustand 전역 상태에 사용자 + access 토큰 저장
       setRecentProvider(provider) // 최근 로그인 수단 저장 (재방문 UX용)
-      // RequireAuth 가드 또는 client 인터셉터(401)가 남긴 redirect 로 복귀. 없거나 위험하면 메인.
+      // RequireAuth 가드 또는 client 인터셉터(401)가 남긴 redirect 로 복귀.
+      // 없으면 권한별 기본 경로: ADMIN → 관리자, 그 외 → 메인.
       const redirect = safeRedirect(params.get('redirect'))
-      navigate(redirect ?? '/', { replace: true })
+      const fallback = user.role === 'ADMIN' ? '/admin' : '/'
+      navigate(redirect ?? fallback, { replace: true })
     } catch (err) {
       setSubmitError(getErrorMessage(err, '아이디 또는 비밀번호가 올바르지 않아요.'))
     } finally {
