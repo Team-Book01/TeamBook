@@ -1,29 +1,297 @@
 /**
- * 관리자(admin) 도메인 API 함수 + 쿼리 훅. (admin 담당자 작업 영역)
+ * 관리자(admin) 도메인 API 함수 + react-query 훅.
  *
- * 아래는 골격 예시입니다. 백엔드 API 확정 후 실제 구현으로 교체하세요.
- * 패턴은 src/api/book.ts 와 src/api/README.md 를 참고하세요.
+ * - 백엔드 매핑: /api/v1/admin/**  (client 의 baseURL 이 이미 /api/v1)
+ * - 목록 조회는 대부분 POST(검색 조건 body), 공지 목록만 GET(쿼리).
+ * - 성공 목록 응답은 PageResponse<T> 봉투로 내려온다.
+ * - 관리자 API 는 admin JWT 가 필요하다(무토큰 시 401). 토큰은 client 인터셉터가 주입한다.
  */
-// import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-// import { client } from './client'
-// import type { AdminUserRow } from '@/types'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { client } from './client'
+import type { PageResponse } from '@/types/common'
+import type {
+  DashboardResponse,
+  NoticeResponse,
+  NoticeDetailResponse,
+  NoticeSearchRequest,
+  NoticeCreateRequest,
+  NoticeUpdateRequest,
+  UserResponse,
+  UserDetailResponse,
+  UserSearchRequest,
+  UserProcessRequest,
+  CommunityContentResponse,
+  CommunityContentDetailResponse,
+  CommunityContentSearchRequest,
+  CommunityProcessRequest,
+  ContentType,
+  ReportResponse,
+  ReportDetailResponse,
+  ReportSearchRequest,
+  ReportProcessRequest,
+  ReportBulkProcessRequest,
+  BulkResult,
+  InquiryResponse,
+  InquiryDetailResponse,
+  InquirySearchRequest,
+  InquiryAnswerCreateRequest,
+  InquiryStatusUpdateRequest,
+} from '@/types/admin'
 
 // ── queryKey 규칙: ['admin', ...] ────────────────────────────────────────────
 export const adminKeys = {
   all: ['admin'] as const,
-  // users: (params) => [...adminKeys.all, 'users', params] as const,
-  // reports: (params) => [...adminKeys.all, 'reports', params] as const,
+  dashboard: () => [...adminKeys.all, 'dashboard'] as const,
+  notices: (params?: NoticeSearchRequest) => [...adminKeys.all, 'notices', params ?? {}] as const,
+  notice: (id: number) => [...adminKeys.all, 'notice', id] as const,
+  users: (params?: UserSearchRequest) => [...adminKeys.all, 'users', params ?? {}] as const,
+  user: (id: number) => [...adminKeys.all, 'user', id] as const,
+  contents: (params?: CommunityContentSearchRequest) => [...adminKeys.all, 'contents', params ?? {}] as const,
+  content: (type: ContentType, id: number) => [...adminKeys.all, 'content', type, id] as const,
+  reports: (params?: ReportSearchRequest) => [...adminKeys.all, 'reports', params ?? {}] as const,
+  report: (id: number) => [...adminKeys.all, 'report', id] as const,
+  inquiries: (params?: InquirySearchRequest) => [...adminKeys.all, 'inquiries', params ?? {}] as const,
+  inquiry: (id: number) => [...adminKeys.all, 'inquiry', id] as const,
 }
 
-// TODO(admin 담당자): 사용자/콘텐츠/신고/문의/공지 관리 API 구현
-//
-// export async function getAdminUsers(params): Promise<...> {
-//   const { data } = await client.get('/admin/users', { params })
-//   return data
-// }
-//
-// export function useAdminUsers(params) {
-//   return useQuery({ queryKey: adminKeys.users(params), queryFn: () => getAdminUsers(params) })
-// }
+// ══ 대시보드 ═══════════════════════════════════════════════════════════════════
+export async function getAdminDashboard(): Promise<DashboardResponse> {
+  const { data } = await client.get<DashboardResponse>('/admin/dashboard')
+  return data
+}
 
-export {}
+export function useAdminDashboard() {
+  return useQuery({ queryKey: adminKeys.dashboard(), queryFn: getAdminDashboard })
+}
+
+// ══ 공지 관리 ═══════════════════════════════════════════════════════════════════
+export async function getAdminNotices(params: NoticeSearchRequest = {}): Promise<PageResponse<NoticeResponse>> {
+  const { data } = await client.get<PageResponse<NoticeResponse>>('/admin/notices', { params })
+  return data
+}
+
+export async function getAdminNotice(noticeId: number): Promise<NoticeDetailResponse> {
+  const { data } = await client.get<NoticeDetailResponse>(`/admin/notices/${noticeId}`)
+  return data
+}
+
+export async function createAdminNotice(body: NoticeCreateRequest): Promise<NoticeResponse> {
+  const { data } = await client.post<NoticeResponse>('/admin/notices', body)
+  return data
+}
+
+export async function updateAdminNotice(noticeId: number, body: NoticeUpdateRequest): Promise<NoticeDetailResponse> {
+  const { data } = await client.put<NoticeDetailResponse>(`/admin/notices/${noticeId}`, body)
+  return data
+}
+
+export function useAdminNotices(params: NoticeSearchRequest = {}) {
+  return useQuery({ queryKey: adminKeys.notices(params), queryFn: () => getAdminNotices(params) })
+}
+
+export function useAdminNotice(noticeId: number | null) {
+  return useQuery({
+    queryKey: adminKeys.notice(noticeId ?? 0),
+    queryFn: () => getAdminNotice(noticeId as number),
+    enabled: noticeId != null,
+  })
+}
+
+export function useCreateNotice() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: NoticeCreateRequest) => createAdminNotice(body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [...adminKeys.all, 'notices'] }),
+  })
+}
+
+export function useUpdateNotice() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ noticeId, body }: { noticeId: number; body: NoticeUpdateRequest }) =>
+      updateAdminNotice(noticeId, body),
+    onSuccess: (_res, { noticeId }) => {
+      qc.invalidateQueries({ queryKey: [...adminKeys.all, 'notices'] })
+      qc.invalidateQueries({ queryKey: adminKeys.notice(noticeId) })
+    },
+  })
+}
+
+// ══ 사용자 관리 ═════════════════════════════════════════════════════════════════
+export async function getAdminUsers(body: UserSearchRequest = {}): Promise<PageResponse<UserResponse>> {
+  const { data } = await client.post<PageResponse<UserResponse>>('/admin/users', body)
+  return data
+}
+
+export async function getAdminUser(userId: number): Promise<UserDetailResponse> {
+  const { data } = await client.get<UserDetailResponse>(`/admin/users/${userId}`)
+  return data
+}
+
+export async function processAdminUser(userId: number, body: UserProcessRequest): Promise<void> {
+  await client.patch(`/admin/users/${userId}/process`, body)
+}
+
+// ══ 콘텐츠(커뮤니티) 관리 ═══════════════════════════════════════════════════════
+export async function getAdminContents(
+  body: CommunityContentSearchRequest = {},
+): Promise<PageResponse<CommunityContentResponse>> {
+  const { data } = await client.post<PageResponse<CommunityContentResponse>>('/admin/communities', body)
+  return data
+}
+
+export async function getAdminContent(
+  contentType: ContentType,
+  contentId: number,
+): Promise<CommunityContentDetailResponse> {
+  const { data } = await client.get<CommunityContentDetailResponse>(`/admin/communities/${contentType}/${contentId}`)
+  return data
+}
+
+export async function processAdminContent(
+  contentType: ContentType,
+  contentId: number,
+  body: CommunityProcessRequest,
+): Promise<void> {
+  await client.patch(`/admin/communities/${contentType}/${contentId}/process`, body)
+}
+
+// ══ 신고 관리 ═══════════════════════════════════════════════════════════════════
+export async function getAdminReports(body: ReportSearchRequest = {}): Promise<PageResponse<ReportResponse>> {
+  const { data } = await client.post<PageResponse<ReportResponse>>('/admin/reports', body)
+  return data
+}
+
+export async function getAdminReport(reportId: number): Promise<ReportDetailResponse> {
+  const { data } = await client.get<ReportDetailResponse>(`/admin/reports/${reportId}`)
+  return data
+}
+
+export async function processAdminReport(reportId: number, body: ReportProcessRequest): Promise<void> {
+  await client.patch(`/admin/reports/${reportId}/process`, body)
+}
+
+export async function bulkProcessReports(body: ReportBulkProcessRequest): Promise<BulkResult> {
+  const { data } = await client.patch<BulkResult>('/admin/reports/process', body)
+  return data
+}
+
+// ══ 문의 관리 ═══════════════════════════════════════════════════════════════════
+export async function getAdminInquiries(body: InquirySearchRequest = {}): Promise<PageResponse<InquiryResponse>> {
+  const { data } = await client.post<PageResponse<InquiryResponse>>('/admin/inquiries', body)
+  return data
+}
+
+export async function getAdminInquiry(inquiryId: number): Promise<InquiryDetailResponse> {
+  const { data } = await client.get<InquiryDetailResponse>(`/admin/inquiries/${inquiryId}`)
+  return data
+}
+
+export async function answerInquiry(inquiryId: number, body: InquiryAnswerCreateRequest): Promise<number> {
+  const { data } = await client.post<number>(`/admin/inquiries/${inquiryId}/answers`, body)
+  return data
+}
+
+export async function updateInquiryStatus(inquiryId: number, body: InquiryStatusUpdateRequest): Promise<void> {
+  await client.patch(`/admin/inquiries/${inquiryId}/status`, body)
+}
+
+// ══ 훅: 사용자 ═══════════════════════════════════════════════════════════════════
+export function useAdminUsers(params: UserSearchRequest = {}) {
+  return useQuery({ queryKey: adminKeys.users(params), queryFn: () => getAdminUsers(params) })
+}
+export function useAdminUser(userId: number | null) {
+  return useQuery({
+    queryKey: adminKeys.user(userId ?? 0),
+    queryFn: () => getAdminUser(userId as number),
+    enabled: userId != null,
+  })
+}
+export function useProcessUser() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ userId, body }: { userId: number; body: UserProcessRequest }) => processAdminUser(userId, body),
+    onSuccess: (_r, { userId }) => {
+      qc.invalidateQueries({ queryKey: [...adminKeys.all, 'users'] })
+      qc.invalidateQueries({ queryKey: adminKeys.user(userId) })
+    },
+  })
+}
+
+// ══ 훅: 콘텐츠 ═══════════════════════════════════════════════════════════════════
+export function useAdminContents(params: CommunityContentSearchRequest = {}) {
+  return useQuery({ queryKey: adminKeys.contents(params), queryFn: () => getAdminContents(params) })
+}
+export function useAdminContent(contentType: ContentType | null, contentId: number | null) {
+  return useQuery({
+    queryKey: adminKeys.content(contentType as ContentType, contentId ?? 0),
+    queryFn: () => getAdminContent(contentType as ContentType, contentId as number),
+    enabled: contentType != null && contentId != null,
+  })
+}
+export function useProcessContent() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ contentType, contentId, body }: { contentType: ContentType; contentId: number; body: CommunityProcessRequest }) =>
+      processAdminContent(contentType, contentId, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [...adminKeys.all, 'contents'] }),
+  })
+}
+
+// ══ 훅: 신고 ═════════════════════════════════════════════════════════════════════
+export function useAdminReports(params: ReportSearchRequest = {}) {
+  return useQuery({ queryKey: adminKeys.reports(params), queryFn: () => getAdminReports(params) })
+}
+export function useAdminReport(reportId: number | null) {
+  return useQuery({
+    queryKey: adminKeys.report(reportId ?? 0),
+    queryFn: () => getAdminReport(reportId as number),
+    enabled: reportId != null,
+  })
+}
+export function useProcessReport() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ reportId, body }: { reportId: number; body: ReportProcessRequest }) => processAdminReport(reportId, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [...adminKeys.all, 'reports'] }),
+  })
+}
+export function useBulkProcessReports() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (body: ReportBulkProcessRequest) => bulkProcessReports(body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: [...adminKeys.all, 'reports'] }),
+  })
+}
+
+// ══ 훅: 문의 ═════════════════════════════════════════════════════════════════════
+export function useAdminInquiries(params: InquirySearchRequest = {}) {
+  return useQuery({ queryKey: adminKeys.inquiries(params), queryFn: () => getAdminInquiries(params) })
+}
+export function useAdminInquiry(inquiryId: number | null) {
+  return useQuery({
+    queryKey: adminKeys.inquiry(inquiryId ?? 0),
+    queryFn: () => getAdminInquiry(inquiryId as number),
+    enabled: inquiryId != null,
+  })
+}
+export function useAnswerInquiry() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ inquiryId, body }: { inquiryId: number; body: InquiryAnswerCreateRequest }) => answerInquiry(inquiryId, body),
+    onSuccess: (_r, { inquiryId }) => {
+      qc.invalidateQueries({ queryKey: [...adminKeys.all, 'inquiries'] })
+      qc.invalidateQueries({ queryKey: adminKeys.inquiry(inquiryId) })
+    },
+  })
+}
+export function useUpdateInquiryStatus() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ inquiryId, body }: { inquiryId: number; body: InquiryStatusUpdateRequest }) => updateInquiryStatus(inquiryId, body),
+    onSuccess: (_r, { inquiryId }) => {
+      qc.invalidateQueries({ queryKey: [...adminKeys.all, 'inquiries'] })
+      qc.invalidateQueries({ queryKey: adminKeys.inquiry(inquiryId) })
+    },
+  })
+}
