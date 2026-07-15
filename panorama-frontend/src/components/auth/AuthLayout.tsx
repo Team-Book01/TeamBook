@@ -34,7 +34,7 @@ export function AuthLayout({
           }}
         />
         <div className="relative flex h-full flex-col justify-between p-12 text-white">
-          <Link to="/login" className="flex items-center gap-3 text-white">
+          <Link to="/" className="flex items-center gap-3 text-white">
             <BookOpen className="size-10 sm:size-12" />
             <span className="font-display text-4xl font-semibold tracking-tight sm:text-5xl">
               파노라마북스
