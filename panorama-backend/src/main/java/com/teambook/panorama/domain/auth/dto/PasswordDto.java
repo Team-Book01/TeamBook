@@ -17,9 +17,9 @@ public class PasswordDto {
 
     // 비밀번호 정책(회원가입과 동일): 8~15자, 대소문자·특수문자 포함
     private static final String PASSWORD_REGEX =
-            "^(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*]).+$";
+            "^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9\\s])\\S+$";
     private static final String PASSWORD_MESSAGE =
-            "대소문자와 특수문자를 포함해야 합니다";
+            "대소문자와 특수문자를 포함해야 하며, 공백을 포함할 수 없습니다";
 
     @Schema(name = "PasswordResetRequest", description = "비밀번호 재설정 메일 발송 요청 (비로그인)")
     public record ResetRequest(

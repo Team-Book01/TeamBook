@@ -41,9 +41,13 @@
   /* ── 폰트 ── */
   --font-sans: 'Noto Sans KR', system-ui, sans-serif;
   --font-serif: 'Noto Serif KR', serif;
+  --font-display: 'Noto Serif KR', serif; /* 로고/타이틀 강조용 (auth·mypage 화면) */
 
   /* ── 라운드 ── */
   --radius: 0.625rem;
+
+  /* ── 카드 그림자 (auth·mypage·settings 공통) ── */
+  --shadow-card: 0 1px 3px rgb(0 0 0 / 0.06), 0 1px 2px rgb(0 0 0 / 0.04);
 }
 
 /* 기본 리셋/베이스 */

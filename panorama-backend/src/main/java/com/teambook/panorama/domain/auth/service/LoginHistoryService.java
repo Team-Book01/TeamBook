@@ -4,53 +4,23 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.teambook.panorama.domain.auth.dto.LoginHistoryDto;
-import com.teambook.panorama.domain.auth.entity.LoginHistory;
-import com.teambook.panorama.domain.auth.enums.LoginResult;
-import com.teambook.panorama.domain.auth.repository.LoginHistoryRepository;
 import com.teambook.panorama.domain.user.enums.Provider;
 
-import lombok.RequiredArgsConstructor;
+/**
+ * 로그인 이력(login history) 서비스. 구현체는 {@link LoginHistoryServiceImpl}.
+ */
+public interface LoginHistoryService {
 
-@Service
-@RequiredArgsConstructor
-public class LoginHistoryService {
+    /** 로그인 성공 이력 기록. */
+    void recordSuccess(Long userId, Provider provider);
 
-    private final LoginHistoryRepository loginHistoryRepository;
+    /** 로컬 로그인 실패 이력 기록 (userId 는 없으면 null). */
+    void recordFailLocal(Long userIdOrNull, String attemptedLoginId, Provider provider);
 
-    @Transactional
-    public void recordSuccess(Long userId, Provider provider) {
-        loginHistoryRepository.save(LoginHistory.success(userId, provider));
-    }
+    /** 마지막 로그인 성공 시각 조회. */
+    Optional<LocalDateTime> findLastSuccessAt(Long userId);
 
-    @Transactional
-    public void recordFailLocal(Long userIdOrNull, String attemptedLoginId, Provider provider) {
-        loginHistoryRepository.save(
-                LoginHistory.failLocal(userIdOrNull, truncate20(attemptedLoginId), provider)
-        );
-    }
-
-    // "마지막 로그인 시각"(구 last_login_at) 파생 조회
-    @Transactional(readOnly = true)
-    public Optional<LocalDateTime> findLastSuccessAt(Long userId) {
-        return loginHistoryRepository
-                .findFirstByUserIdAndResultOrderByAttemptedAtDesc(userId, LoginResult.SUCCESS)
-                .map(LoginHistory::getAttemptedAt);   // 컬럼은 attempted_at, 프로퍼티는 createdAt
-    }
-
-    // 로그인 기록
-    @Transactional(readOnly = true)
-    public List<LoginHistoryDto.Response> getMyHistories(Long userId) {
-        return loginHistoryRepository.findByUserIdOrderByAttemptedAtDesc(userId).stream()
-                .map(LoginHistoryDto.Response::from)
-                .toList();
-    }
-
-    private String truncate20(String s) {
-        if (s == null) return null;
-        return s.length() > 20 ? s.substring(0, 20) : s;
-    }
+    /** 내 로그인 이력 목록 조회. */
+    List<LoginHistoryDto.Response> getMyHistories(Long userId);
 }

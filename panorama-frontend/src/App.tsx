@@ -1,7 +1,9 @@
 import { Routes, Route } from 'react-router-dom'
 
+import { useAuthBootstrap } from '@/hooks/useAuthBootstrap'
 import Layout from '@/components/layout/Layout'
 import AdminLayout from '@/components/layout/AdminLayout'
+import RequireAuth from '@/components/auth/RequireAuth'
 
 // 일반 사용자 페이지
 import HomePage from '@/pages/home/HomePage'
@@ -12,10 +14,11 @@ import CommunityDetailPage from '@/pages/community/CommunityDetailPage'
 import LibraryMapPage from '@/pages/library/LibraryMapPage'
 import MyPage from '@/pages/mypage/MyPage'
 
-// 인증(빈 페이지)
+// 인증
 import LoginPage from '@/pages/auth/LoginPage'
 import SignupPage from '@/pages/auth/SignupPage'
 import SettingsPage from '@/pages/auth/SettingsPage'
+import OAuthCallbackPage from '@/pages/auth/OAuthCallbackPage'
 
 // 관리자 페이지
 import AdminDashboardPage from '@/pages/admin/AdminDashboardPage'
@@ -34,9 +37,12 @@ import AdminSyncPage from '@/pages/admin/AdminSyncPage'
  * - 관리자 페이지 → AdminLayout (좌측 사이드바 + 상단바)
  */
 export default function App() {
+  // 앱 시작 시 refresh 쿠키로 로그인 세션 복원 (새로고침해도 유지)
+  useAuthBootstrap()
+
   return (
     <Routes>
-      {/* 일반 사용자 영역 */}
+      {/* 일반 사용자 영역 (공통 GNB + 푸터) */}
       <Route element={<Layout />}>
         <Route path="/" element={<HomePage />} />
         <Route path="/books" element={<BookSearchPage />} />
@@ -44,12 +50,17 @@ export default function App() {
         <Route path="/community" element={<CommunityPage />} />
         <Route path="/community/:id" element={<CommunityDetailPage />} />
         <Route path="/library-map" element={<LibraryMapPage />} />
-        <Route path="/mypage" element={<MyPage />} />
+      </Route>
 
-        {/* 인증 (빈 페이지 — auth 담당자 작업 예정) */}
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/signup" element={<SignupPage />} />
+      {/* 전체화면 독립 페이지 (자체 헤더/레이아웃 보유 → 공통 Layout 미적용) */}
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/signup" element={<SignupPage />} />
+      <Route path="/oauth/callback" element={<OAuthCallbackPage />} />
+
+      {/* 로그인이 필요한 페이지 (비로그인 시 /login 으로 리다이렉트) */}
+      <Route element={<RequireAuth />}>
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/mypage" element={<MyPage />} />
       </Route>
 
       {/* 관리자 영역 */}
