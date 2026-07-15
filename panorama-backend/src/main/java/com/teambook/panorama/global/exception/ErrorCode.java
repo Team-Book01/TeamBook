@@ -57,6 +57,8 @@ public enum ErrorCode {
   // image (도메인 접두어 IMG + 3자리 일련번호)
   IMAGE_NOT_FOUND(HttpStatus.NOT_FOUND, "IMG001", "존재하지 않는 이미지입니다."),
   ALREADY_ATTACHED_IMAGE(HttpStatus.CONFLICT, "IMG002", "이미 사용중인 이미지입니다."),
+  INVALID_IMAGE_TYPE(HttpStatus.BAD_REQUEST, "IMG003", "이미지가 아닌 파일은 사용할 수 없습니다."),
+  INVALID_IMAGE_SIZE(HttpStatus.BAD_REQUEST, "IMG004", "이미지 파일 용량이 너무 큽니다."),
 
   // notice (도메인 접두어 N)
   NOTICE_NOT_FOUND(HttpStatus.NOT_FOUND, "N001", "존재하지 않는 공지입니다.");
