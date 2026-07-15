@@ -106,7 +106,8 @@ public class AuthService {
         // refresh 쿠키 만료는 컨트롤러에서 처리
     }
 
-    private void saveRefreshToken(Long userId, String rawRefresh) {
+    @Transactional
+    public void saveRefreshToken(Long userId, String rawRefresh) {
         String hash = tokenHashUtil.sha256Hex(rawRefresh);
         LocalDateTime expiresAt = LocalDateTime.now().plus(Duration.ofMillis(jwtProperties.refreshTokenExpiration()));
         refreshTokenRepository.findByUserId(userId)
@@ -114,4 +115,11 @@ public class AuthService {
                         token -> token.updateTokenHash(hash, expiresAt), // 이미 있으면 교체(1인 1토큰 정책)
                         () -> refreshTokenRepository.save(RefreshToken.of(userId, hash, expiresAt)));
     }
+
+    @Transactional
+    public void recordSocialLogin(Long userId, String rawRefresh, Provider provider) {
+        saveRefreshToken(userId, rawRefresh);
+        loginHistoryService.recordSuccess(userId, provider);
+    }
+
 }

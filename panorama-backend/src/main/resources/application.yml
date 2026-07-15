@@ -44,3 +44,6 @@ logging:
 naver:
   client-id: nQurbUEhBwlMSPQUzmCA
   client-secret: 6hMR4MFVAG
+
+app:
+  https: false

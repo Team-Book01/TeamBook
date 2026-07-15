@@ -1,9 +1,6 @@
 package com.teambook.panorama.domain.auth.controller;
 
-import java.time.Duration;
-
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.CookieValue;
@@ -16,6 +13,7 @@ import com.teambook.panorama.domain.auth.dto.LoginDto;
 import com.teambook.panorama.domain.auth.service.AuthService;
 import com.teambook.panorama.global.exception.BusinessException;
 import com.teambook.panorama.global.exception.ErrorCode;
+import com.teambook.panorama.global.security.util.CookieUtil;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -32,9 +30,9 @@ import lombok.RequiredArgsConstructor;
 public class AuthController {
 
   private final AuthService authService;
+  private final CookieUtil cookieUtil;
 
   private static final String REFRESH_COOKIE = "refreshToken";
-  private static final Duration REFRESH_MAX_AGE = Duration.ofDays(14); // JwtProperties와 맞추기
 
   @Operation(
       summary = "로그인",
@@ -50,7 +48,7 @@ public class AuthController {
     LoginDto.IssueResult tokens = authService.login(request);
 
     return ResponseEntity.ok()
-        .header(HttpHeaders.SET_COOKIE, buildRefreshCookie(tokens.rawRefreshToken()).toString())
+        .header(HttpHeaders.SET_COOKIE, cookieUtil.buildRefreshCookie(tokens.rawRefreshToken()).toString())
         .body(LoginDto.Response.of(tokens.accessToken(), tokens.provider()));
   }
 
@@ -89,29 +87,7 @@ public class AuthController {
 
     // 서버가 refresh 쿠키를 만료시켜 제거
     return ResponseEntity.noContent()
-        .header(HttpHeaders.SET_COOKIE, expireRefreshCookie().toString())
-        .build();
-  }
-
-  // ---- 쿠키 헬퍼 ----
-
-  private ResponseCookie buildRefreshCookie(String rawRefresh) {
-    return ResponseCookie.from(REFRESH_COOKIE, rawRefresh)
-        .httpOnly(true) // JS 접근 차단 (XSS 방어)
-        .secure(true) // HTTPS 전용 (로컬 개발 시 상황에 따라 false)
-        .sameSite("None") // 크로스 오리진이면 None + Secure
-        .path("/")
-        .maxAge(REFRESH_MAX_AGE)
-        .build();
-  }
-
-  private ResponseCookie expireRefreshCookie() {
-    return ResponseCookie.from(REFRESH_COOKIE, "")
-        .httpOnly(true)
-        .secure(true)
-        .sameSite("None")
-        .path("/")
-        .maxAge(0) // 즉시 만료 → 브라우저에서 제거
+        .header(HttpHeaders.SET_COOKIE, cookieUtil.expireRefreshCookie().toString())
         .build();
   }
 }

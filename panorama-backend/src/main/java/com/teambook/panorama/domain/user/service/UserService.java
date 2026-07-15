@@ -48,7 +48,7 @@ public class UserService {
     @Transactional(readOnly = true)
     public UserDto.Response getMyInfo(Long userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> null /* new CustomException(ErrorCode.USER_NOT_FOUND) */);
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));   // U001
         return UserDto.Response.from(user);
     }
 
@@ -61,6 +61,16 @@ public class UserService {
             throw new BusinessException(ErrorCode.DUPLICATE_NICKNAME);                 // U003
         user.updateNickname(nickname);   // 변경 감지(dirty checking)
         return UserDto.Response.from(user);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean isLoginIdTaken(String loginId) {
+        return userRepository.existsByLoginId(loginId);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean isNicknameTaken(String nickname) {
+        return userRepository.existsByNickname(nickname);
     }
 
     @Transactional
