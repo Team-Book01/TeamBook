@@ -26,7 +26,7 @@ public class BookmarkController {
   @Operation(summary = "북마크 토글")
   @PostMapping("/bookmark")
   public ResponseEntity<BookmarkResponse> toggleBookmark(@RequestBody @Valid BookmarkRequest request, @AuthenticationPrincipal CustomUserDetails userDetails) {
-    Long userId = userDetails.getUserId();
+    Long userId = (userDetails != null) ? userDetails.getUserId() : null;
     BookmarkResponse response = bookmarkService.toggleBookmark(request, userId);
     return ResponseEntity.ok(response);
   }
