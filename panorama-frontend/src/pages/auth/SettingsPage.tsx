@@ -23,6 +23,7 @@ import { changePassword, updateNickname, withdraw } from '@/api/user'
 import { getErrorMessage } from '@/api/client'
 import { useAuthStore } from '@/store/authStore'
 import { toast } from '@/lib/toast'
+import { isValidNickname, isValidPassword, NICKNAME_MAX_LENGTH } from '@/lib/validation'
 
 /**
  * 계정 설정 화면 (백엔드 연동).
@@ -32,9 +33,6 @@ import { toast } from '@/lib/toast'
  */
 
 type NickStatus = 'idle' | 'checking' | 'available' | 'taken' | 'invalid'
-
-// 닉네임 허용: 한글·영문·숫자·밑줄(_), 1~10자 (백엔드 규칙과 일치)
-const NICKNAME_RE = /^[가-힣a-zA-Z0-9_]{1,10}$/
 
 export default function SettingsPage() {
   const navigate = useNavigate()
@@ -61,7 +59,7 @@ export default function SettingsPage() {
       setNickStatus('idle')
       return
     }
-    if (!NICKNAME_RE.test(trimmed)) {
+    if (!isValidNickname(trimmed)) {
       setNickStatus('invalid') // 형식 위반 → 중복확인 API 호출 안 함
       return
     }
@@ -105,10 +103,7 @@ export default function SettingsPage() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [savingPassword, setSavingPassword] = useState(false)
 
-  const passwordValid = useMemo(() => {
-    const re = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,15}$/
-    return re.test(newPassword)
-  }, [newPassword])
+  const passwordValid = useMemo(() => isValidPassword(newPassword), [newPassword])
 
   const confirmMatch = confirmPassword.length > 0 && newPassword === confirmPassword
   const passwordCanSave = currentPassword.length > 0 && passwordValid && confirmMatch
@@ -238,7 +233,7 @@ export default function SettingsPage() {
                 value={nickname}
                 onChange={(e) => setNickname(e.target.value)}
                 autoComplete="off"
-                maxLength={10}
+                maxLength={NICKNAME_MAX_LENGTH}
               />
               <div className="min-h-[1.25rem] text-xs">
                 {nickStatus === 'checking' && (
