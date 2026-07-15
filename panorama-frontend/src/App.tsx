@@ -59,8 +59,12 @@ export default function App() {
 
       {/* 로그인이 필요한 페이지 (비로그인 시 /login 으로 리다이렉트) */}
       <Route element={<RequireAuth />}>
+        {/* 마이페이지는 공통 GNB(Layout) 를 사용 */}
+        <Route element={<Layout />}>
+          <Route path="/mypage" element={<MyPage />} />
+        </Route>
+        {/* 설정은 자체 헤더(뒤로가기)를 써서 Layout 미적용 */}
         <Route path="/settings" element={<SettingsPage />} />
-        <Route path="/mypage" element={<MyPage />} />
       </Route>
 
       {/* 관리자 영역 */}

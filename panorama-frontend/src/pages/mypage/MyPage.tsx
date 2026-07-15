@@ -1,12 +1,11 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import {
   BookOpen,
   Bookmark,
   PenLine,
   Star,
   Settings,
-  LogOut,
   BadgeCheck,
   MessageSquareText,
   CalendarDays,
@@ -14,9 +13,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
-import { logout as logoutApi } from '@/api/auth'
 import { useAuthStore } from '@/store/authStore'
-import { toast } from '@/lib/toast'
 
 /**
  * 마이페이지 화면 (UI 우선 이식본).
@@ -83,7 +80,6 @@ const stats = [
 
 export default function MyPage() {
   const navigate = useNavigate()
-  const storeLogout = useAuthStore((s) => s.logout)
   const user = useAuthStore((s) => s.user)
   const [active, setActive] = useState<TabKey>('reviews')
   const activeLabel = menu.find((m) => m.key === active)!.label
@@ -94,39 +90,8 @@ export default function MyPage() {
   // 로컬 계정은 아이디(@handle), 소셜 계정은 provider(GOOGLE/NAVER/KAKAO)로 계정 출처를 표기
   const handle = user?.loginId ? `@${user.loginId}` : (user?.provider ?? '')
 
-  async function handleLogout() {
-    try {
-      await logoutApi() // 백엔드: refresh 토큰 삭제 + 쿠키 만료
-    } catch {
-      // 서버 로그아웃이 실패해도 로컬 상태는 정리한다
-    }
-    storeLogout() // zustand 전역 상태 초기화
-    toast.success('로그아웃되었습니다.')
-    navigate('/login', { replace: true })
-  }
-
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-card/60 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-          <Link to="/mypage" className="font-display text-2xl font-semibold tracking-tight">
-            책방<span className="text-accent">.</span>
-          </Link>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => navigate('/settings')}>
-              <Settings className="size-4" />
-              계정 설정
-            </Button>
-            <Button variant="ghost" size="sm" onClick={handleLogout}>
-              <LogOut className="size-4" />
-              로그아웃
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-5xl px-6 py-10">
+    <div className="mx-auto max-w-5xl px-6 py-10">
         {/* Profile card */}
         <section
           className="flex flex-col items-start gap-6 rounded-2xl border border-border bg-card p-8 sm:flex-row sm:items-center"
@@ -245,7 +210,6 @@ export default function MyPage() {
             ))}
           </div>
         </section>
-      </main>
     </div>
   )
 }

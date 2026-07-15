@@ -9,6 +9,7 @@ import { loginWithPassword } from '@/api/auth'
 import { getErrorMessage } from '@/api/client'
 import { useAuthStore } from '@/store/authStore'
 import { setRecentProvider } from '@/lib/recentLogin'
+import { safeRedirect } from '@/lib/authRedirect'
 
 /**
  * 로그인 화면.
@@ -43,8 +44,8 @@ export default function LoginPage() {
       const { user, token, provider } = await loginWithPassword(loginId, password)
       setLogin(user, token) // zustand 전역 상태에 사용자 + access 토큰 저장
       setRecentProvider(provider) // 최근 로그인 수단 저장 (재방문 UX용)
-      // client 인터셉터가 401 시 남겨둔 redirect 파라미터가 있으면 그리로, 없으면 마이페이지
-      const redirect = params.get('redirect')
+      // RequireAuth 가드 또는 client 인터셉터(401)가 남긴 redirect 로 복귀. 없거나 위험하면 마이페이지.
+      const redirect = safeRedirect(params.get('redirect'))
       navigate(redirect ?? '/mypage', { replace: true })
     } catch (err) {
       setSubmitError(getErrorMessage(err, '아이디 또는 비밀번호가 올바르지 않아요.'))

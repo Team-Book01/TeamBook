@@ -1,7 +1,10 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { BookOpen, Search, Bell } from 'lucide-react'
+import { BookOpen, Search, Bell, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useAuthStore } from '@/store/authStore'
+import { logout as logoutApi } from '@/api/auth'
+import { toast } from '@/lib/toast'
 
 
 /**
@@ -29,6 +32,8 @@ export default function Header() {
   const [query, setQuery] = useState('')
   const [focused, setFocused] = useState(false)
   const isHome = location.pathname === '/'
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const storeLogout = useAuthStore((s) => s.logout)
 
   // 현재 경로 기준 활성 메뉴 판정 ('/' 는 정확히 일치, 나머지는 prefix)
   const isActive = (to: string) =>
@@ -38,6 +43,17 @@ export default function Header() {
     e.preventDefault()
     const q = query.trim()
     navigate(q ? `/books?q=${encodeURIComponent(q)}` : '/books')
+  }
+
+  const handleLogout = async () => {
+    try {
+      await logoutApi() // 백엔드: refresh 토큰 삭제 + 쿠키 만료
+    } catch {
+      // 서버 로그아웃 실패해도 로컬 상태는 정리한다
+    }
+    storeLogout()
+    toast.success('로그아웃되었습니다.')
+    navigate('/')
   }
 
   return (
@@ -104,12 +120,31 @@ export default function Header() {
             <Bell size={19} className="text-[#555]" />
             <span className="absolute top-[7px] right-[7px] w-[7px] h-[7px] bg-red-500 rounded-full border-[1.5px] border-white" />
           </button>
-          <Link
-            to="/login"
-            className="flex items-center gap-1.5 text-[13px] font-semibold text-white bg-brand hover:bg-brand-point rounded-full px-4 py-2 transition-colors"
-          >
-            로그인
-          </Link>
+          {isAuthenticated ? (
+            <>
+              <Link
+                to="/mypage"
+                className="flex items-center gap-1.5 text-[13px] font-semibold text-white bg-brand hover:bg-brand-point rounded-full px-4 py-2 transition-colors"
+              >
+                <User size={15} />
+                마이페이지
+              </Link>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="text-[13px] font-semibold text-[#555] hover:bg-[#F5F5F5] rounded-full px-4 py-2 transition-colors"
+              >
+                로그아웃
+              </button>
+            </>
+          ) : (
+            <Link
+              to="/login"
+              className="flex items-center gap-1.5 text-[13px] font-semibold text-white bg-brand hover:bg-brand-point rounded-full px-4 py-2 transition-colors"
+            >
+              로그인
+            </Link>
+          )}
         </div>
       </div>
     </header>

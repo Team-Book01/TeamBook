@@ -32,7 +32,8 @@ export default function SignupPage() {
   }): Record<string, string> {
     const e: Record<string, string> = {}
     if (!/^\S{6,15}$/.test(v.loginId)) e.loginId = '아이디는 공백 없이 6~15자로 입력해 주세요.'
-    if (!/^\S{1,10}$/.test(v.nickname)) e.nickname = '닉네임은 공백 없이 1~10자로 입력해 주세요.'
+    if (!/^[가-힣a-zA-Z0-9_]{1,10}$/.test(v.nickname))
+      e.nickname = '닉네임은 1~10자, 한글·영문·숫자·밑줄(_)만 사용할 수 있어요.'
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.email)) e.email = '올바른 이메일 주소를 입력해 주세요.'
     if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*]).{8,15}$/.test(v.password))
       e.password = '비밀번호는 8~15자, 대소문자·특수문자(!@#$%^&*)를 포함해야 해요.'
