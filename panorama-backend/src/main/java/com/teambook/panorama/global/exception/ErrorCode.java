@@ -54,6 +54,10 @@ public enum ErrorCode {
   COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "CM001", "존재하지 않는 댓글입니다."),
   NOT_COMMENT_OWNER(HttpStatus.FORBIDDEN, "CM002", "댓글 소유자가 아닙니다."),
 
+  // image (도메인 접두어 IMG + 3자리 일련번호)
+  IMAGE_NOT_FOUND(HttpStatus.NOT_FOUND, "IMG001", "존재하지 않는 이미지입니다."),
+  ALREADY_ATTACHED_IMAGE(HttpStatus.CONFLICT, "IMG002", "이미 사용중인 이미지입니다."),
+
   // notice (도메인 접두어 N)
   NOTICE_NOT_FOUND(HttpStatus.NOT_FOUND, "N001", "존재하지 않는 공지입니다.");
 
