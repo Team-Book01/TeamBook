@@ -2,13 +2,6 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
     "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.teambook.panorama.domain.book.mapper.BookStatsMapper">
-<resultMap id="bookStats" type="BookStatsDto">
-<result property="isbn" column="isbn"/>
-<result property="" column="isbn"/>
-<result property="isbn" column="isbn"/>
-<result property="isbn" column="isbn"/>
-
-</resultMap>
 
 <!--isbn 목록 받아서 책stats 조회하기! -->
 <select id="selectBookStatsByIsbns" resultType="BookStatsDto">
@@ -24,26 +17,5 @@
   SELECT b.isbn FROM books b INNER JOIN bookmarks m ON b.book_id = m.book_id WHERE m.user_id = #{userId} AND b.isbn IN <foreach item="isbn" collection="isbns" open="(" separator="," close=")">#{isbn}</foreach>
   </select>
 
-
-
-
-
-
-<!--이건 isbn으로 db에 있는지 확인-> bookId받아오기 -> 있으면 다음단계 진행 없으면 그냥 여기서 그만하려고
-그러면 북마크-->
-<select id="findBookByIsbn" resultType="Long">
-  SELECT book_id
-  FROM books b
-  WHERE b.isbn = #{isbn}
-</select>
-
-
-
-<select id="findBookStatsByBookId" resultType="BookStatsDto">
- SELECT
-  (SELECT count(*) bookmarkCount FROM bookmarks WHERE book_id = #{bookId})
-  (SELECT count(*) reviewCount FROM book_reviews WHERE book_id = #{bookId})
-  (SELECT AVG(rating) avgRating FROM book_reviews WHERE book_id = #{bookId})
-</select>
 </mapper>
 
