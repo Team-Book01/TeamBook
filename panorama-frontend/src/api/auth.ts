@@ -22,10 +22,12 @@ type Provider = 'LOCAL' | 'GOOGLE' | 'NAVER' | 'KAKAO'
 /** GET /users/me 응답 (백엔드 UserDto.Response 기준). */
 interface MeResponse {
   userId: number
+  loginId: string | null
   nickname: string
   profileImageUrl: string | null
   provider: Provider
   role: 'USER' | 'ADMIN'
+  emailVerified: boolean
 }
 
 /** POST /auth/login 응답 (백엔드 LoginDto.Response 기준. refresh 는 HttpOnly 쿠키로 별도 발급). */
@@ -44,10 +46,10 @@ interface LoginResponse {
 export async function loginWithPassword(
   loginId: string,
   password: string,
-): Promise<{ token: string; user: User }> {
+): Promise<{ token: string; user: User; provider: Provider }> {
   const { data } = await client.post<LoginResponse>('/auth/login', { loginId, password })
   const user = await getMe(data.accessToken)
-  return { token: data.accessToken, user }
+  return { token: data.accessToken, user, provider: data.provider }
 }
 
 /**
@@ -116,6 +118,9 @@ export async function getMe(accessToken: string): Promise<User> {
     nickname: data.nickname,
     email: '', // /me 응답에 email 없음 — 추후 백엔드 확장 시 채운다
     role: data.role,
+    loginId: data.loginId,
+    provider: data.provider,
+    emailVerified: data.emailVerified,
     avatarInitial: data.nickname.slice(0, 1),
   }
 }

@@ -4,6 +4,7 @@ import { Loader2 } from 'lucide-react'
 import { getMe } from '@/api/auth'
 import { getErrorMessage } from '@/api/client'
 import { useAuthStore } from '@/store/authStore'
+import { setRecentProvider } from '@/lib/recentLogin'
 import { toast } from '@/lib/toast'
 
 /**
@@ -25,6 +26,7 @@ export default function OAuthCallbackPage() {
     ran.current = true
 
     const token = params.get('token')
+    const provider = params.get('provider')
     const errorParam = params.get('error')
 
     if (errorParam || !token) {
@@ -38,6 +40,7 @@ export default function OAuthCallbackPage() {
     getMe(token)
       .then((user) => {
         login(user, token)
+        setRecentProvider(provider) // 재방문 시 소셜 버튼 강조용 (최근 로그인 수단)
         toast.success('로그인되었어요!')
         navigate('/mypage', { replace: true })
       })

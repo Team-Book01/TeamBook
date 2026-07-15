@@ -9,11 +9,18 @@
  * 로그인 사용자 (전역 상태 authStore 에서 사용).
  * 추후 백엔드 인증 응답에 맞춰 확장.
  */
+/** 로그인 수단 (백엔드 Provider enum). */
+export type Provider = 'LOCAL' | 'GOOGLE' | 'NAVER' | 'KAKAO'
+
 export interface User {
   id: number
   nickname: string
   email: string
   role: 'USER' | 'ADMIN'
+  /** 로그인 아이디 (LOCAL 계정만 존재, 소셜은 null) */
+  loginId?: string | null
+  /** 로그인 수단 (소셜 계정 표기에 사용) */
+  provider?: Provider
   avatarInitial?: string
   avatarColor?: string
 }

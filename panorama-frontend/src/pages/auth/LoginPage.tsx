@@ -5,10 +5,10 @@ import { SocialButtons } from '@/components/auth/SocialButtons'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
-import { Checkbox } from '@/components/ui/Checkbox'
 import { loginWithPassword } from '@/api/auth'
 import { getErrorMessage } from '@/api/client'
 import { useAuthStore } from '@/store/authStore'
+import { setRecentProvider } from '@/lib/recentLogin'
 
 /**
  * 로그인 화면.
@@ -40,8 +40,9 @@ export default function LoginPage() {
     setSubmitError(null)
     setSubmitting(true)
     try {
-      const { user, token } = await loginWithPassword(loginId, password)
+      const { user, token, provider } = await loginWithPassword(loginId, password)
       setLogin(user, token) // zustand 전역 상태에 사용자 + access 토큰 저장
+      setRecentProvider(provider) // 최근 로그인 수단 저장 (재방문 UX용)
       // client 인터셉터가 401 시 남겨둔 redirect 파라미터가 있으면 그리로, 없으면 마이페이지
       const redirect = params.get('redirect')
       navigate(redirect ?? '/mypage', { replace: true })
@@ -84,11 +85,7 @@ export default function LoginPage() {
           {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
         </div>
 
-        <div className="flex items-center justify-between">
-          <label className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Checkbox id="remember" name="remember" />
-            로그인 상태 유지
-          </label>
+        <div className="flex justify-end">
           <Link to="/forgot-password" className="text-sm font-medium text-primary hover:underline">
             비밀번호 찾기
           </Link>

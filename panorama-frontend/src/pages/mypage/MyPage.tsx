@@ -81,9 +81,6 @@ const stats = [
   { label: '독서 인증', value: data.certs.length, icon: BadgeCheck },
 ]
 
-// 비로그인 상태로 /mypage 직접 접근 시 보여줄 기본값
-const mockProfile = { nickname: '책읽는곰', login_id: 'bookbear' }
-
 export default function MyPage() {
   const navigate = useNavigate()
   const storeLogout = useAuthStore((s) => s.logout)
@@ -92,10 +89,10 @@ export default function MyPage() {
   const activeLabel = menu.find((m) => m.key === active)!.label
   const posts = data[active]
 
-  // 프로필 신원(닉네임·아바타)은 실제 로그인 사용자로 표시 (없으면 기본값)
-  const nickname = user?.nickname ?? mockProfile.nickname
-  // NOTE: /users/me 응답에 login_id 가 없어 핸들은 아직 mock. (백엔드 확장 시 교체)
-  const loginId = mockProfile.login_id
+  // 이 페이지는 RequireAuth 로 보호되어 항상 로그인 사용자가 존재한다.
+  const nickname = user?.nickname ?? ''
+  // 로컬 계정은 아이디(@handle), 소셜 계정은 provider(GOOGLE/NAVER/KAKAO)로 계정 출처를 표기
+  const handle = user?.loginId ? `@${user.loginId}` : (user?.provider ?? '')
 
   async function handleLogout() {
     try {
@@ -146,10 +143,7 @@ export default function MyPage() {
                 독서가
               </Badge>
             </div>
-            <p className="mt-1 text-sm text-muted-foreground">@{loginId} · 책방 회원</p>
-            <p className="mt-3 max-w-lg text-sm text-foreground/80">
-              하루 한 챕터씩, 꾸준히 읽고 기록하는 중입니다. 소설과 과학책을 좋아해요.
-            </p>
+            <p className="mt-1 text-sm text-muted-foreground">{handle} · 책방 회원</p>
             <Button variant="outline" size="sm" className="mt-4" onClick={() => navigate('/settings')}>
               <Settings className="size-4" />
               프로필 수정
