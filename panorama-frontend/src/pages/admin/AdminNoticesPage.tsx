@@ -197,6 +197,7 @@ export default function AdminNoticesPage() {
           detail={drawer.mode === 'create' ? null : detailQuery.data ?? null}
           loading={detailQuery.isLoading}
           submitting={createMut.isPending || updateMut.isPending}
+          submitError={createMut.isError ? getErrorMessage(createMut.error, '저장에 실패했습니다.') : updateMut.isError ? getErrorMessage(updateMut.error, '저장에 실패했습니다.') : null}
           onClose={() => setDrawer(null)}
           onEdit={() => setDrawer(d => (d ? { ...d, mode: 'edit' } : d))}
           onSubmit={handleSubmit}

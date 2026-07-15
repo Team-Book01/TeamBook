@@ -86,16 +86,17 @@ function UserDetailDrawer({ userId, onClose }: { userId: number; onClose: () => 
           <button onClick={() => refetch()} className="px-3 py-1.5 text-xs font-semibold border border-border rounded-lg hover:bg-gray-50">다시 시도</button>
         </div>
       ) : (
-        <UserDetailBody u={data} reason={reason} setReason={setReason} pending={processMut.isPending} onRun={run} onGuard={() => setGuard(true)} />
+        <UserDetailBody u={data} reason={reason} setReason={setReason} pending={processMut.isPending} onRun={run} onGuard={() => setGuard(true)}
+          errorMsg={processMut.isError ? getErrorMessage(processMut.error, '처리에 실패했습니다. 다시 시도해 주세요.') : null} />
       )}
       {guard && data && <AdminGuardModal nickname={data.nickname} onConfirm={() => { setGuard(false); run('DELETE') }} onClose={() => setGuard(false)} />}
     </DetailDrawer>
   )
 }
 
-function UserDetailBody({ u, reason, setReason, pending, onRun, onGuard }: {
+function UserDetailBody({ u, reason, setReason, pending, onRun, onGuard, errorMsg }: {
   u: UserDetailResponse; reason: string; setReason: (v: string) => void; pending: boolean
-  onRun: (a: 'SUSPEND' | 'ACTIVATE' | 'DELETE') => void; onGuard: () => void
+  onRun: (a: 'SUSPEND' | 'ACTIVATE' | 'DELETE') => void; onGuard: () => void; errorMsg?: string | null
 }) {
   const onDelete = () => (u.role === 'ADMIN' ? onGuard() : onRun('DELETE'))
   return (
@@ -135,6 +136,7 @@ function UserDetailBody({ u, reason, setReason, pending, onRun, onGuard }: {
               {u.role === 'ADMIN' && <Lock size={11} strokeWidth={2.5} />}강제탈퇴
             </button>
           </div>
+          {errorMsg && <p className="text-[11px] text-red-600">{errorMsg}</p>}
         </div>
       ) : (
         <div className="bg-white rounded-xl border border-border p-4 flex items-center gap-2 text-[12px] text-muted-foreground">

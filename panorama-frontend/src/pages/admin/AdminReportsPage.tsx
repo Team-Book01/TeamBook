@@ -173,6 +173,9 @@ function DetailPanel({ reportId, onClose }: { reportId: number; onClose: () => v
                     className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-white text-xs font-semibold bg-admin hover:bg-admin-hover transition-colors disabled:opacity-50">
                     <Save size={13} /> 상태 변경 저장
                   </button>
+                  {(processMut.isError || bulkMut.isError) && (
+                    <p className="text-[11px] text-red-600 text-center">{getErrorMessage(processMut.error ?? bulkMut.error, '처리에 실패했습니다. 다시 시도해 주세요.')}</p>
+                  )}
                 </div>
               </div>
             </>
@@ -197,10 +200,11 @@ export default function AdminReportsPage() {
   const [selected, setSelected] = useState<number | null>(null)
   const [searchParams] = useSearchParams()
 
-  // 대시보드에서 ?open=<id> 로 진입 시 해당 신고 상세 자동 오픈
+  // 대시보드에서 ?open=<id> 로 진입 시 해당 신고 상세 자동 오픈 (숫자만 허용)
   useEffect(() => {
     const open = searchParams.get('open')
-    if (open) setSelected(Number(open))
+    const id = open ? Number(open) : NaN
+    if (Number.isInteger(id) && id > 0) setSelected(id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -327,6 +331,7 @@ export default function AdminReportsPage() {
                 <button onClick={() => bulk('REVIEWING')} disabled={checked.size === 0 || bulkMut.isPending} className="px-3 py-1.5 text-[11px] font-semibold border border-amber-300 text-amber-700 rounded-lg hover:bg-amber-50 disabled:opacity-40">검토 시작</button>
                 <button onClick={() => bulk('RESOLVED')} disabled={checked.size === 0 || bulkMut.isPending} className="px-3 py-1.5 text-[11px] font-semibold border border-green-300 text-green-700 rounded-lg hover:bg-green-50 disabled:opacity-40">처리 완료</button>
                 <button onClick={() => bulk('REJECTED')} disabled={checked.size === 0 || bulkMut.isPending} className="px-3 py-1.5 text-[11px] font-semibold border border-border text-gray-500 rounded-lg hover:bg-gray-50 disabled:opacity-40">반려</button>
+                {bulkMut.isError && <span className="text-[11px] text-red-600 ml-1">{getErrorMessage(bulkMut.error, '일괄 처리에 실패했습니다.')}</span>}
               </div>
               <div className="flex items-center gap-2">
                 <button onClick={() => setParams(p => ({ ...p, page: page - 1 }))} disabled={page <= 1} className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-border text-muted-foreground hover:bg-gray-50 disabled:opacity-40">이전</button>
