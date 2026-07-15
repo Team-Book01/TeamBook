@@ -11,24 +11,25 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   ChevronsUpDown,
+  X,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useAdminDashboard } from '@/api/admin'
 
 interface AdminNavItem {
   label: string
   to: string
   icon: LucideIcon
   end?: boolean
-  badge?: number
   badgeColor?: string
 }
 
 /**
- * 관리자 공통 좌측 사이드바 — 다크 셸 + 그린 액센트(Option B).
- *  - 배경은 중립 다크, 브랜드 그린은 로고/활성 상태 강조에만 사용
- *  - 메뉴를 섹션으로 그룹핑, 상단 로고 행에 접기 토글, 하단은 계정 영역
- *  - 접으면 아이콘만 남는 레일(64px) + tooltip + 배지 dot, ⌘B 로 토글
+ * 관리자 공통 좌측 사이드바 — 다크 셸 + 그린 액센트.
+ *  - 데스크톱(lg+): 인-플로우, 접기 토글로 아이콘 레일(64px) 전환(⌘B)
+ *  - 모바일(lg 미만): 오버레이 드로어(햄버거로 여닫음), 접기 개념 없이 항상 풀 라벨
+ *  - 신고/문의 배지는 대시보드 실데이터(처리 대기 수)와 동일 소스
  */
 
 const NAV_SECTIONS: { label: string; items: AdminNavItem[] }[] = [
@@ -43,8 +44,8 @@ const NAV_SECTIONS: { label: string; items: AdminNavItem[] }[] = [
     label: '콘텐츠',
     items: [
       { label: '콘텐츠 관리', to: '/admin/content', icon: FileText },
-      { label: '신고 관리', to: '/admin/reports', icon: Flag, badge: 7, badgeColor: '#ef4444' },
-      { label: '문의 관리', to: '/admin/inquiries', icon: MessageSquare, badge: 4, badgeColor: '#f59e0b' },
+      { label: '신고 관리', to: '/admin/reports', icon: Flag, badgeColor: '#ef4444' },
+      { label: '문의 관리', to: '/admin/inquiries', icon: MessageSquare, badgeColor: '#f59e0b' },
     ],
   },
   {
@@ -53,13 +54,25 @@ const NAV_SECTIONS: { label: string; items: AdminNavItem[] }[] = [
   },
 ]
 
-// AdminLayout 이 현재 페이지 제목을 찾을 때 쓰는 평탄화 목록
 export const ADMIN_NAV: AdminNavItem[] = NAV_SECTIONS.flatMap((s) => s.items)
 
 const COLLAPSE_KEY = 'adminSidebarCollapsed'
 
-export default function AdminSidebar() {
+interface Props {
+  mobileOpen: boolean
+  onMobileClose: () => void
+}
+
+export default function AdminSidebar({ mobileOpen, onMobileClose }: Props) {
   const location = useLocation()
+  const { data } = useAdminDashboard()
+
+  // 배지 카운트(실데이터). 없으면(로딩/에러) 배지 미표시
+  const pendingByPath: Record<string, number | undefined> = {
+    '/admin/reports': data?.stats.pendingReports,
+    '/admin/inquiries': data?.stats.pendingInquiries,
+  }
+
   const [collapsed, setCollapsed] = useState(() => {
     try {
       return localStorage.getItem(COLLAPSE_KEY) === '1'
@@ -79,7 +92,7 @@ export default function AdminSidebar() {
       return next
     })
 
-  // ⌘B / Ctrl+B 로 접기 토글 (입력 중이 아닐 때만)
+  // ⌘B / Ctrl+B 로 접기 토글 (데스크톱 편의)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'b') {
@@ -96,30 +109,33 @@ export default function AdminSidebar() {
   const isActive = (to: string, end?: boolean) =>
     end ? location.pathname === to : location.pathname.startsWith(to)
 
-  const navItem = ({ label, to, icon: Icon, end, badge, badgeColor }: AdminNavItem) => {
+  const navItem = ({ label, to, icon: Icon, end, badgeColor }: AdminNavItem) => {
     const active = isActive(to, end)
+    const count = pendingByPath[to]
+    const hasBadge = count != null && count > 0
     return (
       <Link
         key={to}
         to={to}
+        onClick={onMobileClose}
         title={collapsed ? label : undefined}
         className={cn(
-          'relative flex items-center rounded-lg text-[13px] font-medium transition-colors mx-2 my-0.5',
-          collapsed ? 'justify-center px-0 py-2.5' : 'gap-2.5 px-2.5 py-2',
+          'relative flex items-center rounded-lg text-[13px] font-medium transition-colors mx-2 my-0.5 gap-2.5 px-2.5 py-2',
+          collapsed && 'lg:justify-center lg:gap-0 lg:px-0 lg:py-2.5',
           active ? 'bg-admin-point/15 text-white' : 'text-white/68 hover:bg-white/[0.06] hover:text-white',
         )}
       >
-        {active && !collapsed && <span className="absolute left-0 top-1.5 bottom-1.5 w-[2.5px] rounded-full bg-admin-nav-accent" />}
+        {active && <span className={cn('absolute left-0 top-1.5 bottom-1.5 w-[2.5px] rounded-full bg-admin-nav-accent', collapsed && 'lg:hidden')} />}
         <span className="relative shrink-0">
           <Icon size={17} className={active ? 'text-admin-nav-accent' : undefined} />
-          {collapsed && badge != null && (
-            <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full border border-admin-nav" style={{ backgroundColor: badgeColor }} />
+          {hasBadge && (
+            <span className={cn('hidden absolute -top-1 -right-1 w-2 h-2 rounded-full border border-admin-nav', collapsed && 'lg:block')} style={{ backgroundColor: badgeColor }} />
           )}
         </span>
-        {!collapsed && <span className="flex-1 whitespace-nowrap">{label}</span>}
-        {!collapsed && badge != null && (
-          <span className="text-[11px] font-bold text-white rounded-full px-1.5 py-0.5 min-w-[18px] text-center" style={{ backgroundColor: badgeColor }}>
-            {badge}
+        <span className={cn('flex-1 whitespace-nowrap', collapsed && 'lg:hidden')}>{label}</span>
+        {hasBadge && (
+          <span className={cn('text-[11px] font-bold text-white rounded-full px-1.5 py-0.5 min-w-[18px] text-center', collapsed && 'lg:hidden')} style={{ backgroundColor: badgeColor }}>
+            {count}
           </span>
         )}
       </Link>
@@ -128,38 +144,43 @@ export default function AdminSidebar() {
 
   return (
     <aside
+      id="admin-sidebar-nav"
       className={cn(
-        'flex flex-col sticky top-0 h-screen text-white bg-admin-nav transition-[width] duration-200',
-        collapsed ? 'w-[64px] min-w-[64px]' : 'w-[240px] min-w-[240px]',
+        'fixed lg:sticky top-0 left-0 z-50 h-screen flex flex-col text-white bg-admin-nav transition-all duration-200',
+        'w-[240px] min-w-[240px]',
+        collapsed && 'lg:w-[64px] lg:min-w-[64px]',
+        mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
       )}
     >
-      {/* 로고 + 접기 토글 */}
-      <div className={cn('flex items-center h-[60px] border-b border-white/8 shrink-0', collapsed ? 'justify-center px-0' : 'gap-2 px-3.5')}>
-        {!collapsed && (
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <span className="w-6 h-6 rounded-md bg-admin flex items-center justify-center shrink-0">
-              <BookOpen size={14} className="text-white" />
-            </span>
-            <span className="font-bold text-[14px] truncate">파노라마북스</span>
-          </div>
-        )}
+      {/* 로고 + 토글 / 모바일 닫기 */}
+      <div className={cn('flex items-center h-[60px] border-b border-white/8 shrink-0 gap-2 px-3.5', collapsed && 'lg:px-0 lg:justify-center')}>
+        <div className={cn('flex items-center gap-2 flex-1 min-w-0', collapsed && 'lg:hidden')}>
+          <span className="w-6 h-6 rounded-md bg-admin flex items-center justify-center shrink-0">
+            <BookOpen size={14} className="text-white" />
+          </span>
+          <span className="font-bold text-[14px] truncate">파노라마북스</span>
+        </div>
+        {/* 데스크톱: 접기 토글 */}
         <button
           onClick={toggle}
           aria-label={collapsed ? '사이드바 펼치기' : '사이드바 접기'}
           aria-expanded={!collapsed}
-          aria-controls="admin-sidebar-nav"
           title={collapsed ? '사이드바 펼치기  (⌘B)' : '사이드바 접기  (⌘B)'}
-          className="p-1.5 rounded-lg text-white/55 hover:text-white hover:bg-white/10 transition-colors shrink-0"
+          className="hidden lg:flex p-1.5 rounded-lg text-white/55 hover:text-white hover:bg-white/10 transition-colors shrink-0"
         >
           {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+        </button>
+        {/* 모바일: 닫기 */}
+        <button onClick={onMobileClose} aria-label="메뉴 닫기" className="lg:hidden ml-auto p-1.5 rounded-lg text-white/55 hover:text-white hover:bg-white/10 transition-colors shrink-0">
+          <X size={18} />
         </button>
       </div>
 
       {/* 메뉴 (섹션 그룹핑) */}
-      <nav id="admin-sidebar-nav" className="flex-1 overflow-y-auto py-2 scrollbar-hide">
+      <nav className="flex-1 overflow-y-auto py-2 scrollbar-hide">
         {NAV_SECTIONS.map((section, i) => (
-          <div key={section.label} className={cn(i > 0 && (collapsed ? 'mt-2 pt-2 border-t border-white/[0.06]' : 'mt-3'))}>
-            {!collapsed && <p className="text-[10px] font-medium text-white/35 px-4 pb-1 pt-1">{section.label}</p>}
+          <div key={section.label} className={cn(i > 0 && 'mt-3')}>
+            <p className={cn('text-[10px] font-medium text-white/35 px-4 pb-1 pt-1', collapsed && 'lg:hidden')}>{section.label}</p>
             {section.items.map(navItem)}
           </div>
         ))}
@@ -170,18 +191,14 @@ export default function AdminSidebar() {
         <button
           type="button"
           title={collapsed ? '김관리자 · 슈퍼 어드민' : undefined}
-          className={cn('w-full flex items-center rounded-lg hover:bg-white/[0.06] transition-colors', collapsed ? 'justify-center py-2' : 'gap-2.5 px-2.5 py-2')}
+          className={cn('w-full flex items-center rounded-lg hover:bg-white/[0.06] transition-colors gap-2.5 px-2.5 py-2', collapsed && 'lg:justify-center lg:px-0')}
         >
           <span className="w-8 h-8 rounded-full bg-admin-point flex items-center justify-center text-[12px] font-bold shrink-0">관</span>
-          {!collapsed && (
-            <>
-              <span className="flex flex-col items-start leading-tight min-w-0">
-                <span className="text-[12.5px] font-semibold truncate">김관리자</span>
-                <span className="text-[10.5px] text-white/45">슈퍼 어드민</span>
-              </span>
-              <ChevronsUpDown size={14} className="ml-auto text-white/40 shrink-0" />
-            </>
-          )}
+          <span className={cn('flex flex-col items-start leading-tight min-w-0', collapsed && 'lg:hidden')}>
+            <span className="text-[12.5px] font-semibold truncate">김관리자</span>
+            <span className="text-[10.5px] text-white/45">슈퍼 어드민</span>
+          </span>
+          <ChevronsUpDown size={14} className={cn('ml-auto text-white/40 shrink-0', collapsed && 'lg:hidden')} />
         </button>
       </div>
     </aside>
