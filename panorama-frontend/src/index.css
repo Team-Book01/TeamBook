@@ -41,7 +41,7 @@
   --color-secondary: #eff6f2;
   --color-secondary-foreground: #1e4a38;
   --color-muted: #f2f2f2;
-  --color-muted-foreground: #777777;
+  --color-muted-foreground: #6b6b6b; /* AA 대비 확보(#777은 4.48:1로 경계) */
   --color-accent: #eff6f2;
   --color-accent-foreground: #1e4a38;
   --color-destructive: #e5484d;

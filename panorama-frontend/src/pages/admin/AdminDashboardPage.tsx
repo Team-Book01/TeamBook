@@ -63,8 +63,8 @@ function ActionKpi({ to, icon: Icon, label, value, unit, tone }: {
     <Link
       to={to}
       className={cn(
-        'flex items-center gap-3 rounded-xl border px-4 py-3.5 transition-colors',
-        danger ? 'bg-red-50 border-red-200 hover:bg-red-100/60' : 'bg-amber-50 border-amber-200 hover:bg-amber-100/60',
+        'flex items-center gap-3 rounded-xl border px-4 py-3.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
+        danger ? 'bg-red-50 border-red-200 hover:bg-red-100/60 focus-visible:ring-red-400' : 'bg-amber-50 border-amber-200 hover:bg-amber-100/60 focus-visible:ring-amber-400',
       )}
     >
       <span className="w-10 h-10 rounded-lg bg-white flex items-center justify-center shrink-0">
@@ -100,14 +100,33 @@ function InfoKpi({ icon: Icon, label, value, unit, trend }: {
   )
 }
 
+// 로딩 스켈레톤 — 실제 레이아웃과 동일 형태로 점프 방지
+function DashboardSkeleton() {
+  const block = 'animate-pulse rounded-xl bg-gray-100'
+  return (
+    <div className="p-6 space-y-5">
+      {[2, 3].map((n, i) => (
+        <div key={i}>
+          <div className="h-3 w-14 bg-gray-100 rounded mb-2 animate-pulse" />
+          <div className={cn('grid gap-3 grid-cols-1', n === 2 ? 'sm:grid-cols-2' : 'sm:grid-cols-3')}>
+            {Array.from({ length: n }).map((_, j) => <div key={j} className={cn(block, 'h-[74px]')} />)}
+          </div>
+        </div>
+      ))}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div className={cn(block, 'h-[240px]')} />
+        <div className={cn(block, 'h-[240px]')} />
+      </div>
+    </div>
+  )
+}
+
 export default function AdminDashboardPage() {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<'reports' | 'inquiries'>('reports')
   const { data, isLoading, isError, error, refetch } = useAdminDashboard()
 
-  if (isLoading) {
-    return <div className="p-7 text-center text-sm text-muted-foreground py-24">대시보드를 불러오는 중…</div>
-  }
+  if (isLoading) return <DashboardSkeleton />
   if (isError || !data) {
     return (
       <div className="p-7 text-center py-24">
@@ -189,24 +208,26 @@ export default function AdminDashboardPage() {
               {activeTab === 'reports'
                 ? data.pendingReports.map(r => (
                     <button key={r.reportId} onClick={() => navigate(`/admin/reports?open=${r.reportId}`)}
-                      className="w-full text-left flex items-center gap-3 px-5 py-3 hover:bg-[#f9faf9] transition-colors">
+                      className="group w-full text-left flex items-center gap-3 px-5 py-3 hover:bg-[#f9faf9] focus-visible:outline-none focus-visible:bg-admin-light transition-colors">
                       <span className={cn('text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0', REASON_BADGE[r.reasonType])}>{REASON_LABEL[r.reasonType]}</span>
                       <div className="flex-1 min-w-0">
                         <p className="text-[12px] text-foreground font-medium truncate">{r.targetSummary ?? '(원본 없음)'}</p>
                         <p className="text-[11px] text-muted-foreground truncate">신고자: {r.reporterNickname}</p>
                       </div>
                       <span className="text-[11px] text-muted-foreground shrink-0">{timeAgo(r.createdAt)}</span>
+                      <ChevronRight size={14} className="text-muted-foreground/60 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                     </button>
                   ))
                 : data.pendingInquiries.map(q => (
                     <button key={q.inquiryId} onClick={() => navigate(`/admin/inquiries?open=${q.inquiryId}`)}
-                      className="w-full text-left flex items-center gap-3 px-5 py-3 hover:bg-[#f9faf9] transition-colors">
+                      className="group w-full text-left flex items-center gap-3 px-5 py-3 hover:bg-[#f9faf9] focus-visible:outline-none focus-visible:bg-admin-light transition-colors">
                       <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 shrink-0 max-w-[96px] truncate">{q.category}</span>
                       <div className="flex-1 min-w-0">
                         <p className="text-[12px] text-foreground font-medium truncate">{q.title}</p>
                         <p className="text-[11px] text-muted-foreground truncate">{q.writerNickname}</p>
                       </div>
                       <span className="text-[11px] text-muted-foreground shrink-0">{timeAgo(q.createdAt)}</span>
+                      <ChevronRight size={14} className="text-muted-foreground/60 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                     </button>
                   ))}
             </div>
@@ -236,13 +257,14 @@ export default function AdminDashboardPage() {
             <div className="divide-y divide-[#f5f5f5]">
               {data.recentContents.map(c => (
                 <button key={c.postId} onClick={() => navigate(`/admin/content?type=POST&open=${c.postId}`)}
-                  className="w-full text-left flex items-center gap-3 px-5 py-3 hover:bg-[#f9faf9] transition-colors">
+                  className="group w-full text-left flex items-center gap-3 px-5 py-3 hover:bg-[#f9faf9] focus-visible:outline-none focus-visible:bg-admin-light transition-colors">
                   <span className={cn('text-[10px] font-semibold px-2 py-0.5 rounded-full shrink-0', POST_CATEGORY_BADGE[c.category])}>
                     {POST_CATEGORY_LABEL[c.category]}
                   </span>
                   <p className="flex-1 text-[12px] font-medium text-foreground truncate">{c.title}</p>
                   <span className="text-[11px] text-muted-foreground shrink-0">{c.authorNickname}</span>
-                  <span className="text-[10px] text-muted-foreground shrink-0 w-[52px] text-right">{timeAgo(c.createdAt)}</span>
+                  <span className="text-[11px] text-muted-foreground shrink-0 w-[52px] text-right">{timeAgo(c.createdAt)}</span>
+                  <ChevronRight size={14} className="text-muted-foreground/60 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                 </button>
               ))}
             </div>
