@@ -35,14 +35,14 @@ public class PostCommentController {
     private final PostCommentService postCommentService;
 
     @PostMapping("/posts/{postId}/comments")
-    public ResponseEntity<PostCommentResponseDto> create(@RequestHeader("X-USER-ID") Long userId,
+    public ResponseEntity<PostCommentResponseDto> create(@RequestHeader("X-USER-ID") Long userId,    // TODO: JWT 연동 후 @AuthenticationPrincipal로 교체
             @PathVariable("postId") Long postId, @Valid @RequestBody PostCommentRequestDto request) {
         Long commentId = postCommentService.createComment(userId, postId, request);
 
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}").buildAndExpand(commentId).toUri();
 
-        return ResponseEntity.created(location).body(new PostCommentResponseDto(commentId));
+        return ResponseEntity.created(location).body(new PostCommentResponseDto(commentId, request.content()));
     }
 
     @GetMapping("/posts/{postId}/comments")
@@ -54,7 +54,7 @@ public class PostCommentController {
 
     @PutMapping("/posts/{postId}/comments/{commentId}")
     public ResponseEntity<PostCommentResponseDto> update(@PathVariable("postId") Long postId,
-            @PathVariable("commentId") Long commentId, @RequestHeader("X-USER-ID") Long userId,
+            @PathVariable("commentId") Long commentId, @RequestHeader("X-USER-ID") Long userId,    // TODO: JWT 연동 후 @AuthenticationPrincipal로 교체
             @Valid @RequestBody PostCommentUpdateRequestDto request) {
         PostCommentResponseDto response = postCommentService.updateComment(postId, commentId, userId, request);
         return ResponseEntity.ok(response);
@@ -62,7 +62,7 @@ public class PostCommentController {
 
     @DeleteMapping("/posts/{postId}/comments/{commentId}")
     public ResponseEntity<Void> delete(@PathVariable("postId") Long postId,
-            @PathVariable("commentId") Long commentId, @RequestHeader("X-USER-ID") Long userId) {
+            @PathVariable("commentId") Long commentId, @RequestHeader("X-USER-ID") Long userId) {    // TODO: JWT 연동 후 @AuthenticationPrincipal로 교체
         postCommentService.deleteComment(postId, commentId, userId);
         return ResponseEntity.noContent().build();
     }

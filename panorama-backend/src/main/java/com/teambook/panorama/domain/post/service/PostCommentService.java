@@ -100,7 +100,7 @@ public class PostCommentService {
 
     postComment.updateContent(request.content());
 
-    return new PostCommentResponseDto(commentId);
+    return new PostCommentResponseDto(commentId, postComment.getContent());
   }
 
   @Transactional
