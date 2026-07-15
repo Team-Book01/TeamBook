@@ -13,6 +13,9 @@ public class UserDto {
             @Schema(description = "회원 ID", example = "1")
             Long userId,
 
+            @Schema(description = "로그인 아이디 (LOCAL 계정만 존재, 소셜은 null)", example = "testuser1", nullable = true)
+            String loginId,
+
             @Schema(description = "닉네임", example = "테스터")
             String nickname,
 
@@ -23,15 +26,20 @@ public class UserDto {
             Provider provider,
 
             @Schema(description = "권한", example = "USER")
-            Role role
+            Role role,
+
+            @Schema(description = "이메일 인증 여부 (비밀번호 변경 등에 사용)", example = "false")
+            boolean emailVerified
     ) {
         public static Response from(User user) {
             return new Response(
                     user.getId(),
+                    user.getLoginId(),
                     user.getNickname(),
                     user.getProfileImageUrl(),
                     user.getProvider(),
-                    user.getRole()
+                    user.getRole(),
+                    user.isEmailVerified()
             );
         }
     }
