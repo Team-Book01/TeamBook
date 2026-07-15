@@ -10,7 +10,5 @@ public interface BookmarkRepository extends JpaRepository<Bookmark, Long> {
   //
   Optional<Bookmark> findByUserIdAndBook_BookId(Long userId, Long bookId);
   long countByBook_BookId(Long bookId);
-  
-
 
 }

@@ -4,6 +4,7 @@ import { Star, Heart, ChevronLeft, ChevronUp, BookOpen } from "lucide-react";
 
 import { useBook, useBookmarkMutation } from "@/api/book";
 import { getErrorMessage } from "@/api/client";
+import { useRequireLogin } from "@/hooks/useRequireLogin";
 import { LibraryFinder, ReviewSection } from "./components";
 
 /** yyyymmdd → yyyy.mm.dd (형식이 아니면 원본 그대로) */
@@ -26,6 +27,7 @@ export default function BookDetailPage() {
 
   const { data: book, isLoading, isError, error, isFetching } = useBook(isbn);
   const bookmark = useBookmarkMutation();
+  const { ensureLoggedIn } = useRequireLogin();
 
   const [showTop, setShowTop] = useState(false);
   const [imgError, setImgError] = useState(false);
@@ -55,6 +57,8 @@ export default function BookDetailPage() {
 
   const handleToggleBookmark = () => {
     if (!book) return;
+    // 프론트 토큰 검증: 없으면 로그인으로, 있으면 요청 발사 → 백엔드 토글
+    if (!ensureLoggedIn()) return;
     bookmark.mutate({
       isbn: book.isbn,
       title: book.title,

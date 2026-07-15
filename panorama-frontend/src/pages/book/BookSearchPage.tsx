@@ -5,6 +5,7 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 import type { BookItem, BookSort } from "@/types/book";
 import { useBookSearch, useBookmarkMutation } from "@/api/book";
 import { getErrorMessage } from "@/api/client";
+import { useRequireLogin } from "@/hooks/useRequireLogin";
 import { BookCard, ProfileCard, PopularBooksCard } from "./components";
 
 // 정렬 옵션(UI) → 백엔드 sort 파라미터 + 클라이언트 정렬 기준
@@ -34,6 +35,7 @@ export default function BookSearchPage() {
   } = useBookSearch({ keyword: q, sort: toBackendSort(sortLabel) });
 
   const bookmark = useBookmarkMutation();
+  const { ensureLoggedIn } = useRequireLogin();
   const bottomRef = useRef<HTMLDivElement>(null);
 
   // 서버 응답(페이지들)을 한 배열로 펼치고, 인기순/별점순은 클라이언트에서 정렬
@@ -85,6 +87,8 @@ export default function BookSearchPage() {
 
   const handleToggleBookmark = (book: BookItem) => {
     if (!book.isbn) return;
+    // 프론트 토큰 검증: 없으면 로그인으로, 있으면 요청 발사 → 백엔드 토글
+    if (!ensureLoggedIn()) return;
     bookmark.mutate({
       isbn: book.isbn,
       title: book.title,
