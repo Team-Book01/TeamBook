@@ -29,8 +29,9 @@ public ResponseEntity<BookSearchResponse> getBooks(
   @RequestParam(value = "start", defaultValue = "1") Integer start,
   @RequestParam(value = "sort", defaultValue = "sim") String sort,
 @AuthenticationPrincipal CustomUserDetails userDetails) {
-    //임시 유저 Id
-    Long userId = userDetails.getUserId();
+    // 검색은 permitAll 이라 비로그인(익명) 요청이면 userDetails 가 null 이다.
+    // 이 경우 userId 를 null 로 두면 북마크 조회가 빈 결과가 되어 정상 동작한다. (NPE 방지)
+    Long userId = (userDetails != null) ? userDetails.getUserId() : null;
     BookSearchResponse response = bookSearchService.findBooks(keyword, display, start, sort, userId);
     return ResponseEntity.ok(response);
   }
