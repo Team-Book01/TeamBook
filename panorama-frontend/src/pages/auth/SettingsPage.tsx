@@ -6,8 +6,6 @@ import {
   User,
   Lock,
   Trash2,
-  Bell,
-  Eye,
   Mail,
   Loader2,
   CheckCircle2,
@@ -17,7 +15,6 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
 import { Separator } from '@/components/ui/Separator'
-import { Switch } from '@/components/ui/Switch'
 import { checkExists, logout as logoutApi } from '@/api/auth'
 import { changePassword, updateNickname, withdraw } from '@/api/user'
 import { getErrorCode, getErrorMessage } from '@/api/client'
@@ -388,71 +385,6 @@ export default function SettingsPage() {
           )}
         </section>
         )}
-
-        {/* Notifications section (변경 없음) */}
-        <section
-          className="mt-6 rounded-2xl border border-border bg-card p-6"
-          style={{ boxShadow: 'var(--shadow-card)' }}
-        >
-          <div className="flex items-center gap-3">
-            <Bell className="size-5 text-primary" />
-            <h2 className="text-lg font-semibold">알림 설정</h2>
-          </div>
-          <Separator className="my-4" />
-
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">독서 인증 리마인더</p>
-                <p className="text-xs text-muted-foreground">매일 독서 인증을 잊지 않도록 알려드려요.</p>
-              </div>
-              <Switch defaultChecked />
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">새 리뷰·댓글 알림</p>
-                <p className="text-xs text-muted-foreground">내 글에 달린 반응을 받아보세요.</p>
-              </div>
-              <Switch defaultChecked />
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">마케팅·이벤트</p>
-                <p className="text-xs text-muted-foreground">책방의 새로운 소식과 이벤트를 받아보세요.</p>
-              </div>
-              <Switch />
-            </div>
-          </div>
-        </section>
-
-        {/* Privacy section (변경 없음) */}
-        <section
-          className="mt-6 rounded-2xl border border-border bg-card p-6"
-          style={{ boxShadow: 'var(--shadow-card)' }}
-        >
-          <div className="flex items-center gap-3">
-            <Eye className="size-5 text-primary" />
-            <h2 className="text-lg font-semibold">프라이버시</h2>
-          </div>
-          <Separator className="my-4" />
-
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">프로필 공개</p>
-                <p className="text-xs text-muted-foreground">다른 사용자가 내 프로필을 볼 수 있어요.</p>
-              </div>
-              <Switch defaultChecked />
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">독후감 공개</p>
-                <p className="text-xs text-muted-foreground">작성한 독후감을 모두에게 공개할까요?</p>
-              </div>
-              <Switch defaultChecked />
-            </div>
-          </div>
-        </section>
 
         {/* Danger zone */}
         <section className="mt-6 rounded-2xl border border-destructive/20 bg-card p-6">
