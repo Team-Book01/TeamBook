@@ -3,7 +3,6 @@ import { useSearchParams } from 'react-router-dom'
 import { startSocialLogin } from '@/lib/oauth'
 import { getRecentProvider } from '@/lib/recentLogin'
 import { savePendingRedirect } from '@/lib/authRedirect'
-import { toast } from '@/lib/toast'
 
 type Provider = 'google' | 'kakao' | 'naver'
 
@@ -63,24 +62,18 @@ const providers: {
 /**
  * 소셜 로그인 버튼 묶음.
  *
- * - google / naver: 백엔드 OAuth2 엔드포인트로 이동해 실제 로그인 시작.
+ * - google / naver / kakao: 백엔드 OAuth2 엔드포인트로 이동해 실제 로그인 시작.
  *   (백엔드가 처리 후 /oauth/callback 으로 토큰을 붙여 리다이렉트 → OAuthCallbackPage)
- * - kakao: 백엔드 미지원이라 "준비 중" 안내만 띄운다.
  */
 export function SocialButtons({ mode }: { mode: 'login' | 'signup' }) {
-  const action = mode === 'login' ? '로그인' : '회원가입'
   const [params] = useSearchParams()
   // 최근 로그인 수단 (재방문 강조용). 로그인 화면에서만 표시. 저장값은 대문자(GOOGLE 등).
   const recent = mode === 'login' ? getRecentProvider() : null
 
-  function handleClick(id: Provider, label: string) {
-    if (id === 'google' || id === 'naver') {
-      // 외부 왕복으로 URL 쿼리가 소실되므로, 복귀 경로를 세션에 저장해두고 콜백에서 회수
-      savePendingRedirect(params.get('redirect'))
-      startSocialLogin(id)
-    } else {
-      toast.info(`${label.replace('로 계속하기', '')} ${action}은 준비 중이에요.`)
-    }
+  function handleClick(id: Provider) {
+    // 외부 왕복으로 URL 쿼리가 소실되므로, 복귀 경로를 세션에 저장해두고 콜백에서 회수
+    savePendingRedirect(params.get('redirect'))
+    startSocialLogin(id)
   }
 
   return (
@@ -91,7 +84,7 @@ export function SocialButtons({ mode }: { mode: 'login' | 'signup' }) {
           <button
             key={p.id}
             type="button"
-            onClick={() => handleClick(p.id, p.label)}
+            onClick={() => handleClick(p.id)}
             aria-label={isRecent ? `${p.label} (최근 사용)` : p.label}
             className={`relative inline-flex h-11 w-full items-center justify-center gap-3 rounded-lg px-4 text-sm font-semibold transition-all ${p.className} ${
               isRecent ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''

@@ -43,9 +43,11 @@ export default function OAuthCallbackPage() {
         login(user, token)
         setRecentProvider(provider) // 재방문 시 소셜 버튼 강조용 (최근 로그인 수단)
         toast.success('로그인되었어요!')
-        // 소셜 로그인 시작 전 저장해둔 복귀 경로가 있으면 그리로, 없으면 마이페이지
+        // 소셜 로그인 시작 전 저장해둔 복귀 경로가 있으면 그리로,
+        // 없으면 권한별 기본 경로: ADMIN → 관리자, 그 외 → 메인
         const redirect = takePendingRedirect()
-        navigate(redirect ?? '/mypage', { replace: true })
+        const fallback = user.role === 'ADMIN' ? '/admin' : '/'
+        navigate(redirect ?? fallback, { replace: true })
       })
       .catch((e) => {
         const msg = getErrorMessage(e, '로그인 정보를 불러오지 못했어요.')

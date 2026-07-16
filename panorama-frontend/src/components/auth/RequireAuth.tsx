@@ -18,6 +18,10 @@ export default function RequireAuth() {
   if (!authReady) return null // 세션 복원 대기 (깜빡임/조기 리다이렉트 방지)
 
   if (!isAuthenticated) {
+    // 마이페이지는 복귀 대상에서 제외 → 로그인 후 기본 경로(홈)로 보낸다.
+    if (location.pathname === '/mypage') {
+      return <Navigate to="/login" replace />
+    }
     // 원래 가려던 내부 경로(path+query)를 인코딩해 전달. (검증은 LoginPage 에서 수행)
     const dest = location.pathname + location.search
     return <Navigate to={`/login?redirect=${encodeURIComponent(dest)}`} replace />

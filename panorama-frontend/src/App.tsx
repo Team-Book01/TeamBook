@@ -66,7 +66,7 @@ export default function App() {
         <Route path="/settings" element={<SettingsPage />} />
       </Route>
 
-      {/* 관리자 영역 (로그인 + role===ADMIN 만 진입) */}
+      {/* 관리자 영역 (ADMIN 권한만 접근, 그 외는 로그인/메인으로) */}
       <Route element={<RequireAdmin />}>
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboardPage />} />
