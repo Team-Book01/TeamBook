@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -35,41 +36,42 @@ public class PostImageService {
       throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
     }
 
-    List<String> imageTypeList = List.of("image/jpeg", "image/png", "image/gif", "image/webp");
+    Map<String, String> imageTypeMap = Map.of(
+    "image/jpeg", ".jpg", "image/png", ".png", "image/gif", ".gif", "image/webp", ".webp");
     for (MultipartFile file : files) {
       if (file.isEmpty()) {
         throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
       }
 
-      if (!imageTypeList.contains(file.getContentType())) {
+      String contentType = file.getContentType();
+      if (contentType == null || !imageTypeMap.containsKey(contentType)) {
         throw new BusinessException(ErrorCode.INVALID_IMAGE_TYPE);
       }
 
+      // yml 상한(5MB)이 먼저 차단하지만, 설정 변경 시 무방비가 되지 않도록 방어층으로 유지.
       if (file.getSize() > (5 * 1024 * 1024)) {
         throw new BusinessException(ErrorCode.INVALID_IMAGE_SIZE);
       }
     }
 
     List<PostImageResponseDto> result = new ArrayList<>();
+    Path dir = Paths.get(uploadDir);
+    try {
+      Files.createDirectories(dir);
+    } catch (IOException e) {
+      throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
+    }
 
     for (MultipartFile file : files) {
-      // 1) 확장자 추출: 원본 이름에서
+      // 1) 확장자 발급: 검증된 MIME에서 (원본 이름은 기록용으로만)
       String originalName = file.getOriginalFilename();
-      String ext = "";
-      if (originalName != null) {
-        int typeIndex = originalName.lastIndexOf(".");
-        if (typeIndex != -1) {
-          ext = originalName.substring(typeIndex);
-        }
-      }
+      String ext = imageTypeMap.get(file.getContentType());
 
       // 2) 이름 발급
       String imageKey = UUID.randomUUID().toString() + ext;
 
       // 3) 디스크 저장
       try {
-        Path dir = Paths.get(uploadDir);
-        Files.createDirectories(dir);
         file.transferTo(dir.resolve(imageKey).toAbsolutePath());
       } catch (IOException e) {
         throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);

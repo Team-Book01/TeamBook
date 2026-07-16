@@ -8,6 +8,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -40,6 +42,21 @@ public class GlobalExceptionHandler {
   public ResponseEntity<ErrorResponse> handleMissingRequestHeaderException(MissingRequestHeaderException e) {
     log.warn("Missing Header: {}", e.getMessage());
     return build(ErrorCode.MISSING_HEADER, List.of());
+  }
+
+  // 400 - multipart 파싱 단계에서 파일 크기 상한(yml) 초과.
+  // 서비스의 getSize() 검사보다 먼저 터지므로 여기서 IMG004로 번역한다.
+  @ExceptionHandler(MaxUploadSizeExceededException.class)
+  public ResponseEntity<ErrorResponse> handleMaxUploadSizeExceeded(MaxUploadSizeExceededException e) {
+    log.warn("Upload size exceeded: {}", e.getMessage());
+    return build(ErrorCode.INVALID_IMAGE_SIZE, List.of());
+  }
+
+  // 400 - multipart 요청에 필수 part(예: images)가 없음.
+  @ExceptionHandler(MissingServletRequestPartException.class)
+  public ResponseEntity<ErrorResponse> handleMissingServletRequestPart(MissingServletRequestPartException e) {
+    log.warn("Missing multipart part: {}", e.getMessage());
+    return build(ErrorCode.INVALID_INPUT_VALUE, List.of());
   }
 
   // 비즈니스 예외 (ErrorCode 가 상태/코드를 소유).
