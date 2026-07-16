@@ -4,7 +4,6 @@ import com.teambook.panorama.domain.user.entity.User;
 import com.teambook.panorama.global.constant.ValidationPattern;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -29,12 +28,8 @@ public class SignUpDto {
             @Size(min = ValidationPattern.NICKNAME_MIN, max = ValidationPattern.NICKNAME_MAX)
             @Pattern(regexp = ValidationPattern.NICKNAME,
                 message = ValidationPattern.NICKNAME_MESSAGE)
-            String nickname,
-
-            @Schema(description = "이메일", example = "test@example.com")
-            @NotBlank
-            @Email
-            String email
+            String nickname
+            // 이메일은 가입 시 받지 않는다. 가입 후 설정(SettingsPage)에서 등록·인증한다(DB email nullable).
     ) {}
 
     @Schema(name = "SignUpResponse", description = "회원가입 결과")
