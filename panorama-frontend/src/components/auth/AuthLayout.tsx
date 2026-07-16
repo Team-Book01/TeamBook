@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
+import { BookOpen } from 'lucide-react'
 import authBooks from '@/assets/auth-books.jpg'
 
 /** 로그인·회원가입 공통 2단 레이아웃 (좌: 비주얼, 우: 폼). */
@@ -33,11 +34,11 @@ export function AuthLayout({
           }}
         />
         <div className="relative flex h-full flex-col justify-between p-12 text-white">
-          <Link
-            to="/login"
-            className="font-display text-6xl font-semibold tracking-tight sm:text-7xl"
-          >
-            책방<span className="text-accent">.</span>
+          <Link to="/" className="flex items-center gap-3 text-white">
+            <BookOpen className="size-10 sm:size-12" />
+            <span className="font-display text-4xl font-semibold tracking-tight sm:text-5xl">
+              파노라마북스
+            </span>
           </Link>
           <div className="max-w-md">
             <p className="font-display text-4xl leading-tight font-medium">
@@ -54,11 +55,9 @@ export function AuthLayout({
       {/* 폼 영역 */}
       <div className="flex items-center justify-center px-6 py-12 sm:px-12">
         <div className="w-full max-w-md">
-          <Link
-            to="/"
-            className="mb-10 inline-block font-display text-2xl font-semibold tracking-tight lg:hidden"
-          >
-            책방<span className="text-accent">.</span>
+          <Link to="/" className="mb-10 flex items-center gap-2 lg:hidden">
+            <BookOpen size={22} className="text-brand" />
+            <span className="text-brand text-xl font-bold tracking-tight">파노라마북스</span>
           </Link>
           <p className="text-sm font-semibold tracking-wide text-accent-foreground/70 uppercase">
             {eyebrow}
