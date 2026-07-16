@@ -116,13 +116,13 @@ export async function toggleBookmark(body: BookmarkRequest): Promise<BookmarkRes
   return data
 }
 
-/** GET /api/v1/books/{isbn}/reviews — 리뷰 목록 */
+/** GET /api/v1//reviews/{isbn} — 리뷰 목록 */
 export async function getReviews(
   isbn: string,
   page = 1,
   size = 10,
 ): Promise<ReviewListResponse> {
-  const { data } = await client.get<ReviewListResponse>(`/books/${isbn}/reviews`, {
+  const { data } = await client.get<ReviewListResponse>(`/reviews/${isbn}`, {
     params: { page, size },
   })
   return data
@@ -254,7 +254,8 @@ export function useBookReviews(isbn: string, page = 1, size = 10) {
   return useQuery({
     queryKey: bookKeys.reviews(isbn, page, size),
     queryFn: () => getReviews(isbn, page, size),
-    enabled: isbn.length > 0,
+    // isbn 이 빈 값/누락(null)이어도 렌더 중 터지지 않도록 방어적으로 체크
+    enabled: !!isbn && isbn.length > 0,
   })
 }
 
@@ -274,46 +275,70 @@ export function useBookLibraries(isbn: string, params: LibraryParams) {
 /**
  * 북마크 토글.
  *
- * - 낙관적 업데이트: 클릭 즉시 상세 캐시의 하트 상태·카운트를 뒤집어 UI 가 바로 반응한다.
- *   실패하면 이전 값으로 롤백한다.
- * - 성공 시 서버가 준 확정값(isBookmarked/bookmarkCount)으로 상세 캐시를 덮어쓴다.
- * - 마지막에 검색 목록(여러 keyword 조합) + 상세를 invalidate 해서 서버 기준으로 재동기화한다.
+ * 검색 목록/상세 캐시를 refetch 없이 직접 갱신한다.
+ * (상세·검색 모두 매 조회 시 네이버 API 를 호출하므로, invalidate 로 재조회를 걸면
+ *  느리고 rate-limit 에 취약하다. 응답이 해당 도서의 확정값 isBookmarked/bookmarkCount 를
+ *  주므로 그 값으로 캐시를 직접 덮어쓰는 편이 즉각적이고 안정적이다.)
+ *
+ * - onMutate: 클릭 즉시 상세 + 모든 검색 캐시에서 해당 isbn 을 낙관적으로 토글 → UI 즉시 반응.
+ * - onError: 스냅샷으로 롤백.
+ * - onSuccess: 서버 확정값으로 상세 + 검색 캐시를 덮어쓴다.
  */
 export function useBookmarkMutation() {
   const queryClient = useQueryClient()
+  const searchFilter = { queryKey: [...bookKeys.all, 'search'] as const }
+
+  /** 상세 + 모든 검색 캐시에서 isbn 이 일치하는 항목에 updater 를 적용한다. */
+  const writeBook = (isbn: string, updater: (item: BookItem) => BookItem) => {
+    queryClient.setQueryData<BookDetail>(bookKeys.detail(isbn), (old) =>
+      old ? (updater(old) as BookDetail) : old,
+    )
+    queryClient.setQueriesData<InfiniteData<BookSearchResponse>>(searchFilter, (old) =>
+      old
+        ? {
+            ...old,
+            pages: old.pages.map((page) => ({
+              ...page,
+              items: page.items.map((it) => (it.isbn === isbn ? updater(it) : it)),
+            })),
+          }
+        : old,
+    )
+  }
+
   return useMutation({
     mutationFn: (body: BookmarkRequest) => toggleBookmark(body),
     onMutate: async (variables) => {
       const detailKey = bookKeys.detail(variables.isbn)
-      // 진행 중인 상세 refetch 를 취소해 낙관적 값이 덮이지 않게 한다.
-      await queryClient.cancelQueries({ queryKey: detailKey })
+      // 진행 중인 refetch 를 취소해 낙관적 값이 덮이지 않게 한다.
+      await Promise.all([
+        queryClient.cancelQueries({ queryKey: detailKey }),
+        queryClient.cancelQueries(searchFilter),
+      ])
+      // 롤백용 스냅샷
       const prevDetail = queryClient.getQueryData<BookDetail>(detailKey)
-      if (prevDetail) {
-        queryClient.setQueryData<BookDetail>(detailKey, {
-          ...prevDetail,
-          isBookmarked: !prevDetail.isBookmarked,
-          bookmarkCount: prevDetail.bookmarkCount + (prevDetail.isBookmarked ? -1 : 1),
-        })
-      }
-      return { prevDetail }
+      const prevSearches = queryClient.getQueriesData<InfiniteData<BookSearchResponse>>(searchFilter)
+      // 낙관적 토글 (하트 뒤집고 카운트 ±1)
+      writeBook(variables.isbn, (it) => ({
+        ...it,
+        isBookmarked: !it.isBookmarked,
+        bookmarkCount: it.bookmarkCount + (it.isBookmarked ? -1 : 1),
+      }))
+      return { prevDetail, prevSearches }
     },
     onError: (_err, variables, context) => {
       if (context?.prevDetail) {
         queryClient.setQueryData(bookKeys.detail(variables.isbn), context.prevDetail)
       }
+      context?.prevSearches?.forEach(([key, data]) => queryClient.setQueryData(key, data))
     },
     onSuccess: (data, variables) => {
-      // 서버 확정값으로 상세 캐시 동기화 (하트 상태 + 정확한 카운트)
-      queryClient.setQueryData<BookDetail>(bookKeys.detail(variables.isbn), (old) =>
-        old
-          ? { ...old, isBookmarked: data.isBookmarked, bookmarkCount: data.bookmarkCount }
-          : old,
-      )
-    },
-    onSettled: (_data, _err, variables) => {
-      // 검색 결과 전체 + 해당 도서 상세를 서버 기준으로 재동기화
-      queryClient.invalidateQueries({ queryKey: [...bookKeys.all, 'search'] })
-      queryClient.invalidateQueries({ queryKey: bookKeys.detail(variables.isbn) })
+      // 서버 확정값으로 상세 + 검색 캐시 동기화 (하트 상태 + 정확한 카운트)
+      writeBook(variables.isbn, (it) => ({
+        ...it,
+        isBookmarked: data.isBookmarked,
+        bookmarkCount: data.bookmarkCount,
+      }))
     },
   })
 }

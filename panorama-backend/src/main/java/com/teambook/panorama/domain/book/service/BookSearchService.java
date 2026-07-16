@@ -88,7 +88,7 @@ public class BookSearchService {
     //네이버 단건 조회 -> 없는 isbn 예외 처리
     var items = naverBookClient.search(isbn, 1, 1, "sim").items();
     if (items.isEmpty()) {
-      //예외 수정필요
+      //예외 수정필요!!
       throw new RuntimeException();
     }
     NaverBookItem item = items.getFirst();
@@ -99,6 +99,7 @@ public class BookSearchService {
 
 
     return BookSearchItem.builder()
+    .isbn(isbn)
     .author(item.author())
     .avgRating(stats != null ? stats.avgRating() : BigDecimal.ZERO)
     .reviewCount(stats != null ? stats.reviewCount() : 0)

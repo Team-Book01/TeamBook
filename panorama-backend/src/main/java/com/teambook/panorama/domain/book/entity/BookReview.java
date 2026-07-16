@@ -6,6 +6,8 @@ import com.teambook.panorama.global.entity.BaseTimeEntity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -13,6 +15,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -41,14 +44,22 @@ public class BookReview extends BaseTimeEntity {
   private String content;
 
   @Column(name = "status", nullable = false, length = 20)
-  private String status;
+  @Enumerated(EnumType.STRING)
+  private ReviewStatus status;
 
+  @Builder
   public BookReview(Long userId, Book book, BigDecimal rating, String content) {
     this.userId = userId;
     this.book = book;
     this.rating = rating;
     this.content = content;
-    this.status = "ACTIVE";
+    this.status = ReviewStatus.ACTIVE;
+  }
+
+  public void update(BigDecimal rating, String content, ReviewStatus status) {
+    this.rating = rating;
+    this.content = content;
+    this.status = status;
   }
 
   
