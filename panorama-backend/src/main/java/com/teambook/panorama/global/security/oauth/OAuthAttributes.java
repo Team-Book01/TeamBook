@@ -31,20 +31,31 @@ public class OAuthAttributes {
     }
 
     private static OAuthAttributes ofGoogle(Map<String, Object> attributes) {
-        return new OAuthAttributes(
-                Provider.GOOGLE,
-                (String) attributes.get("sub"),     // ★ 구글 고유 ID
-                (String) attributes.get("email"));
+    String providerUserId = asString(attributes.get("sub"));   // ★ 구글 고유 ID
+    if (providerUserId == null) {
+        throw new OAuth2AuthenticationException(
+                new OAuth2Error("invalid_user_info_response"), "구글 응답에 sub가 없습니다.");
+    }
+
+    String email = asString(attributes.get("email"));   // 없으면 null
+    return new OAuthAttributes(Provider.GOOGLE, providerUserId, email);
     }
 
     private static OAuthAttributes ofNaver(Map<String, Object> attributes) {
-    @SuppressWarnings("unchecked")
-    Map<String, Object> response = (Map<String, Object>) attributes.get("response");
-    // response가 null이면 → OAuth2AuthenticationException으로 감싸 던지기
-    return new OAuthAttributes(
-            Provider.NAVER,
-            (String) response.get("id"),      // 구글의 sub 자리
-            (String) response.get("email"));
+    // 네이버는 사용자 정보가 "response" 하위에 중첩돼 온다. 없으면 카카오와 동일하게 던진다.
+    if (!(attributes.get("response") instanceof Map<?, ?> response)) {
+        throw new OAuth2AuthenticationException(
+                new OAuth2Error("invalid_user_info_response"), "네이버 응답에 response가 없습니다.");
+    }
+
+    String providerUserId = asString(response.get("id"));   // 구글의 sub 자리
+    if (providerUserId == null) {
+        throw new OAuth2AuthenticationException(
+                new OAuth2Error("invalid_user_info_response"), "네이버 응답에 id가 없습니다.");
+    }
+
+    String email = asString(response.get("email"));   // 없으면 null
+    return new OAuthAttributes(Provider.NAVER, providerUserId, email);
     }
 
     private static OAuthAttributes ofKakao(Map<String, Object> attributes) {
@@ -58,7 +69,7 @@ public class OAuthAttributes {
     // 2) email — scope에 없으니 원칙적으로 안 오지만, 콘솔에서 나중에 켜도 안전하도록 방어적으로
     String email = null;
     if (attributes.get("kakao_account") instanceof Map<?, ?> account) {
-        email = asString(account.get("email"));   // 키 없으면 null (빈칸 아님 — 노트 방침)
+        email = asString(account.get("email"));   // 키 없으면 null
     }
 
     return new OAuthAttributes(Provider.KAKAO, providerUserId, email);
