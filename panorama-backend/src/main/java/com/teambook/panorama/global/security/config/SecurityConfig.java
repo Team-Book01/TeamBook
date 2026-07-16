@@ -90,6 +90,8 @@ public class SecurityConfig {
                                 .requestMatchers(HttpMethod.GET, "/api/v1/libraries").permitAll()
                                 .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                                 .requestMatchers(HttpMethod.GET, "/api/v1/books/**").permitAll()
+                                // 리뷰 목록 조회는 공개(도서 상세와 동일). 작성/수정/삭제는 인증 필요.
+                                .requestMatchers(HttpMethod.GET, "/api/v1/reviews/**").permitAll()
                                 .anyRequest().authenticated()
                         )
                         // 인증/인가 실패 처리: 인증 안 됨 → 401, 권한 부족 → 403

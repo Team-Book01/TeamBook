@@ -60,7 +60,7 @@ export default function BookDetailPage() {
     // 프론트 토큰 검증: 없으면 로그인으로, 있으면 요청 발사 → 백엔드 토글
     if (!ensureLoggedIn()) return;
     bookmark.mutate({
-      isbn: book.isbn,
+      isbn: book.isbn || isbn, // 응답 isbn 이 비어도 URL 파라미터로 보정
       title: book.title,
       author: book.author,
       publisher: book.publisher,
@@ -230,7 +230,7 @@ export default function BookDetailPage() {
 
       {/* ── Reviews (요약만 실데이터, 목록은 준비 중 — 목업) ── */}
       <div ref={reviewRef}>
-        <ReviewSection avgRating={book.avgRating} reviewCount={book.reviewCount} />
+        <ReviewSection isbn={isbn} avgRating={book.avgRating} reviewCount={book.reviewCount} />
       </div>
 
       <button

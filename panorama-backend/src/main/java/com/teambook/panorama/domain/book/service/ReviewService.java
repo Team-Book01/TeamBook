@@ -6,12 +6,23 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
 
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.teambook.panorama.domain.book.client.NaverBookClient;
+import com.teambook.panorama.domain.book.dto.naver.NaverBookItem;
 import com.teambook.panorama.domain.book.dto.review.ReviewItem;
+import com.teambook.panorama.domain.book.dto.review.ReviewRequest;
 import com.teambook.panorama.domain.book.dto.review.ReviewResponse;
 import com.teambook.panorama.domain.book.entity.Book;
+import com.teambook.panorama.domain.book.entity.BookReview;
+import com.teambook.panorama.domain.book.entity.ReviewStatus;
 import com.teambook.panorama.domain.book.mapper.ReviewMapper;
 import com.teambook.panorama.domain.book.repository.BookRepository;
+import com.teambook.panorama.domain.book.repository.ReviewRepository;
+import com.teambook.panorama.domain.user.repository.UserRepository;
+
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -20,6 +31,9 @@ public class ReviewService {
 
   private final ReviewMapper reviewMapper;
   private final BookRepository bookRepository;
+  private final ReviewRepository reviewRepository;
+  private final NaverBookClient naverBookClient;
+  private final UserRepository userRepository;
 
   //도서 리뷰목록 조회
   public ReviewResponse findByIsbn(String isbn, Long userId, int size, int page) {
@@ -37,7 +51,7 @@ public class ReviewService {
       .reviewItems(List.of())
       .ratingDistribution(initRatingDistribution())
       .build();
-    } 
+    }
     //bookId로 변환
     Long bookId = book.get().getBookId();
     
@@ -56,6 +70,75 @@ public class ReviewService {
     .ratingDistribution(calulateRatingDistribution(bookId))
     .build();
   }
+  //리뷰 생성
+  @Transactional
+  public ReviewItem saveReview(ReviewRequest request, String isbn, Long userId) {
+    //책DB있는지부터 조회 -> 생성 //예외 수정 필요
+    Book book = bookRepository.findByIsbn(isbn).orElseGet(() -> {
+      NaverBookItem naverBookItem = naverBookClient.search(isbn, 1, 1, "sim").items().getFirst();
+      return
+      bookRepository.save(Book.builder()
+      .author(naverBookItem.author())
+      .description(naverBookItem.description())
+      .imageUrl(naverBookItem.image())
+      .isbn(isbn)
+      .pubdate(naverBookItem.pubdate())
+      .publisher(naverBookItem.publisher())
+      .shopUrl(naverBookItem.link())
+      .title(naverBookItem.title())
+      .build());
+    });
+    //리뷰쓴 적 있는 사람인지 - > 예외 수정 필요
+    if(reviewRepository.existsByUserIdAndBook_BookId(userId, book.getBookId())) {
+      throw new RuntimeException();
+    }
+    //리뷰 생성
+    BookReview review = reviewRepository.save(BookReview.builder()
+    .book(book)
+    .content(request.content())
+    .rating(request.rating())
+    .userId(userId)
+    .build());
+  //리턴 값 예외 수정 필요
+  return ReviewItem.builder()
+  .content(review.getContent())
+  .createdAt(review.getCreatedAt())
+  .isMine(true)
+  .nickname(userRepository.findById(userId).get().getNickname())
+  .rating(review.getRating())
+  .reviewId(review.getReviewId())
+  .build();  
+  }
+  //리뷰 수정. 예외 처리 수정 필요.
+  @Transactional
+  public ReviewItem updateReveiw(ReviewRequest request, Long reveiwId, Long userId){
+    BookReview foundReview = reviewRepository.findById(reveiwId).orElseThrow();
+    if (foundReview.getUserId() != userId) {
+      throw new RuntimeException();
+    }
+    foundReview.update(request.rating(), request.content(), foundReview.getStatus());
+    String nickname = userRepository.findById(userId).orElseThrow().getNickname();
+    return ReviewItem.builder()
+    .content(request.content())
+    .createdAt(foundReview.getCreatedAt())
+    .isMine(true)
+    .reviewId(reveiwId)
+    .nickname(nickname)
+    .rating(request.rating())
+    .build();
+  }
+  //리뷰 삭제하기, 예외 처리 수정필요
+  @Transactional
+  public void deleteReveiw(Long reveiwId, Long userId){
+    BookReview foundReview = reviewRepository.findById(reveiwId).orElseThrow();
+    if (foundReview.getUserId() != userId) {
+      throw new RuntimeException();
+    }
+    foundReview.update(foundReview.getRating(), foundReview.getContent(), ReviewStatus.DELETED);    
+  }
+  
+
+
 
   //별점 분포 0으로 초기화해서 생성
   private Map<BigDecimal, Integer> initRatingDistribution() {

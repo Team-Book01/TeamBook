@@ -80,20 +80,30 @@ export interface BookmarkResponse {
 
 // ── 리뷰 ────────────────────────────────────────────────────────────────────
 
+/** 리뷰 1건 (백엔드 ReviewItem) */
 export interface Review {
   reviewId: number
   nickname: string
   rating: number // 0.5 ~ 5.0 (0.5 단위)
   content: string
   createdAt: string // ISO-8601 (예: 2026-07-01T12:00:00)
+  /** 로그인 사용자가 작성한 리뷰인지 */
+  isMine: boolean
 }
 
-/** GET /api/v1/books/{isbn}/reviews 응답 */
+/**
+ * 별점 분포. key 는 별점 문자열('0.5' ~ '5.0'), value 는 해당 별점의 리뷰 수.
+ * 백엔드가 0.5 단위 10개 버킷을 0 으로 초기화해 항상 채워서 내려준다.
+ */
+export type RatingDistribution = Record<string, number>
+
+/** GET /api/v1/reviews/{isbn} 응답 */
 export interface ReviewListResponse {
   total: number
   page: number
   size: number
-  reviews: Review[]
+  reviewItems: Review[]
+  ratingDistribution: RatingDistribution
 }
 
 /** POST /api/v1/books/{isbn}/reviews 요청 body */
