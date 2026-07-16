@@ -281,7 +281,8 @@ export default function SettingsPage() {
           </form>
         </section>
 
-        {/* Password section */}
+        {/* Password section (소셜 계정은 비밀번호가 없으므로 미노출) */}
+        {isLocalAccount && (
         <section
           className="mt-6 rounded-2xl border border-border bg-card p-6"
           style={{ boxShadow: 'var(--shadow-card)' }}
@@ -386,6 +387,7 @@ export default function SettingsPage() {
             </div>
           )}
         </section>
+        )}
 
         {/* Notifications section (변경 없음) */}
         <section
