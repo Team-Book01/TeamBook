@@ -1,0 +1,26 @@
+package com.teambook.panorama.domain.book.controller;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.teambook.panorama.domain.book.dto.library.LibraryListResponse;
+import com.teambook.panorama.domain.book.service.LibraryService;
+
+import lombok.RequiredArgsConstructor;
+
+@RestController
+@RequestMapping("/api/v1/library")
+@RequiredArgsConstructor
+public class LibraryController {
+  private final LibraryService libraryService;
+
+  @GetMapping("/{isbn}")
+  public ResponseEntity<LibraryListResponse> getLibraryList(@PathVariable("isbn") String isbn,
+  @RequestParam("regionCode") String regionCode) {
+    return ResponseEntity.ok(libraryService.findLibAndBook(isbn, regionCode));
+  }
+}
