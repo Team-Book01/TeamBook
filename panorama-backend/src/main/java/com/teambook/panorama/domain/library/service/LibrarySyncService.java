@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -20,6 +21,8 @@ import com.teambook.panorama.domain.library.dto.LibrarySearchResponse.Response;
 import com.teambook.panorama.domain.library.dto.LibrarySyncResult;
 import com.teambook.panorama.domain.library.entity.Library;
 import com.teambook.panorama.domain.library.repository.LibraryRepository;
+import com.teambook.panorama.global.exception.BusinessException;
+import com.teambook.panorama.global.exception.ErrorCode;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -48,8 +51,28 @@ public class LibrarySyncService {
   private final Data4LibraryClient data4LibraryClient;
   private final LibraryRepository libraryRepository;
 
+  /**
+   * 수동 실행(POST /admin/libraries/sync)과 월간 스케줄러의 동시 실행을 막는 락.
+   * 둘이 겹치면 같은 findAll() 스냅샷 기준으로 같은 lib_code 를 insert 하려다
+   * UNIQUE 제약 위반으로 한쪽이 롤백될 수 있어, 먼저 잡은 쪽만 실행하고 나머지는 즉시 거절한다.
+   * (단일 인스턴스 기준. 다중 인스턴스로 확장하면 DB 락/분산락으로 교체 필요.)
+   */
+  private final ReentrantLock syncLock = new ReentrantLock();
+
   @Transactional
   public LibrarySyncResult sync() {
+    // 이미 동기화가 돌고 있으면 대기하지 않고 바로 거절(409). tryLock 은 즉시 반환하므로 커넥션을 붙잡지 않는다.
+    if (!syncLock.tryLock()) {
+      throw new BusinessException(ErrorCode.LIBRARY_SYNC_IN_PROGRESS);
+    }
+    try {
+      return doSync();
+    } finally {
+      syncLock.unlock();
+    }
+  }
+
+  private LibrarySyncResult doSync() {
     // 기존 전체를 lib_code 기준 맵으로 (upsert 판정용). 중복 lib_code 가 있으면 먼저 것을 사용.
     Map<String, Library> byLibCode = libraryRepository.findAll().stream()
         .collect(Collectors.toMap(Library::getLibCode, Function.identity(), (a, b) -> a, HashMap::new));
@@ -65,7 +88,17 @@ public class LibrarySyncService {
       Response response = (body == null) ? null : body.response();
       List<LibItem> items = (response == null) ? null : response.libs();
       if (items == null || items.isEmpty()) {
-        break; // 더 이상 데이터 없음(또는 인증오류 등 비정상 응답) → 종료
+        // 첫 페이지부터 데이터가 없으면 정상 종료가 아니라 인증/API 오류로 본다.
+        // 정보나루는 authKey 가 틀려도 HTTP 200 + 에러 본문을 주므로, 여기서 걸러내지 않으면
+        // 0건 처리가 "성공(200)"으로 위장되어 관리자가 동기화가 정상인 줄 오인한다. → 예외로 실패를 표면화.
+        // (2페이지 이후의 빈 응답은 데이터 끝에 도달한 정상 종료로 간주하고 break)
+        if (pageNo == 1) {
+          throw new BusinessException(ErrorCode.LIBRARY_SYNC_FAILED,
+              "정보나루 응답에 도서관 데이터가 없습니다(numFound="
+                  + (response == null ? "null" : response.numFound())
+                  + "). authKey/파라미터 또는 외부 API 상태를 확인하세요.");
+        }
+        break; // 데이터 끝에 도달 → 정상 종료
       }
 
       for (LibItem item : items) {
