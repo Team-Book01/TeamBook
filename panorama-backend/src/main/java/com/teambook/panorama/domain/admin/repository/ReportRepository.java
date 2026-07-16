@@ -6,7 +6,7 @@ import com.teambook.panorama.domain.admin.entity.Report;
 
 /**
  * 신고 쓰기(상태 변경) 전용 JPA 리포지토리.
- * 조회(목록·상세)는 MyBatis(AdminMapper)를 사용한다. (CONVENTIONS.md §8)
+ * 조회(목록·상세)는 MyBatis(ReportMapper)를 사용한다. (CONVENTIONS.md §8)
  */
 public interface ReportRepository extends JpaRepository<Report, Long> {
 

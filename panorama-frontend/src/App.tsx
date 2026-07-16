@@ -1,9 +1,10 @@
-import { Routes, Route } from 'react-router-dom'
+import { Route, Routes } from 'react-router-dom'
 
 import { useAuthBootstrap } from '@/hooks/useAuthBootstrap'
 import Layout from '@/components/layout/Layout'
 import AdminLayout from '@/components/layout/AdminLayout'
 import RequireAuth from '@/components/auth/RequireAuth'
+import RequireAdmin from '@/components/auth/RequireAdmin'
 
 // 일반 사용자 페이지
 import HomePage from '@/pages/home/HomePage'
@@ -24,11 +25,9 @@ import OAuthCallbackPage from '@/pages/auth/OAuthCallbackPage'
 import AdminDashboardPage from '@/pages/admin/AdminDashboardPage'
 import AdminUsersPage from '@/pages/admin/AdminUsersPage'
 import AdminContentPage from '@/pages/admin/AdminContentPage'
-import AdminClubsPage from '@/pages/admin/AdminClubsPage'
 import AdminReportsPage from '@/pages/admin/AdminReportsPage'
 import AdminInquiriesPage from '@/pages/admin/AdminInquiriesPage'
 import AdminNoticesPage from '@/pages/admin/AdminNoticesPage'
-import AdminSyncPage from '@/pages/admin/AdminSyncPage'
 
 /**
  * App 은 라우팅만 담당한다. (화면 코드는 각 pages/<domain> 에 위치)
@@ -67,16 +66,16 @@ export default function App() {
         <Route path="/settings" element={<SettingsPage />} />
       </Route>
 
-      {/* 관리자 영역 */}
-      <Route path="/admin" element={<AdminLayout />}>
-        <Route index element={<AdminDashboardPage />} />
-        <Route path="users" element={<AdminUsersPage />} />
-        <Route path="content" element={<AdminContentPage />} />
-        <Route path="clubs" element={<AdminClubsPage />} />
-        <Route path="reports" element={<AdminReportsPage />} />
-        <Route path="inquiries" element={<AdminInquiriesPage />} />
-        <Route path="notices" element={<AdminNoticesPage />} />
-        <Route path="sync" element={<AdminSyncPage />} />
+      {/* 관리자 영역 (로그인 + role===ADMIN 만 진입) */}
+      <Route element={<RequireAdmin />}>
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<AdminDashboardPage />} />
+          <Route path="users" element={<AdminUsersPage />} />
+          <Route path="content" element={<AdminContentPage />} />
+          <Route path="reports" element={<AdminReportsPage />} />
+          <Route path="inquiries" element={<AdminInquiriesPage />} />
+          <Route path="notices" element={<AdminNoticesPage />} />
+        </Route>
       </Route>
 
       {/* 404 → 홈 대체 (간단 처리) */}

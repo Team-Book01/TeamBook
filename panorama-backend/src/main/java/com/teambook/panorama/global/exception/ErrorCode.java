@@ -61,7 +61,12 @@ public enum ErrorCode {
   INVALID_IMAGE_SIZE(HttpStatus.BAD_REQUEST, "IMG004", "이미지 파일 용량이 너무 큽니다."),
 
   // notice (도메인 접두어 N)
-  NOTICE_NOT_FOUND(HttpStatus.NOT_FOUND, "N001", "존재하지 않는 공지입니다.");
+  NOTICE_NOT_FOUND(HttpStatus.NOT_FOUND, "N001", "존재하지 않는 공지입니다."),
+
+  // library (도메인 접두어 L)
+  LIBRARY_SYNC_FAILED(HttpStatus.BAD_GATEWAY, "L001",
+      "도서관 동기화에 실패했습니다. 외부 API 인증키/상태를 확인하세요."),
+  LIBRARY_SYNC_IN_PROGRESS(HttpStatus.CONFLICT, "L002", "이미 도서관 동기화가 진행 중입니다.");
 
   private final HttpStatus status;
   private final String code;

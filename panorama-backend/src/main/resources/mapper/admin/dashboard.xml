@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.teambook.panorama.domain.admin.repository.DashboardMapper">
+
+    <!-- ══════════════ 대시보드 ══════════════ -->
+
+    <!-- 이번 주 시작(월요일 0시). WEEKDAY: 월=0 -->
+    <sql id="weekStart">
+        DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY)
+    </sql>
+
+    <!-- 상단 통계 카드: 단일 행으로 서브쿼리 집계 (record → 생성자 매핑) -->
+    <resultMap id="dashboardStatsMap"
+               type="com.teambook.panorama.domain.admin.dto.dashboard.DashboardStatsResponse">
+        <constructor>
+            <arg column="total_users"          name="totalUsers"          javaType="java.lang.Long"/>
+            <arg column="new_users_this_week"  name="newUsersThisWeek"    javaType="java.lang.Long"/>
+            <arg column="today_visitors"       name="todayVisitors"       javaType="java.lang.Long"/>
+            <arg column="total_posts"          name="totalPosts"          javaType="java.lang.Long"/>
+            <arg column="new_posts_today"      name="newPostsToday"       javaType="java.lang.Long"/>
+            <arg column="pending_reports"      name="pendingReports"      javaType="java.lang.Long"/>
+            <arg column="pending_inquiries"    name="pendingInquiries"    javaType="java.lang.Long"/>
+        </constructor>
+    </resultMap>
+
+    <select id="selectDashboardStats" resultMap="dashboardStatsMap">
+        SELECT
+            (SELECT COUNT(*) FROM users
+                WHERE status &lt;&gt; 'DELETED')                              AS total_users,
+            (SELECT COUNT(*) FROM users
+                WHERE status &lt;&gt; 'DELETED'
+                  AND created_at &gt;= <include refid="weekStart"/>)         AS new_users_this_week,
+            (SELECT COUNT(DISTINCT user_id) FROM login_histories
+                WHERE result = 'SUCCESS'
+                  AND user_id IS NOT NULL
+                  AND attempted_at &gt;= CURDATE())                          AS today_visitors,
+            (SELECT COUNT(*) FROM posts
+                WHERE status &lt;&gt; 'DELETED')                              AS total_posts,
+            (SELECT COUNT(*) FROM posts
+                WHERE status &lt;&gt; 'DELETED'
+                  AND created_at &gt;= CURDATE())                           AS new_posts_today,
+            (SELECT COUNT(*) FROM reports
+                WHERE status = 'PENDING')                                   AS pending_reports,
+            (SELECT COUNT(*) FROM inquiries
+                WHERE status = 'PENDING')                                   AS pending_inquiries
+    </select>
+
+    <!-- 처리 대기 - 신고는 ReportMapper.selectReports(status=PENDING) 를 재사용한다. (중복 쿼리 제거) -->
+
+    <!-- 처리 대기 - 문의 (PENDING, 최신순). 작성자 닉네임 마스킹 -->
+    <resultMap id="pendingInquiryMap"
+               type="com.teambook.panorama.domain.admin.dto.dashboard.PendingInquiryResponse">
+        <constructor>
+            <idArg column="inquiry_id"       name="inquiryId"       javaType="java.lang.Long"/>
+            <arg   column="category"         name="category"        javaType="java.lang.String"/>
+            <arg   column="title"            name="title"           javaType="java.lang.String"/>
+            <arg   column="writer_nickname"  name="writerNickname"  javaType="java.lang.String"/>
+            <arg   column="created_at"       name="createdAt"       javaType="java.time.LocalDateTime"/>
+        </constructor>
+    </resultMap>
+
+    <select id="selectPendingInquiries" resultMap="pendingInquiryMap">
+        SELECT
+            i.inquiry_id,
+            i.category,
+            i.title,
+            CONCAT(LEFT(u.nickname, 2), '****') AS writer_nickname,
+            i.created_at
+        FROM inquiries i
+        LEFT JOIN users u ON u.user_id = i.user_id
+        WHERE i.status = 'PENDING'
+        ORDER BY i.created_at DESC
+        LIMIT #{limit}
+    </select>
+
+    <!-- 최근 콘텐츠 - 게시글 (삭제 제외, 최신순). 작성자 닉네임 마스킹 -->
+    <resultMap id="recentContentMap"
+               type="com.teambook.panorama.domain.admin.dto.dashboard.RecentContentResponse">
+        <constructor>
+            <idArg column="post_id"          name="postId"          javaType="java.lang.Long"/>
+            <arg   column="category"         name="category"        javaType="java.lang.String"/>
+            <arg   column="title"            name="title"           javaType="java.lang.String"/>
+            <arg   column="author_nickname"  name="authorNickname"  javaType="java.lang.String"/>
+            <arg   column="created_at"       name="createdAt"       javaType="java.time.LocalDateTime"/>
+        </constructor>
+    </resultMap>
+
+    <select id="selectRecentContents" resultMap="recentContentMap">
+        SELECT
+            p.post_id,
+            p.category,
+            p.title,
+            CONCAT(LEFT(u.nickname, 2), '****') AS author_nickname,
+            p.created_at
+        FROM posts p
+        LEFT JOIN users u ON u.user_id = p.user_id
+        WHERE p.status &lt;&gt; 'DELETED'
+        ORDER BY p.created_at DESC
+        LIMIT #{limit}
+    </select>
+
+</mapper>

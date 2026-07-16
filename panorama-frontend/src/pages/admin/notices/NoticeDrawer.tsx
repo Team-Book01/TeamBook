@@ -1,148 +1,114 @@
 import { useState, useEffect } from 'react'
-import type { Notice } from './noticeData'
+import { X, Pin } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import type { NoticeCategory, NoticeDetailResponse } from '@/types/admin'
+import { NOTICE_CATEGORY_BADGE, NOTICE_CATEGORY_OPTIONS, NOTICE_STATUS_META, formatDate } from './noticeMeta'
+
+export interface NoticeForm {
+  category: NoticeCategory
+  title: string
+  content: string
+  pinned: boolean
+  important: boolean
+}
 
 interface Props {
-  notice: Notice | null
   mode: 'view' | 'edit' | 'create'
+  detail: NoticeDetailResponse | null
+  loading?: boolean
+  submitting?: boolean
+  submitError?: string | null
   onClose: () => void
-  onSave: (data: Partial<Notice>) => void
-  onDelete?: (id: string) => void
+  onEdit: () => void
+  onSubmit: (form: NoticeForm) => void
 }
 
-const CATEGORIES = ['일반', '이벤트', '업데이트', '점검']
-const STATUSES = ['ACTIVE', 'HIDDEN']
-
-const catColors: Record<string, { bg: string; color: string }> = {
-  일반: { bg: '#f3f4f6', color: '#6b7280' },
-  이벤트: { bg: '#ede9fe', color: '#7c3aed' },
-  업데이트: { bg: '#dbeafe', color: '#1d4ed8' },
-  점검: { bg: '#ffedd5', color: '#c2410c' },
-}
-
-export default function NoticeDrawer({ notice, mode: initialMode, onClose, onSave, onDelete }: Props) {
-  const [mode, setMode] = useState(initialMode)
-  const [form, setForm] = useState({
+export default function NoticeDrawer({ mode, detail, loading, submitting, submitError, onClose, onEdit, onSubmit }: Props) {
+  const [form, setForm] = useState<NoticeForm>({
+    category: 'GENERAL',
     title: '',
-    category: '일반',
     content: '',
     pinned: false,
     important: false,
-    status: 'ACTIVE' as 'ACTIVE' | 'HIDDEN',
   })
 
   useEffect(() => {
-    setMode(initialMode)
-    if (notice && initialMode !== 'create') {
+    if (mode !== 'create' && detail) {
       setForm({
-        title: notice.title,
-        category: notice.category,
-        content: notice.content,
-        pinned: notice.pinned,
-        important: notice.important,
-        status: notice.status as 'ACTIVE' | 'HIDDEN',
+        category: detail.category,
+        title: detail.title,
+        content: detail.content,
+        pinned: detail.pinned,
+        important: detail.important,
       })
-    } else if (initialMode === 'create') {
-      setForm({ title: '', category: '일반', content: '', pinned: false, important: false, status: 'ACTIVE' })
+    } else if (mode === 'create') {
+      setForm({ category: 'GENERAL', title: '', content: '', pinned: false, important: false })
     }
-  }, [notice, initialMode])
+  }, [mode, detail])
 
-  const cat = catColors[form.category] || catColors['일반']
+  const isView = mode === 'view'
 
   return (
     <>
+      <style>{`@keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }`}</style>
       {/* Dim */}
-      <div
-        onClick={onClose}
-        style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.35)', zIndex: 40, backdropFilter: 'blur(1px)' }}
-      />
+      <div onClick={onClose} className="fixed inset-0 bg-black/35 backdrop-blur-[1px] z-40" />
       {/* Drawer */}
-      <div
-        style={{
-          position: 'fixed', top: 0, right: 0, bottom: 0,
-          width: '40%', backgroundColor: 'white',
-          boxShadow: '-4px 0 24px rgba(0,0,0,0.12)',
-          zIndex: 50, display: 'flex', flexDirection: 'column',
-          animation: 'slideInRight 0.22s ease-out',
-        }}
-      >
-        <style>{`@keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }`}</style>
-
-        {/* Drawer header */}
-        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-          <span style={{ backgroundColor: cat.bg, color: cat.color, fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 20 }}>
-            {form.category}
+      <div className="fixed top-0 right-0 bottom-0 w-[40%] min-w-[380px] bg-white shadow-[-4px_0_24px_rgba(0,0,0,0.12)] z-50 flex flex-col animate-[slideInRight_0.22s_ease-out]">
+        {/* Header */}
+        <div className="px-6 pt-5 pb-4 border-b border-border flex items-center gap-2.5 shrink-0">
+          <span className={cn('text-xs font-semibold px-2.5 py-[3px] rounded-full', NOTICE_CATEGORY_BADGE[form.category])}>
+            {NOTICE_CATEGORY_OPTIONS.find(o => o.value === form.category)?.label}
           </span>
-          {mode === 'view' && notice && (
-            <span style={{
-              backgroundColor: notice.status === 'ACTIVE' ? '#dcfce7' : notice.status === 'HIDDEN' ? '#f3f4f6' : '#fee2e2',
-              color: notice.status === 'ACTIVE' ? '#15803d' : notice.status === 'HIDDEN' ? '#6b7280' : '#dc2626',
-              fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 20
-            }}>
-              {notice.status}
+          {isView && detail && (
+            <span className={cn('inline-flex items-center gap-1.5 text-xs font-semibold', NOTICE_STATUS_META[detail.status].text)}>
+              <span className={cn('w-[7px] h-[7px] rounded-full inline-block', NOTICE_STATUS_META[detail.status].dot)} />
+              {NOTICE_STATUS_META[detail.status].label}
             </span>
           )}
-          <div style={{ flex: 1 }} />
-          <span style={{ color: '#6b7280', fontSize: 13 }}>
+          <div className="flex-1" />
+          <span className="text-muted-foreground text-[13px]">
             {mode === 'create' ? '새 공지 작성' : mode === 'edit' ? '공지 수정' : '공지 상세'}
           </span>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', padding: 4, borderRadius: 4 }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M18 6 6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+          <button onClick={onClose} className="text-muted-foreground p-1 rounded-md hover:bg-gray-100 transition-colors">
+            <X size={20} />
           </button>
         </div>
 
         {/* Body */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
-          {mode === 'view' && notice ? (
-            <ViewContent notice={notice} />
+        <div className="flex-1 overflow-y-auto px-6 py-5">
+          {isView ? (
+            loading || !detail ? (
+              <div className="py-20 text-center text-sm text-muted-foreground">불러오는 중…</div>
+            ) : (
+              <ViewContent detail={detail} />
+            )
           ) : (
             <EditForm form={form} setForm={setForm} />
           )}
         </div>
 
         {/* Footer */}
-        <div style={{ padding: '16px 24px', borderTop: '1px solid #e5e7eb', flexShrink: 0 }}>
-          {mode === 'view' ? (
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button
-                onClick={() => setMode('edit')}
-                style={{ flex: 1, padding: '10px 0', backgroundColor: '#1a3328', color: 'white', border: 'none', borderRadius: 8, fontWeight: 600, fontSize: 14, cursor: 'pointer' }}
-              >
-                수정
-              </button>
-              {onDelete && notice && (
-                <button
-                  onClick={() => { onDelete(notice.id); onClose() }}
-                  style={{ padding: '10px 18px', backgroundColor: 'white', color: '#ef4444', border: '1.5px solid #ef4444', borderRadius: 8, fontWeight: 600, fontSize: 14, cursor: 'pointer' }}
-                >
-                  삭제
-                </button>
-              )}
-            </div>
+        <div className="px-6 py-4 border-t border-border shrink-0">
+          {isView ? (
+            <button
+              onClick={onEdit}
+              disabled={!detail}
+              className="w-full py-2.5 bg-admin text-white rounded-lg font-semibold text-sm hover:bg-admin-hover transition-colors disabled:opacity-50"
+            >
+              수정
+            </button>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button
-                  onClick={() => onSave({ ...form, draft: true } as Partial<Notice>)}
-                  style={{ flex: 1, padding: '10px 0', backgroundColor: 'white', color: '#6b7280', border: '1.5px solid #d1d5db', borderRadius: 8, fontWeight: 600, fontSize: 14, cursor: 'pointer' }}
-                >
-                  임시저장
-                </button>
-                {mode === 'edit' && onDelete && notice && (
-                  <button
-                    onClick={() => { onDelete(notice.id); onClose() }}
-                    style={{ padding: '10px 18px', backgroundColor: 'white', color: '#ef4444', border: '1.5px solid #ef4444', borderRadius: 8, fontWeight: 600, fontSize: 14, cursor: 'pointer' }}
-                  >
-                    삭제
-                  </button>
-                )}
-              </div>
+            <>
               <button
-                onClick={() => { onSave(form as Partial<Notice>); onClose() }}
-                style={{ width: '100%', padding: '11px 0', backgroundColor: '#1a3328', color: 'white', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
+                onClick={() => onSubmit(form)}
+                disabled={submitting || !form.title.trim()}
+                className="w-full py-2.5 bg-admin text-white rounded-lg font-bold text-sm hover:bg-admin-hover transition-colors disabled:opacity-50"
               >
-                {mode === 'edit' ? '변경사항 저장' : '공지 등록'}
+                {submitting ? '저장 중…' : mode === 'edit' ? '변경사항 저장' : '공지 등록'}
               </button>
-            </div>
+              {submitError && <p className="mt-2 text-[11px] text-red-600 text-center">{submitError}</p>}
+            </>
           )}
         </div>
       </div>
@@ -150,120 +116,103 @@ export default function NoticeDrawer({ notice, mode: initialMode, onClose, onSav
   )
 }
 
-function ViewContent({ notice }: { notice: Notice }) {
+function ViewContent({ detail }: { detail: NoticeDetailResponse }) {
   return (
     <div>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-        {notice.pinned && <span style={{ fontSize: 12, color: '#92400e', backgroundColor: '#fef3c7', padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>📌 상단 고정</span>}
-        {notice.important && <span style={{ fontSize: 12, color: '#dc2626', backgroundColor: '#fee2e2', padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>중요</span>}
+      <div className="flex gap-2 mb-3 flex-wrap">
+        {detail.pinned && (
+          <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-800 bg-amber-100 px-2 py-0.5 rounded">
+            <Pin size={11} className="fill-amber-700" /> 상단 고정
+          </span>
+        )}
+        {detail.important && <span className="text-xs font-semibold text-red-600 bg-red-100 px-2 py-0.5 rounded">중요</span>}
       </div>
-      <h2 style={{ fontSize: 18, fontWeight: 700, color: '#111827', marginBottom: 16, lineHeight: 1.4 }}>{notice.title}</h2>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
+      <h2 className="text-lg font-bold text-foreground mb-4 leading-snug">{detail.title}</h2>
+      <div className="grid grid-cols-2 gap-2.5 mb-5">
         {[
-          { label: '조회수', value: notice.views.toLocaleString() + '회' },
-          { label: '작성자', value: notice.author },
-          { label: '게시일', value: notice.date },
-          { label: '상태', value: notice.status },
+          { label: '조회수', value: detail.viewCount.toLocaleString() + '회' },
+          { label: '작성자', value: detail.nickname },
+          { label: '게시일', value: formatDate(detail.createdAt) },
+          { label: '상태', value: NOTICE_STATUS_META[detail.status].label },
         ].map(({ label, value }) => (
-          <div key={label} style={{ backgroundColor: '#f9fafb', borderRadius: 8, padding: '10px 12px' }}>
-            <div style={{ color: '#9ca3af', fontSize: 11, marginBottom: 3 }}>{label}</div>
-            <div style={{ color: '#111827', fontSize: 13, fontWeight: 600 }}>{value}</div>
+          <div key={label} className="bg-gray-50 rounded-lg px-3 py-2.5">
+            <div className="text-muted-foreground text-[11px] mb-0.5">{label}</div>
+            <div className="text-foreground text-[13px] font-semibold">{value}</div>
           </div>
         ))}
       </div>
-      <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: 16 }}>
-        <div style={{ color: '#374151', fontSize: 14, lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>{notice.content}</div>
+      <div className="border-t border-border pt-4">
+        <div className="text-[#374151] text-sm leading-[1.8] whitespace-pre-wrap">{detail.content}</div>
       </div>
     </div>
   )
 }
 
-interface FormState {
-  title: string
-  category: string
-  content: string
-  pinned: boolean
-  important: boolean
-  status: 'ACTIVE' | 'HIDDEN'
-}
-
-function EditForm({ form, setForm }: { form: FormState; setForm: (f: FormState) => void }) {
-  const selectStyle = {
-    width: '100%', padding: '9px 12px', borderRadius: 8, border: '1.5px solid #e5e7eb',
-    fontSize: 14, color: '#374151', backgroundColor: 'white', outline: 'none', cursor: 'pointer',
-  }
-  const inputStyle = {
-    width: '100%', padding: '9px 12px', borderRadius: 8, border: '1.5px solid #e5e7eb',
-    fontSize: 14, color: '#374151', backgroundColor: 'white', outline: 'none', boxSizing: 'border-box' as const,
-  }
-  const labelStyle = { display: 'block', fontSize: 12, fontWeight: 600, color: '#6b7280', marginBottom: 5, textTransform: 'uppercase' as const, letterSpacing: '0.03em' }
+function EditForm({ form, setForm }: { form: NoticeForm; setForm: (f: NoticeForm) => void }) {
+  const fieldCls =
+    'w-full px-3 py-2.5 rounded-lg border-[1.5px] border-border text-sm text-foreground bg-white outline-none focus:border-admin'
+  const labelCls = 'block text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-[0.03em]'
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+    <div className="flex flex-col gap-[18px]">
       <div>
-        <label style={labelStyle}>분류</label>
-        <select style={selectStyle} value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}>
-          {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+        <label className={labelCls}>분류</label>
+        <select
+          className={cn(fieldCls, 'cursor-pointer')}
+          value={form.category}
+          onChange={e => setForm({ ...form, category: e.target.value as NoticeCategory })}
+        >
+          {NOTICE_CATEGORY_OPTIONS.map(o => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
         </select>
       </div>
       <div>
-        <label style={labelStyle}>제목</label>
+        <label className={labelCls}>제목</label>
         <input
-          style={inputStyle}
+          className={fieldCls}
           placeholder="공지 제목을 입력하세요"
           value={form.title}
           onChange={e => setForm({ ...form, title: e.target.value })}
         />
       </div>
       <div>
-        <label style={labelStyle}>본문</label>
-        <div style={{ border: '1.5px solid #e5e7eb', borderRadius: 8, overflow: 'hidden' }}>
-          <div style={{ backgroundColor: '#f9fafb', borderBottom: '1px solid #e5e7eb', padding: '6px 10px', display: 'flex', gap: 8 }}>
-            {['B', 'I', 'U', '≡', '·'].map(t => (
-              <button key={t} style={{ background: 'none', border: '1px solid #d1d5db', borderRadius: 4, width: 26, height: 26, cursor: 'pointer', fontSize: 12, fontWeight: t === 'B' ? 700 : 400, color: '#6b7280' }}>{t}</button>
-            ))}
-          </div>
-          <textarea
-            style={{ width: '100%', minHeight: 180, padding: '12px', fontSize: 14, color: '#374151', border: 'none', resize: 'vertical', outline: 'none', lineHeight: 1.7, boxSizing: 'border-box' }}
-            placeholder="공지 내용을 입력하세요..."
-            value={form.content}
-            onChange={e => setForm({ ...form, content: e.target.value })}
-          />
-        </div>
+        <label className={labelCls}>본문</label>
+        <textarea
+          className="w-full min-h-[200px] px-3 py-2.5 rounded-lg border-[1.5px] border-border text-sm text-foreground bg-white resize-y outline-none focus:border-admin leading-[1.7]"
+          placeholder="공지 내용을 입력하세요..."
+          value={form.content}
+          onChange={e => setForm({ ...form, content: e.target.value })}
+        />
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <label style={labelStyle}>옵션</label>
+      <div className="flex flex-col gap-3">
+        <label className={labelCls}>옵션</label>
         {[
           { key: 'pinned' as const, label: '상단 고정', desc: '목록 최상단에 고정됩니다' },
           { key: 'important' as const, label: '중요 공지', desc: '제목에 빨강 "중요" 배지가 표시됩니다' },
         ].map(({ key, label, desc }) => (
-          <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', backgroundColor: '#f9fafb', borderRadius: 8 }}>
+          <div key={key} className="flex items-center justify-between px-3.5 py-2.5 bg-gray-50 rounded-lg">
             <div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>{label}</div>
-              <div style={{ fontSize: 11, color: '#9ca3af' }}>{desc}</div>
+              <div className="text-[13px] font-semibold text-foreground">{label}</div>
+              <div className="text-[11px] text-muted-foreground">{desc}</div>
             </div>
-            <div
+            <button
+              type="button"
               onClick={() => setForm({ ...form, [key]: !form[key] })}
-              style={{
-                width: 42, height: 24, borderRadius: 12,
-                backgroundColor: form[key] ? '#1a3328' : '#d1d5db',
-                position: 'relative', cursor: 'pointer', transition: 'background 0.2s',
-              }}
+              className={cn(
+                'w-[42px] h-6 rounded-full relative transition-colors shrink-0',
+                form[key] ? 'bg-admin' : 'bg-gray-300',
+              )}
             >
-              <div style={{
-                position: 'absolute', top: 3, left: form[key] ? 20 : 3,
-                width: 18, height: 18, borderRadius: '50%', backgroundColor: 'white',
-                transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-              }} />
-            </div>
+              <span
+                className={cn(
+                  'absolute top-[3px] w-[18px] h-[18px] rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.2)] transition-all',
+                  form[key] ? 'left-5' : 'left-[3px]',
+                )}
+              />
+            </button>
           </div>
         ))}
-      </div>
-      <div>
-        <label style={labelStyle}>상태</label>
-        <select style={selectStyle} value={form.status} onChange={e => setForm({ ...form, status: e.target.value as 'ACTIVE' | 'HIDDEN' })}>
-          {STATUSES.map(s => <option key={s}>{s}</option>)}
-        </select>
       </div>
     </div>
   )

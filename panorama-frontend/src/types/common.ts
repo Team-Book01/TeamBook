@@ -28,3 +28,16 @@ export interface PageParams {
   page?: number
   size?: number
 }
+
+/**
+ * 백엔드 공통 페이지 응답 봉투 (global PageResponse<T>).
+ * 성공 응답은 이 형태로 내려온다. page 는 1부터 시작.
+ */
+export interface PageResponse<T> {
+  content: T[]
+  page: number
+  size: number
+  totalElements: number
+  totalPages: number
+  last: boolean
+}

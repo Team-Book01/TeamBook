@@ -11,7 +11,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
-    
+
     properties:
       hibernate:
         format_sql: true
@@ -53,3 +53,7 @@ app:
   https: false
   upload:
     dir: ./uploads
+    
+data4library:
+  base-url: http://data4library.kr
+  auth-key: ${DATA4LIBRARY_AUTH_KEY}

@@ -17,6 +17,18 @@
   --color-brand-mint: #a8d5c2; /* 민트 강조 */
   --color-gold: #f5b301; /* 별점·알림 포인트 골드 */
 
+  /* ── 관리자 콘솔 전용 토큰 ──
+     지금은 브랜드 그린과 동일값이라 사용자 화면과 톤이 통일된다.
+     추후 관리자 화면 색감을 사용자와 분리하고 싶으면 이 블록만 수정하면
+     admin 화면 전체(bg-admin, text-admin-point 등)가 한 번에 바뀐다. */
+  --color-admin: #1e4a38; /* 관리자 메인 그린 (= brand) */
+  --color-admin-hover: #17382b; /* 버튼 hover */
+  --color-admin-point: #2e7d6b; /* 포인트/링크 (= brand-point) */
+  --color-admin-light: #eff6f2; /* 연한 배경/활성 (= brand-light) */
+  --color-admin-bg: #f7f8f6; /* 콘솔 페이지 배경 */
+  --color-admin-nav: #191c21; /* 관리자 사이드바(다크 셸) 배경 */
+  --color-admin-nav-accent: #3fae8f; /* 다크 배경 위 활성 강조 그린 (밝은 민트그린) */
+
   /* ── shadcn 계열 시맨틱 토큰 (그린 브랜드로 통일) ── */
   --color-background: #f9f9f9;
   --color-foreground: #1a1a1a;
@@ -29,7 +41,7 @@
   --color-secondary: #eff6f2;
   --color-secondary-foreground: #1e4a38;
   --color-muted: #f2f2f2;
-  --color-muted-foreground: #777777;
+  --color-muted-foreground: #6b6b6b; /* AA 대비 확보(#777은 4.48:1로 경계) */
   --color-accent: #eff6f2;
   --color-accent-foreground: #1e4a38;
   --color-destructive: #e5484d;
