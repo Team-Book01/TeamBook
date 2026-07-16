@@ -75,17 +75,20 @@ export async function logout(): Promise<void> {
   await client.post('/auth/logout')
 }
 
-/** 회원가입 요청 body (백엔드 SignUpDto.Request 기준). */
+/**
+ * 회원가입 요청 body.
+ * 이메일은 가입 시 받지 않고, 가입 후 설정(SettingsPage)에서 등록·인증한다.
+ * ⚠️ 백엔드 SignUpDto.Request.email 은 아직 @NotBlank @Email(필수) → nullable 로 완화해야 실제 가입 성공.
+ */
 export interface SignupRequest {
   loginId: string
   password: string
   nickname: string
-  email: string
 }
 
 /**
  * 로컬 회원가입 (POST /users).
- * 성공 시 201(본문 없음), 중복이면 409(U002=아이디 / U003=닉네임 / U004=이메일).
+ * 성공 시 201(본문 없음), 중복이면 409(U002=아이디 / U003=닉네임).
  */
 export async function signup(body: SignupRequest): Promise<void> {
   await client.post('/users', body)

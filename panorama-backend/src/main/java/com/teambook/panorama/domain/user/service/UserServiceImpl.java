@@ -35,11 +35,11 @@ public class UserServiceImpl implements UserService {
         // 2. 비밀번호 인코딩
         String encodedPassword = passwordEncoder.encode(request.password());
 
-        // 3. User 생성 및 저장
+        // 3. User 생성 및 저장 (email은 가입 시 받지 않음 → null, 이후 설정에서 등록·인증)
         User user = User.createLocalUser(
                 request.loginId(),
                 encodedPassword,
-                request.email(),
+                null,
                 request.nickname()
         );
         return userRepository.save(user).getId();

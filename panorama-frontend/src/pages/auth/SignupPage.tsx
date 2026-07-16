@@ -33,7 +33,6 @@ export default function SignupPage() {
   function validate(v: {
     loginId: string
     nickname: string
-    email: string
     password: string
     confirm: string
     agree: boolean
@@ -41,7 +40,6 @@ export default function SignupPage() {
     const e: Record<string, string> = {}
     if (!isValidLoginId(v.loginId)) e.loginId = LOGIN_ID_MESSAGE
     if (!isValidNickname(v.nickname)) e.nickname = NICKNAME_MESSAGE
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.email)) e.email = '올바른 이메일 주소를 입력해 주세요.'
     if (!isValidPassword(v.password)) e.password = PASSWORD_MESSAGE
     if (v.password !== v.confirm) e.confirm = '비밀번호가 일치하지 않아요.'
     if (!v.agree) e.agree = '약관에 동의해 주세요.'
@@ -54,7 +52,6 @@ export default function SignupPage() {
     const values = {
       loginId: String(form.get('loginId') ?? '').trim(),
       nickname: String(form.get('nickname') ?? '').trim(),
-      email: String(form.get('email') ?? '').trim(),
       password: String(form.get('password') ?? ''),
       confirm: String(form.get('confirm') ?? ''),
       agree: form.get('agree') === 'on',
@@ -83,12 +80,11 @@ export default function SignupPage() {
         return
       }
 
-      // 2) 가입 요청
+      // 2) 가입 요청 (이메일은 가입 후 설정에서 등록·인증)
       await signup({
         loginId: values.loginId,
         password: values.password,
         nickname: values.nickname,
-        email: values.email,
       })
 
       toast.success('가입 완료! 로그인해 주세요.')
@@ -130,17 +126,6 @@ export default function SignupPage() {
           <Label htmlFor="nickname">닉네임</Label>
           <Input id="nickname" name="nickname" placeholder="한글·영문·숫자·밑줄(_), 1~10자" />
           {errors.nickname && <p className="text-xs text-destructive">{errors.nickname}</p>}
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="email">이메일</Label>
-          <Input
-            id="email"
-            name="email"
-            type="email"
-            placeholder="비밀번호 찾기에 사용돼요"
-            autoComplete="email"
-          />
-          {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="password">비밀번호</Label>
