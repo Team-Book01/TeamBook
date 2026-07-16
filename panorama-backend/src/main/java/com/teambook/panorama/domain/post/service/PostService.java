@@ -1,5 +1,7 @@
 package com.teambook.panorama.domain.post.service;
 
+import java.util.List;
+
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
@@ -10,7 +12,9 @@ import com.teambook.panorama.domain.post.dto.PostRequestDto;
 import com.teambook.panorama.domain.post.dto.PostResponseDto;
 import com.teambook.panorama.domain.post.dto.PostSummaryResponseDto;
 import com.teambook.panorama.domain.post.entity.Post;
+import com.teambook.panorama.domain.post.entity.PostImage;
 import com.teambook.panorama.domain.post.enums.PostStatus;
+import com.teambook.panorama.domain.post.repositories.PostImageRepository;
 import com.teambook.panorama.domain.post.repositories.PostRepository;
 import com.teambook.panorama.domain.user.entity.User;
 import com.teambook.panorama.domain.user.repository.UserRepository;
@@ -25,24 +29,40 @@ import lombok.RequiredArgsConstructor;
 public class PostService {
   private final PostRepository postRepository;
   private final UserRepository userRepository;
+  private final PostImageRepository postImageRepository;
 
   @Transactional
   public Long createPost(Long userId, PostRequestDto request) {
     User user = userRepository.findById(userId)
-      .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
     Post post = Post.builder().user(user)
-      .category(request.category())
-      .title(request.title())
-      .content(request.content()).build();
-    return postRepository.save(post).getPostId();
+        .category(request.category())
+        .title(request.title())
+        .content(request.content()).build();
+
+    Post saved = postRepository.save(post);
+
+    if (request.imageKeys() != null && !request.imageKeys().isEmpty()) {
+      List<PostImage> images = postImageRepository.findByImageKeyIn(request.imageKeys());
+      if (images.size() != request.imageKeys().size()) {
+        throw new BusinessException(ErrorCode.IMAGE_NOT_FOUND);
+      }
+      for (PostImage image : images) {
+        image.attachTo(saved);
+      }
+    }
+
+    return saved.getPostId();
   }
 
   @Transactional
   public PostDetailResponseDto getDetailAndIncreaseView(Long postId) {
     Post post = checkAndGetPost(postId);
     post.increaseViewCount();
-    
-    return new PostDetailResponseDto(postId, (post.getBook() != null ? (post.getBook().getBookId()) : null), post.getUser().getId(), post.getUser().getNickname(), post.getCategory(), post.getTitle(), post.getContent(), post.getViewCount(), post.getCreatedAt());
+
+    return new PostDetailResponseDto(postId, (post.getBook() != null ? (post.getBook().getBookId()) : null),
+        post.getUser().getId(), post.getUser().getNickname(), post.getCategory(), post.getTitle(), post.getContent(),
+        post.getViewCount(), post.getCreatedAt());
   }
 
   @Transactional(readOnly = true)
@@ -55,7 +75,7 @@ public class PostService {
   public PostResponseDto updatePost(Long postId, Long userId, PostRequestDto request) {
     Post post = checkAndGetPost(postId);
 
-    if(!userId.equals(post.getUser().getId())) {
+    if (!userId.equals(post.getUser().getId())) {
       throw new BusinessException(ErrorCode.NOT_POST_OWNER);
     }
 
@@ -68,9 +88,9 @@ public class PostService {
   @Transactional
   public void deletePost(Long postId, Long userId) {
     Post post = checkAndGetPost(postId);
-    
+
     // 세번째 관문: 지우려는 사용자와 작성자가 같은 사람인가?
-    if(!userId.equals(post.getUser().getId())) {
+    if (!userId.equals(post.getUser().getId())) {
       throw new BusinessException(ErrorCode.NOT_POST_OWNER);
     }
 
@@ -82,7 +102,7 @@ public class PostService {
     Post post = postRepository.findById(postId).orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));
 
     // 두번째 관문: 일반 사용자가 볼 수 있는 글인가?
-    if(post.getStatus() != PostStatus.ACTIVE) {
+    if (post.getStatus() != PostStatus.ACTIVE) {
       throw new BusinessException(ErrorCode.POST_NOT_FOUND);
     }
 
