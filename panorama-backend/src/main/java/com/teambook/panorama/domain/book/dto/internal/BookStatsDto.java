@@ -9,8 +9,7 @@ public record BookStatsDto(
   String isbn,
   BigDecimal avgRating,
   Integer reviewCount,
-  Integer bookmarkCount,
-  Integer postCount
+  Integer bookmarkCount
 ) {
 
 }

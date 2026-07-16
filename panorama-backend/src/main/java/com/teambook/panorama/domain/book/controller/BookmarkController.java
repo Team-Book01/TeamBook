@@ -10,8 +10,6 @@ import org.springframework.web.bind.annotation.RestController;
 import com.teambook.panorama.domain.book.dto.bookmark.BookmarkRequest;
 import com.teambook.panorama.domain.book.dto.bookmark.BookmarkResponse;
 import com.teambook.panorama.domain.book.service.BookmarkService;
-import com.teambook.panorama.global.security.userdetails.CustomUserDetails;
-
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -25,8 +23,7 @@ public class BookmarkController {
 
   @Operation(summary = "북마크 토글")
   @PostMapping("/bookmark")
-  public ResponseEntity<BookmarkResponse> toggleBookmark(@RequestBody @Valid BookmarkRequest request, @AuthenticationPrincipal CustomUserDetails userDetails) {
-    Long userId = (userDetails != null) ? userDetails.getUserId() : null;
+  public ResponseEntity<BookmarkResponse> toggleBookmark(@RequestBody @Valid BookmarkRequest request, @AuthenticationPrincipal Long userId) {
     BookmarkResponse response = bookmarkService.toggleBookmark(request, userId);
     return ResponseEntity.ok(response);
   }
