@@ -50,6 +50,7 @@ public enum ErrorCode {
   POST_NOT_FOUND(HttpStatus.NOT_FOUND, "P001", "존재하지 않는 게시글입니다."),
   NOT_POST_OWNER(HttpStatus.FORBIDDEN, "P002", "게시글 소유자가 아닙니다."),
   ALREADY_LIKED_POST(HttpStatus.CONFLICT, "P003", "이미 추천한 게시글입니다."),
+  ALREADY_SCRAPPED_POST(HttpStatus.CONFLICT, "P004", "이미 스크랩한 게시글입니다."),
   
   // comment (도메인 접두어 CM + 3자리 일련번호)
   COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "CM001", "존재하지 않는 댓글입니다."),
