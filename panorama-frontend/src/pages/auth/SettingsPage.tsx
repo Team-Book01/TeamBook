@@ -124,6 +124,27 @@ export default function SettingsPage() {
     }
   }
 
+  // ── 이메일 등록·인증 (비밀번호 찾기 활성화용) ────────────
+  // 백엔드 발송/인증 미구현(스텁) → 화면 흐름만 설계(전송·인증은 '준비 중' 안내).
+  const [emailInput, setEmailInput] = useState(user?.email ?? '')
+  const [codeSent, setCodeSent] = useState(false)
+  const [verifyCode, setVerifyCode] = useState('')
+  const alreadyVerified = Boolean(user?.emailVerified && user?.email)
+
+  const emailFormatValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInput.trim())
+  const codeValid = /^\d{6}$/.test(verifyCode)
+
+  function handleSendCode() {
+    if (!emailFormatValid) return
+    setCodeSent(true)
+    toast.info('인증코드를 전송했어요. (메일 발송은 준비 중이에요)')
+  }
+
+  function handleVerifyCode() {
+    if (!codeValid) return
+    toast.info('이메일 인증은 준비 중이에요. (백엔드 연동 예정)')
+  }
+
   // ── 계정 삭제 ─────────────────────────────────────────
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deletePassword, setDeletePassword] = useState('')
@@ -286,12 +307,11 @@ export default function SettingsPage() {
         >
           <div className="flex items-center gap-3">
             <Lock className="size-5 text-primary" />
-            <h2 className="text-lg font-semibold">비밀번호 변경</h2>
+            <h2 className="text-lg font-semibold">비밀번호 수정</h2>
           </div>
           <Separator className="my-4" />
 
-          {user?.emailVerified ? (
-            <form className="flex flex-col gap-4" onSubmit={handlePasswordSave} noValidate>
+          <form className="flex flex-col gap-4" onSubmit={handlePasswordSave} noValidate>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="currentPassword">현재 비밀번호</Label>
                 <Input
@@ -358,29 +378,89 @@ export default function SettingsPage() {
               </div>
               <div className="flex justify-end">
                 <Button type="submit" size="sm" disabled={!passwordCanSave || savingPassword}>
-                  {savingPassword ? '변경 중...' : '변경'}
+                  {savingPassword ? '변경 중...' : '수정'}
                 </Button>
               </div>
             </form>
+        </section>
+        )}
+
+        {/* Email 등록·인증 (로컬 계정만 · 비밀번호 찾기 활성화용) */}
+        {isLocalAccount && (
+        <section
+          className="mt-6 rounded-2xl border border-border bg-card p-6"
+          style={{ boxShadow: 'var(--shadow-card)' }}
+        >
+          <div className="flex items-center gap-3">
+            <Mail className="size-5 text-primary" />
+            <h2 className="text-lg font-semibold">이메일 인증</h2>
+          </div>
+          <Separator className="my-4" />
+          <p className="text-xs text-muted-foreground">
+            이메일을 등록·인증해 두면 비밀번호를 잊었을 때 로그인 화면의 &lsquo;비밀번호 찾기&rsquo;로
+            재설정할 수 있어요.
+          </p>
+
+          {alreadyVerified ? (
+            <div className="mt-4 flex items-center gap-2 rounded-xl bg-secondary/50 p-4 text-sm">
+              <CheckCircle2 className="size-4 shrink-0 text-primary" />
+              <span>
+                인증된 이메일: <span className="font-medium text-foreground">{user?.email}</span>
+              </span>
+            </div>
           ) : (
-            // 이메일 미인증 → 인증 안내 (백엔드 미구현이라 클릭 시 준비중)
-            <div className="flex flex-col items-start gap-3 rounded-xl bg-secondary/50 p-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-start gap-3">
-                <Mail className="mt-0.5 size-5 shrink-0 text-primary" />
-                <div>
-                  <p className="text-sm font-medium">이메일 인증이 필요합니다</p>
-                  <p className="text-xs text-muted-foreground">
-                    비밀번호를 변경하려면 먼저 이메일 인증을 완료해 주세요.
-                  </p>
+            <div className="mt-4 flex flex-col gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="verifyEmail">이메일</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="verifyEmail"
+                    type="email"
+                    placeholder="you@example.com"
+                    autoComplete="email"
+                    value={emailInput}
+                    onChange={(e) => setEmailInput(e.target.value)}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0"
+                    onClick={handleSendCode}
+                    disabled={!emailFormatValid}
+                  >
+                    {codeSent ? '재전송' : '인증코드 전송'}
+                  </Button>
                 </div>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => toast.info('이메일 인증은 준비 중이에요.')}
-              >
-                이메일 인증하기
-              </Button>
+
+              {codeSent && (
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="verifyCode">인증코드</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="verifyCode"
+                      inputMode="numeric"
+                      maxLength={6}
+                      placeholder="메일로 받은 6자리 숫자"
+                      value={verifyCode}
+                      onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, ''))}
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="shrink-0"
+                      onClick={handleVerifyCode}
+                      disabled={!codeValid}
+                    >
+                      확인
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    메일로 받은 6자리 인증코드를 입력해 주세요.
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </section>
