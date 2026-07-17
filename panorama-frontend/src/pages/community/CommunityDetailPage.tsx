@@ -221,12 +221,15 @@ function PostActions({ postId }: { postId: number }) {
 function CommentInput({
   postId,
   replyToCommentId,
+  replyToNickname,
   onDone,
   onCancel,
   autoFocus = false,
 }: {
   postId: number
   replyToCommentId?: number
+  /** 답댓글에 대한 답글일 때 placeholder 안내("○○님에게 답글")용 대상 닉네임 — 전송 content 에는 반영하지 않는다 */
+  replyToNickname?: string
   onDone?: () => void
   onCancel?: () => void
   autoFocus?: boolean
@@ -250,10 +253,16 @@ function CommentInput({
     )
   }
 
+  const placeholder = replyToNickname
+    ? `${replyToNickname}님에게 답글`
+    : isReply
+      ? '답글을 입력하세요...'
+      : '따뜻한 댓글은 작성자에게 큰 힘이 됩니다 :)'
+
   return (
     <div className="flex-1">
       <textarea
-        placeholder={isReply ? '답글을 입력하세요...' : '따뜻한 댓글은 작성자에게 큰 힘이 됩니다 :)'}
+        placeholder={placeholder}
         value={text}
         autoFocus={autoFocus}
         maxLength={500}
@@ -394,6 +403,8 @@ function ReplyItem({
   reply: PostCommentReply
   myNickname?: string
 }) {
+  const [showReply, setShowReply] = useState(false)
+
   return (
     <div className="pl-5 pt-2.5 border-t border-black/5">
       <div className="rounded-[10px] px-4 py-3.5 bg-[#F7FAF9] border border-[#2E7D6B]/[0.12]">
@@ -410,8 +421,32 @@ function ReplyItem({
             content={reply.content}
             isMine={myNickname != null && reply.nickname === myNickname}
           />
+          <div className="flex items-center gap-4 mt-2">
+            <button
+              onClick={() => setShowReply(!showReply)}
+              className="flex items-center gap-1 text-xs text-[#888] cursor-pointer"
+            >
+              <MessageCircle size={11} color="#AAAAAA" />
+              답글 달기
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* 답댓글에 대한 답글 — 서버가 루트 댓글로 재부모화(1단계 평탄화)해 같은 루트 밑 시간순으로 붙는다.
+          placeholder 로 대상만 안내하고 전송 content 에는 아무것도 덧붙이지 않는다 */}
+      {showReply && (
+        <div className="flex gap-2.5 mt-3 mb-1 pl-5">
+          <CommentInput
+            postId={postId}
+            replyToCommentId={reply.commentId}
+            replyToNickname={reply.nickname}
+            autoFocus
+            onDone={() => setShowReply(false)}
+            onCancel={() => setShowReply(false)}
+          />
+        </div>
+      )}
     </div>
   )
 }
