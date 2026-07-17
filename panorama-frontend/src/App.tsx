@@ -12,6 +12,7 @@ import BookSearchPage from '@/pages/book/BookSearchPage'
 import BookDetailPage from '@/pages/book/BookDetailPage'
 import CommunityPage from '@/pages/community/CommunityPage'
 import CommunityDetailPage from '@/pages/community/CommunityDetailPage'
+import CommunityWritePage from '@/pages/community/CommunityWritePage'
 import LibraryMapPage from '@/pages/library/LibraryMapPage'
 import MyPage from '@/pages/mypage/MyPage'
 
@@ -46,8 +47,6 @@ export default function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/books" element={<BookSearchPage />} />
         <Route path="/books/:isbn" element={<BookDetailPage />} />
-        <Route path="/community" element={<CommunityPage />} />
-        <Route path="/community/:id" element={<CommunityDetailPage />} />
         <Route path="/library-map" element={<LibraryMapPage />} />
       </Route>
 
@@ -58,9 +57,14 @@ export default function App() {
 
       {/* 로그인이 필요한 페이지 (비로그인 시 /login 으로 리다이렉트) */}
       <Route element={<RequireAuth />}>
-        {/* 마이페이지는 공통 GNB(Layout) 를 사용 */}
+        {/* 마이페이지·커뮤니티는 공통 GNB(Layout) 를 사용 */}
+        {/* 커뮤니티는 백엔드 전 엔드포인트가 인증 필요 → 목록/상세 포함 전체 보호 */}
         <Route element={<Layout />}>
           <Route path="/mypage" element={<MyPage />} />
+          <Route path="/community" element={<CommunityPage />} />
+          <Route path="/community/write" element={<CommunityWritePage />} />
+          <Route path="/community/:id" element={<CommunityDetailPage />} />
+          <Route path="/community/:id/edit" element={<CommunityWritePage />} />
         </Route>
         {/* 설정은 자체 헤더(뒤로가기)를 써서 Layout 미적용 */}
         <Route path="/settings" element={<SettingsPage />} />
