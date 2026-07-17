@@ -97,6 +97,15 @@ public class PostService {
     post.changeStatus(PostStatus.DELETED);
   }
 
+  // 조정 주체가 없어서 서버에 상수 소유, 프론트에서 파라미터 형태로 변경 요구할 수 있음
+  private static final long POPULAR_LIKE_THRESHOLD = 3;
+
+  @Transactional(readOnly = true)
+  public Slice<PostSummaryResponseDto> findPopularPosts(Pageable pageable) {
+    Slice<Post> sliceList = postRepository.findPopular(PostStatus.ACTIVE, POPULAR_LIKE_THRESHOLD, pageable);
+    return sliceList.map(PostSummaryResponseDto::from);
+  }
+
   private Post checkAndGetPost(Long postId) {
     // 첫번째 관문: 글이 기존에 있던 글이었나?
     Post post = postRepository.findById(postId).orElseThrow(() -> new BusinessException(ErrorCode.POST_NOT_FOUND));

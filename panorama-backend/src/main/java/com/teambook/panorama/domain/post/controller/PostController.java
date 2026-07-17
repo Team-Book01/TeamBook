@@ -78,4 +78,10 @@ public class PostController {
     postService.deletePost(postId, userId);
     return ResponseEntity.noContent().build();    // 204
   }
+
+  @GetMapping("/popular")
+  public ResponseEntity<SliceResponse<PostSummaryResponseDto>> findPopularPosts(@PageableDefault(size = 10) Pageable pageable) {
+    Slice<PostSummaryResponseDto> posts = postService.findPopularPosts(pageable);
+    return ResponseEntity.ok(SliceResponse.of(posts));
+  }
 }
