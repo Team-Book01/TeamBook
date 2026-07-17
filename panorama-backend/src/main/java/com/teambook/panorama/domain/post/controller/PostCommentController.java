@@ -20,11 +20,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 
@@ -35,7 +35,7 @@ public class PostCommentController {
     private final PostCommentService postCommentService;
 
     @PostMapping("/posts/{postId}/comments")
-    public ResponseEntity<PostCommentResponseDto> create(@RequestHeader("X-USER-ID") Long userId,    // TODO: JWT 연동 후 @AuthenticationPrincipal로 교체
+    public ResponseEntity<PostCommentResponseDto> create(@AuthenticationPrincipal Long userId,
             @PathVariable("postId") Long postId, @Valid @RequestBody PostCommentRequestDto request) {
         Long commentId = postCommentService.createComment(userId, postId, request);
 
@@ -54,7 +54,7 @@ public class PostCommentController {
 
     @PutMapping("/posts/{postId}/comments/{commentId}")
     public ResponseEntity<PostCommentResponseDto> update(@PathVariable("postId") Long postId,
-            @PathVariable("commentId") Long commentId, @RequestHeader("X-USER-ID") Long userId,    // TODO: JWT 연동 후 @AuthenticationPrincipal로 교체
+            @PathVariable("commentId") Long commentId, @AuthenticationPrincipal Long userId,
             @Valid @RequestBody PostCommentUpdateRequestDto request) {
         PostCommentResponseDto response = postCommentService.updateComment(postId, commentId, userId, request);
         return ResponseEntity.ok(response);
@@ -62,7 +62,7 @@ public class PostCommentController {
 
     @DeleteMapping("/posts/{postId}/comments/{commentId}")
     public ResponseEntity<Void> delete(@PathVariable("postId") Long postId,
-            @PathVariable("commentId") Long commentId, @RequestHeader("X-USER-ID") Long userId) {    // TODO: JWT 연동 후 @AuthenticationPrincipal로 교체
+            @PathVariable("commentId") Long commentId, @AuthenticationPrincipal Long userId) {
         postCommentService.deleteComment(postId, commentId, userId);
         return ResponseEntity.noContent().build();
     }

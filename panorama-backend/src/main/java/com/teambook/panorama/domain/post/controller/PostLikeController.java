@@ -1,10 +1,10 @@
 package com.teambook.panorama.domain.post.controller;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -25,7 +25,7 @@ public class PostLikeController {
   @PostMapping
   public ResponseEntity<PostLikeResponseDto> like(
       @PathVariable Long postId,
-      @RequestHeader("X-USER-ID") Long userId) {   // TODO: @AuthenticationPrincipal 교체 (7/17)
+      @AuthenticationPrincipal Long userId) {
     return ResponseEntity.ok(postLikeService.like(postId, userId));
   }
 
@@ -33,7 +33,7 @@ public class PostLikeController {
   @DeleteMapping
   public ResponseEntity<PostLikeResponseDto> unlike(
       @PathVariable Long postId,
-      @RequestHeader("X-USER-ID") Long userId) {   // TODO: @AuthenticationPrincipal 교체 (7/17)
+      @AuthenticationPrincipal Long userId) {
     return ResponseEntity.ok(postLikeService.unlike(postId, userId));
   }
 }
