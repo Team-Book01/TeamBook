@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, PenLine, Eye } from 'lucide-react'
+import { Search, PenLine, Eye, Heart, MessageCircle } from 'lucide-react'
 
 import type { PostCategory, PostSummary } from '@/types/community'
 import { usePosts, usePopularPosts, POST_CATEGORY_LABEL, POST_CATEGORIES } from '@/api/community'
@@ -88,6 +88,14 @@ function PostCard({ post, onOpen }: { post: PostSummary; onOpen: () => void }) {
             <span className="flex items-center gap-1 text-xs text-[#ccc]">
               <Eye size={13} strokeWidth={1.8} />
               <span>{post.viewCount.toLocaleString()}</span>
+            </span>
+            <span className="flex items-center gap-1 text-xs text-[#bbb]">
+              <Heart size={13} strokeWidth={1.8} />
+              <span>{post.likeCount.toLocaleString()}</span>
+            </span>
+            <span className="flex items-center gap-1 text-xs" style={{ color: '#2E7D6B' }}>
+              <MessageCircle size={13} strokeWidth={1.8} />
+              <span>{post.commentCount.toLocaleString()}</span>
             </span>
           </div>
         </div>

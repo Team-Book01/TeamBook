@@ -25,6 +25,8 @@ import type {
   PostResponse,
   PostScrapResponse,
   PostSummary,
+  ReportReasonType,
+  ReportRequest,
   SliceResponse,
 } from '@/types/community'
 
@@ -46,6 +48,15 @@ export const POST_CATEGORY_BY_LABEL: Record<string, PostCategory> = {
 
 /** 목록/댓글 기본 페이지 크기 (백엔드 @PageableDefault(size = 10) 와 동일) */
 export const POST_PAGE_SIZE = 10
+
+// ── 상수: 신고 사유 enum ↔ 한국어 라벨 (백엔드 ReasonType enum 기준) ─────────
+export const REPORT_REASONS: { value: ReportReasonType; label: string }[] = [
+  { value: 'ABUSE', label: '욕설·비방' },
+  { value: 'SPAM', label: '스팸·광고' },
+  { value: 'MISINFO', label: '허위 정보' },
+  { value: 'OBSCENE', label: '음란성' },
+  { value: 'ETC', label: '기타' },
+]
 
 /**
  * 게시글 이미지 URL 보정.
@@ -190,6 +201,11 @@ export async function deleteComment(postId: number, commentId: number): Promise<
   await client.delete(`/posts/${postId}/comments/${commentId}`)
 }
 
+/** POST /api/v1/reports — 사용자 신고 등록 → 201 (본문 없음). 중복 신고 시 409("이미 신고한 대상입니다") */
+export async function createReport(body: ReportRequest): Promise<void> {
+  await client.post('/reports', body)
+}
+
 /** GET /api/v1/members/me/scraps — 내 스크랩 목록 (마이페이지) */
 export async function getMyScraps(page = 0, size = POST_PAGE_SIZE): Promise<SliceResponse<PostSummary>> {
   const { data } = await client.get<SliceResponse<PostSummary>>('/members/me/scraps', {
@@ -305,27 +321,41 @@ export function useDeletePost() {
 
 /**
  * 좋아요 토글 (like=true 면 등록, false 면 취소).
- * 초기 상태 조회 API 가 없어 화면은 낙관적 토글로 운용:
+ * 초기 상태는 상세 응답(liked·likeCount)으로 렌더하고, 토글 응답값으로 상세 캐시를 직접 갱신한다.
+ * (invalidate 로 상세를 refetch 하면 GET /posts/{id} 가 조회수를 +1 하므로 setQueryData 사용)
  * 409(P003, 이미 좋아요)를 받으면 "이미 처리됨"으로 재동기화한다. (에러 처리 X — 화면 참고)
  */
 export function useLikePostMutation(postId: number) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (like: boolean) => (like ? likePost(postId) : unlikePost(postId)),
-    onSuccess: () => {
+    onSuccess: (res) => {
+      queryClient.setQueryData<PostDetail>(communityKeys.detail(postId), (old) =>
+        old ? { ...old, liked: res.liked, likeCount: res.likeCount } : old,
+      )
       queryClient.invalidateQueries({ queryKey: [...communityKeys.all, 'popular'] })
     },
   })
 }
 
-/** 스크랩 토글 (scrap=true 면 등록, false 면 취소). 409(P004) 재동기화는 화면에서 처리. */
+/** 스크랩 토글 (scrap=true 면 등록, false 면 취소). 응답값으로 상세 캐시 갱신, 409(P004) 재동기화는 화면에서 처리. */
 export function useScrapPostMutation(postId: number) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (scrap: boolean) => (scrap ? scrapPost(postId) : unscrapPost(postId)),
-    onSuccess: () => {
+    onSuccess: (res) => {
+      queryClient.setQueryData<PostDetail>(communityKeys.detail(postId), (old) =>
+        old ? { ...old, scrapped: res.scrapped } : old,
+      )
       queryClient.invalidateQueries({ queryKey: [...communityKeys.all, 'myScraps'] })
     },
+  })
+}
+
+/** 사용자 신고 등록. 캐시 영향 없음 — 409(중복 신고) 처리는 화면에서. */
+export function useCreateReport() {
+  return useMutation({
+    mutationFn: (body: ReportRequest) => createReport(body),
   })
 }
 

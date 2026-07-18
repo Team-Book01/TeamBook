@@ -40,6 +40,8 @@ export interface PostSummary {
   createdAt: string
   bookTitle: string | null
   author: string | null
+  likeCount: number
+  commentCount: number
 }
 
 /** 게시글 상세 (백엔드 PostDetailResponseDto). content 는 에디터 산출 HTML. */
@@ -54,15 +56,57 @@ export interface PostDetail {
   content: string
   viewCount: number
   createdAt: string
+  /** 요청 사용자의 좋아요/스크랩 여부 (버튼 초기 상태) */
+  liked: boolean
+  scrapped: boolean
+  likeCount: number
+  /** 첨부 책 정보 (책 없으면 null). isbn 은 수정 시 기존 첨부 유지 저장(PUT find-or-create 키)에 사용 */
+  bookTitle: string | null
+  bookAuthor: string | null
+  bookImageUrl: string | null
+  isbn: string | null
 }
 
-/** 게시글 작성/수정 요청 body (백엔드 PostRequestDto). imageKeys 는 수정(PUT) 시 서버가 무시. */
+/**
+ * 게시글 작성/수정 요청 body (백엔드 PostRequestDto). imageKeys 는 수정(PUT) 시 서버가 무시.
+ * 책 첨부: isbn 이 있으면 서버가 find-or-create (isbn 을 실으면 bookTitle 필수).
+ * ⚠️ 수정(PUT)에서 isbn 을 생략하면 기존 첨부 책이 해제된다.
+ */
 export interface PostRequest {
   category: PostCategory
   title: string
   content: string
   /** 이미지 업로드(POST /posts/images) 응답의 imageKey 수집 배열. 이미지 없으면 생략 */
   imageKeys?: string[]
+  isbn?: string
+  bookTitle?: string
+  bookAuthor?: string
+  bookImageUrl?: string
+}
+
+/** 글쓰기 화면에서 첨부 선택된 책 (PostRequest 의 책 4필드 원천) */
+export interface AttachedBook {
+  isbn: string
+  title: string
+  author: string
+  imageUrl: string
+}
+
+// ── 신고 ────────────────────────────────────────────────────────────────────
+
+/** 신고 대상 유형 (백엔드 admin/entity/type/TargetType 중 사용자 신고에서 쓰는 값) */
+export type ReportTargetType = 'POST'
+
+/** 신고 사유 (백엔드 admin/entity/type/ReasonType) */
+export type ReportReasonType = 'ABUSE' | 'SPAM' | 'MISINFO' | 'OBSCENE' | 'ETC'
+
+/** POST /api/v1/reports 요청 body (백엔드 ReportSubmitRequestDto). 신고자는 JWT 에서 — body 에 넣지 않는다. */
+export interface ReportRequest {
+  targetType: ReportTargetType
+  targetId: number
+  reasonType: ReportReasonType
+  /** 상세 내용 (선택, 최대 255자) */
+  content?: string
 }
 
 /** 작성(201)/수정(200) 응답 (백엔드 PostResponseDto). */

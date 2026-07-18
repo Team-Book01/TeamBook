@@ -1,9 +1,9 @@
 import { useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import type Editor from '@toast-ui/editor'
-import { ChevronRight } from 'lucide-react'
+import { BookPlus, ChevronRight, X } from 'lucide-react'
 
-import type { PostCategory, PostDetail } from '@/types/community'
+import type { AttachedBook, PostCategory, PostDetail } from '@/types/community'
 import {
   POST_CATEGORIES,
   POST_CATEGORY_LABEL,
@@ -15,6 +15,8 @@ import {
 } from '@/api/community'
 import { getErrorMessage } from '@/api/client'
 import ToastEditor from './components/ToastEditor'
+import BookSearchModal from './components/BookSearchModal'
+import BookCoverThumb from './components/BookCoverThumb'
 
 /** 에디터가 비어 있을 때 내놓는 HTML(<p><br></p> 등)을 빈 값으로 판정 */
 function isEmptyHtml(html: string): boolean {
@@ -41,6 +43,20 @@ function WriteForm({ post }: { post?: PostDetail }) {
   const [title, setTitle] = useState(post?.title ?? '')
   const [category, setCategory] = useState<PostCategory>(post?.category ?? 'FREE')
 
+  // 책 첨부. 수정 모드는 상세 응답(isbn·bookTitle·bookAuthor·bookImageUrl)으로 기존 첨부 카드를 복원하고,
+  // 그대로 저장하면 같은 4필드가 PUT 에 실려 첨부가 유지된다.
+  const [attachedBook, setAttachedBook] = useState<AttachedBook | null>(() =>
+    isEditMode && post.isbn != null && post.bookTitle != null
+      ? {
+          isbn: post.isbn,
+          title: post.bookTitle,
+          author: post.bookAuthor ?? '',
+          imageUrl: post.bookImageUrl ?? '',
+        }
+      : null,
+  )
+  const [bookModalOpen, setBookModalOpen] = useState(false)
+
   const createPost = useCreatePost()
   const updatePost = useUpdatePost(post?.postId ?? 0)
   const isSaving = createPost.isPending || updatePost.isPending
@@ -56,10 +72,20 @@ function WriteForm({ post }: { post?: PostDetail }) {
     if (trimmedTitle.length > 255) return alert('제목은 255자 이내로 입력해주세요.')
     if (isEmptyHtml(content)) return alert('내용을 입력해주세요.')
 
+    // 첨부 책 4필드 — 미첨부면 모두 미포함 (수정 PUT 에서 미포함이면 서버가 기존 첨부를 해제한다)
+    const bookFields = attachedBook
+      ? {
+          isbn: attachedBook.isbn,
+          bookTitle: attachedBook.title, // isbn 을 실으면 bookTitle 필수
+          bookAuthor: attachedBook.author,
+          bookImageUrl: attachedBook.imageUrl,
+        }
+      : {}
+
     if (isEditMode) {
       // PUT 은 imageKeys 를 서버가 무시하므로 보내지 않는다
       updatePost.mutate(
-        { category, title: trimmedTitle, content },
+        { category, title: trimmedTitle, content, ...bookFields },
         {
           onSuccess: () => navigate(`/community/${post.postId}`),
           onError: (e) => alert(getErrorMessage(e, '게시글 수정에 실패했어요.')),
@@ -72,6 +98,7 @@ function WriteForm({ post }: { post?: PostDetail }) {
           title: trimmedTitle,
           content,
           ...(imageKeysRef.current.length > 0 ? { imageKeys: imageKeysRef.current } : {}),
+          ...bookFields,
         },
         {
           onSuccess: (res) => navigate(`/community/${res.postId}`, { replace: true }),
@@ -103,6 +130,38 @@ function WriteForm({ post }: { post?: PostDetail }) {
           placeholder="제목을 입력하세요"
           className="flex-1 text-[15px] font-semibold text-[#1A1A1A] bg-white border border-[#E0E0E0] rounded-xl px-4 py-2.5 outline-none focus:border-[#2E7D6B] transition-colors placeholder:text-[#ccc]"
         />
+      </div>
+
+      {/* 책 첨부 */}
+      <div className="flex flex-col gap-2">
+        {attachedBook ? (
+          <div className="flex items-center gap-3 border border-[#D5EAE4] bg-[#F7FAF9] rounded-xl px-4 py-3">
+            <BookCoverThumb imageUrl={attachedBook.imageUrl} title={attachedBook.title} width={44} height={62} />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-[#1A1A1A] truncate m-0">{attachedBook.title}</p>
+              <p className="text-xs text-[#999] truncate mt-0.5 m-0">{attachedBook.author}</p>
+            </div>
+            <button
+              onClick={() => setBookModalOpen(true)}
+              className="text-xs font-semibold text-[#2E7D6B] px-3 py-1.5 rounded-lg border border-[#D5EAE4] bg-white cursor-pointer flex-shrink-0"
+            >
+              교체
+            </button>
+            <button
+              onClick={() => setAttachedBook(null)}
+              className="flex items-center gap-1 text-xs font-semibold text-[#888] px-3 py-1.5 rounded-lg border border-[#E0E0E0] bg-white cursor-pointer flex-shrink-0"
+            >
+              <X size={12} /> 첨부 해제
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setBookModalOpen(true)}
+            className="inline-flex items-center gap-2 self-start text-sm font-semibold text-[#2E7D6B] px-4 py-2.5 rounded-xl border border-[#D5EAE4] bg-white hover:bg-[#EFF6F2] transition-colors cursor-pointer"
+          >
+            <BookPlus size={15} /> 책 첨부
+          </button>
+        )}
       </div>
 
       {/* 에디터 (수정 모드는 initialHtml 로 기존 본문 주입) */}
@@ -138,6 +197,17 @@ function WriteForm({ post }: { post?: PostDetail }) {
           {isSaving ? '저장 중…' : isEditMode ? '수정하기' : '등록하기'}
         </button>
       </div>
+
+      {/* 책 검색 모달 */}
+      {bookModalOpen && (
+        <BookSearchModal
+          onSelect={(book) => {
+            setAttachedBook(book)
+            setBookModalOpen(false)
+          }}
+          onClose={() => setBookModalOpen(false)}
+        />
+      )}
     </>
   )
 }

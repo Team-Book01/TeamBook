@@ -7,6 +7,7 @@ import {
   Bookmark,
   MessageCircle,
   Eye,
+  Flag,
   MoreVertical,
   CornerDownRight,
   ChevronRight,
@@ -28,8 +29,10 @@ import {
 } from '@/api/community'
 import { getErrorCode, getErrorMessage, getErrorStatus } from '@/api/client'
 import { useAuthStore } from '@/store/authStore'
+import BookCoverThumb from './components/BookCoverThumb'
 import CategoryBadge from './components/CategoryBadge'
 import CommunityLayout from './components/CommunityLayout'
+import ReportModal from './components/ReportModal'
 import { formatDateTime, formatRelativeTime, sanitizePostHtml } from './utils'
 
 // ─── Avatar (닉네임 이니셜) ───────────────────────────────────────────────────
@@ -72,8 +75,19 @@ function PostMeta({ post, isMine }: { post: PostDetail; isMine: boolean }) {
       {/* 카테고리 & 도서 정보 */}
       <div className="flex items-center gap-3 mb-5">
         <CategoryBadge category={post.category} />
-        {post.bookId != null && (
-          <span className="text-[13px] text-[#888]">연결된 도서 #{post.bookId}</span>
+        {post.bookTitle != null && (
+          <div className="flex items-center gap-2 min-w-0">
+            <BookCoverThumb imageUrl={post.bookImageUrl} title={post.bookTitle} width={27} height={40} />
+            <span className="text-[13px] font-semibold text-[#1A1A1A] truncate max-w-[220px]">
+              {post.bookTitle}
+            </span>
+            {post.bookAuthor && (
+              <>
+                <span className="text-[13px] text-[#CCCCCC]">·</span>
+                <span className="text-[13px] text-[#888] truncate max-w-[120px]">{post.bookAuthor}</span>
+              </>
+            )}
+          </div>
         )}
       </div>
 
@@ -137,23 +151,27 @@ function PostMeta({ post, isMine }: { post: PostDetail; isMine: boolean }) {
   )
 }
 
-// ─── 좋아요/스크랩 버튼 (낙관적 토글) ────────────────────────────────────────
+// ─── 좋아요/스크랩/신고 버튼 ─────────────────────────────────────────────────
 /**
- * 초기 상태 조회 API 가 없어 초기값은 false 로 시작한다.
- * - 등록 요청이 409(P003/P004) 를 받으면 "이미 처리됨"으로 화면을 재동기화 (에러 토스트 X)
+ * 초기 상태는 상세 응답의 liked·scrapped·likeCount 로 렌더한다. (재진입 시 초기화 문제 수리)
+ * - 토글은 낙관적 반영 후 응답값으로 확정. 등록이 409(P003/P004)면 "이미 처리됨"으로 재동기화 (에러 토스트 X)
  * - 취소는 멱등(항상 200)이라 실패 처리 불요
  */
-function PostActions({ postId }: { postId: number }) {
-  const [liked, setLiked] = useState(false)
-  const [likeCount, setLikeCount] = useState<number | null>(null) // 초기 카운트 API 없음 → 응답 후 표시
-  const [scrapped, setScrapped] = useState(false)
+function PostActions({ post }: { post: PostDetail }) {
+  const postId = post.postId
+  const [liked, setLiked] = useState(post.liked)
+  const [likeCount, setLikeCount] = useState(post.likeCount)
+  const [scrapped, setScrapped] = useState(post.scrapped)
+  const [reportOpen, setReportOpen] = useState(false)
 
   const likeMutation = useLikePostMutation(postId)
   const scrapMutation = useScrapPostMutation(postId)
 
   const toggleLike = () => {
+    const prev = { liked, likeCount }
     const next = !liked
     setLiked(next) // 낙관적 반영
+    setLikeCount(likeCount + (next ? 1 : -1))
     likeMutation.mutate(next, {
       onSuccess: (res) => {
         setLiked(res.liked)
@@ -161,10 +179,13 @@ function PostActions({ postId }: { postId: number }) {
       },
       onError: (e) => {
         if (getErrorStatus(e) === 409 && getErrorCode(e) === 'P003') {
-          setLiked(true) // 이미 좋아요한 글 → 눌린 상태로 재동기화
+          // 이미 좋아요한 글 → 눌린 상태로 재동기화 (카운트는 이전 값 유지)
+          setLiked(true)
+          setLikeCount(prev.likeCount)
           return
         }
-        setLiked(!next) // 그 외 실패 → 원복
+        setLiked(prev.liked) // 그 외 실패 → 원복
+        setLikeCount(prev.likeCount)
       },
     })
   }
@@ -196,7 +217,7 @@ function PostActions({ postId }: { postId: number }) {
       >
         <Heart size={17} color={liked ? '#2E7D6B' : '#888'} fill={liked ? '#2E7D6B' : 'none'} />
         <span className="text-sm font-semibold" style={{ color: liked ? '#2E7D6B' : '#888' }}>
-          추천{likeCount != null ? ` ${likeCount}` : ''}
+          추천 {likeCount}
         </span>
       </button>
 
@@ -213,6 +234,18 @@ function PostActions({ postId }: { postId: number }) {
           {scrapped ? '스크랩됨' : '스크랩'}
         </span>
       </button>
+
+      {/* 신고 */}
+      <button
+        onClick={() => setReportOpen(true)}
+        className="flex items-center gap-2 px-4 py-2.5 rounded-full cursor-pointer transition-all bg-white hover:bg-[#FFF5F6]"
+        style={{ border: '1.5px solid rgba(0,0,0,0.12)' }}
+      >
+        <Flag size={15} color="#D4183D" />
+        <span className="text-sm font-semibold text-[#888]">신고</span>
+      </button>
+
+      {reportOpen && <ReportModal targetId={postId} onClose={() => setReportOpen(false)} />}
     </div>
   )
 }
@@ -611,7 +644,7 @@ export default function CommunityDetailPage() {
               style={{ lineHeight: 1.85, fontSize: 16, overflowWrap: 'break-word' }}
               dangerouslySetInnerHTML={{ __html: safeHtml }}
             />
-            <PostActions postId={post.postId} />
+            <PostActions post={post} />
           </article>
 
           <div className="bg-white rounded-2xl border border-[#EAEAEA] shadow-[0_2px_16px_rgba(0,0,0,0.04)] px-6 py-8 md:px-[52px] md:py-9">
