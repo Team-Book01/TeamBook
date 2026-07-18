@@ -7,6 +7,8 @@ import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.teambook.panorama.domain.book.entity.Book;
+import com.teambook.panorama.domain.book.repository.BookRepository;
 import com.teambook.panorama.domain.post.dto.PostDetailResponseDto;
 import com.teambook.panorama.domain.post.dto.PostRequestDto;
 import com.teambook.panorama.domain.post.dto.PostResponseDto;
@@ -23,19 +25,23 @@ import com.teambook.panorama.global.exception.ErrorCode;
 
 import lombok.RequiredArgsConstructor;
 
-// TODO: 책 첨부는 팀 BookRepository(findByIsbn) develop 머지 후 ISBN find-or-create로 연동
 @Service
 @RequiredArgsConstructor
 public class PostService {
   private final PostRepository postRepository;
   private final UserRepository userRepository;
   private final PostImageRepository postImageRepository;
+  private final BookRepository bookRepository;
 
   @Transactional
   public Long createPost(Long userId, PostRequestDto request) {
     User user = userRepository.findById(userId)
         .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-    Post post = Post.builder().user(user)
+
+    Book book = findOrCreateBook(request);
+
+    Post post = Post.builder().book(book)
+        .user(user)
         .category(request.category())
         .title(request.title())
         .content(request.content()).build();
@@ -79,7 +85,9 @@ public class PostService {
       throw new BusinessException(ErrorCode.NOT_POST_OWNER);
     }
 
-    post.update(null, request.category(), request.title(), request.content());
+    Book book = findOrCreateBook(request);
+
+    post.update(book, request.category(), request.title(), request.content());
 
     return new PostResponseDto(postId);
   }
@@ -116,5 +124,13 @@ public class PostService {
     }
 
     return post;
+  }
+
+  private Book findOrCreateBook(PostRequestDto request) {
+    if (request.isbn() == null) {
+      return null;
+    }
+    return bookRepository.findByIsbn(request.isbn())
+    .orElseGet(() -> bookRepository.save(Book.builder().isbn(request.isbn()).title(request.bookTitle()).author(request.bookAuthor()).imageUrl(request.bookImageUrl()).build()));
   }
 }
