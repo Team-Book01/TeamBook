@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Search, PenLine, Eye, Heart, MessageCircle } from 'lucide-react'
 
@@ -118,7 +118,41 @@ export default function CommunityPage() {
   const allQuery = usePosts()
   const popularQuery = usePopularPosts()
   const query = isPopularTab ? popularQuery : allQuery
-  const { isLoading, isError, error, fetchNextPage, hasNextPage, isFetchingNextPage } = query
+  const {
+    isLoading,
+    isError,
+    error,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isFetchNextPageError,
+  } = query
+
+  // ── 무한스크롤: 목록 하단 sentinel 이 뷰포트 하단 600px 안에 들어오면
+  //    "더 보기" 버튼과 동일한 fetchNextPage 를 호출 (버튼은 수동 복구·즉시 로드용으로 유지)
+  const sentinelRef = useRef<HTMLDivElement | null>(null)
+  // observer 콜백이 항상 최신 쿼리 상태를 보도록 ref 로 전달 (stale closure 방지)
+  const loadMoreRef = useRef({ hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage })
+  loadMoreRef.current = { hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage }
+
+  useEffect(() => {
+    const el = sentinelRef.current
+    if (!el || !hasNextPage) return // 마지막 페이지: observer 미생성 (기존 것은 cleanup 이 해제)
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) return
+        const q = loadMoreRef.current
+        // 공유 가드: 로딩 중(중복 발사 방지)·마지막 페이지·직전 로드 실패(재시도는 버튼) 시 스킵
+        if (!q.hasNextPage || q.isFetchingNextPage || q.isFetchNextPageError) return
+        // cancelRefetch:false — 이미 로드 중이면 무시 (버튼과 동시 발화해도 요청 한 발)
+        q.fetchNextPage({ cancelRefetch: false })
+      },
+      // 카드 1장 실측 180px + 목록 gap 12px = 192px → 600px = 카드 약 3장 앞에서 미리 발화
+      { rootMargin: '0px 0px 600px 0px' },
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [hasNextPage])
 
   const posts = useMemo(() => {
     const loaded = query.data?.pages.flatMap((p) => p.content) ?? []
@@ -244,11 +278,14 @@ export default function CommunityPage() {
         )}
       </div>
 
+      {/* 무한스크롤 sentinel — 고정 관찰 대상 (목록 항목 재관찰 방식 대신 rootMargin 으로 선발화) */}
+      <div ref={sentinelRef} aria-hidden className="h-px" />
+
       {/* Load more */}
-      {hasNextPage && (
+      {hasNextPage ? (
         <div className="mt-8 text-center">
           <button
-            onClick={() => fetchNextPage()}
+            onClick={() => fetchNextPage({ cancelRefetch: false })}
             disabled={isFetchingNextPage}
             className="text-sm font-semibold border rounded-xl px-8 py-3 bg-white transition-all hover:shadow-sm disabled:opacity-60"
             style={{ color: '#2E7D6B', borderColor: '#D5EAE4' }}
@@ -258,7 +295,17 @@ export default function CommunityPage() {
             {isFetchingNextPage ? '불러오는 중…' : '게시글 더 보기'}
           </button>
         </div>
-      )}
+      ) : !isLoading && !isError && posts.length > 0 ? (
+        <div className="mt-8 text-center">
+          <button
+            disabled
+            className="text-sm font-semibold border rounded-xl px-8 py-3 bg-white cursor-default"
+            style={{ color: '#bbb', borderColor: '#EAEAEA' }}
+          >
+            마지막 글입니다
+          </button>
+        </div>
+      ) : null}
     </CommunityLayout>
   )
 }
