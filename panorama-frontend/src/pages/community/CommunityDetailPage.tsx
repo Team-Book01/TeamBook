@@ -334,12 +334,15 @@ function CommentBody({
   commentId,
   content,
   isMine,
+  mentionNickname,
   onDeleted,
 }: {
   postId: number
   commentId: number
   content: string
   isMine: boolean
+  /** 답글 대상 닉네임 뱃지 (서버 도출 mentionNickname, null 이면 미표시) */
+  mentionNickname?: string | null
   onDeleted?: () => void
 }) {
   const [editing, setEditing] = useState(false)
@@ -403,6 +406,14 @@ function CommentBody({
   return (
     <div>
       <p className="text-[15px] text-[#3A3A3A] m-0" style={{ lineHeight: 1.75, whiteSpace: 'pre-wrap' }}>
+        {mentionNickname != null && (
+          <span
+            className="inline-flex items-center rounded-md px-1.5 py-0.5 mr-1.5 text-[13px] font-bold align-[1px]"
+            style={{ background: '#E8F5F1', color: '#2E7D6B' }}
+          >
+            @{mentionNickname}
+          </span>
+        )}
         {content}
       </p>
       {isMine && (
@@ -453,6 +464,7 @@ function ReplyItem({
             commentId={reply.commentId}
             content={reply.content}
             isMine={myNickname != null && reply.nickname === myNickname}
+            mentionNickname={reply.mentionNickname}
           />
           <div className="flex items-center gap-4 mt-2">
             <button

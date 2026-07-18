@@ -137,6 +137,8 @@ export interface PostCommentReply {
   nickname: string
   content: string
   createdAt: string
+  /** 답글 대상(답댓글에 단 답글) 작성자 닉네임 — 서버 도출, 대상 없으면 null */
+  mentionNickname: string | null
 }
 
 /** 루트 댓글 + 답댓글 목록 (백엔드 PostCommentListResponseDto). */
