@@ -1,6 +1,7 @@
 package com.teambook.panorama.domain.post.controller;
 
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -8,6 +9,7 @@ import com.teambook.panorama.domain.post.dto.PostDetailResponseDto;
 import com.teambook.panorama.domain.post.dto.PostRequestDto;
 import com.teambook.panorama.domain.post.dto.PostResponseDto;
 import com.teambook.panorama.domain.post.dto.PostSummaryResponseDto;
+import com.teambook.panorama.domain.post.enums.PostCategory;
 import com.teambook.panorama.domain.post.service.PostService;
 import com.teambook.panorama.global.response.SliceResponse;
 
@@ -60,9 +62,11 @@ public class PostController {
   }
 
   @GetMapping
-  public ResponseEntity<SliceResponse<PostSummaryResponseDto>> findActivePosts(@PageableDefault(size = 10) Pageable pageable) {
-    Slice<PostSummaryResponseDto> postlists = postService.findActivePosts(pageable);
-      return ResponseEntity.ok(SliceResponse.of(postlists));
+  public ResponseEntity<SliceResponse<PostSummaryResponseDto>> findActivePosts(
+      @RequestParam(value = "category", required = false) PostCategory category,
+      @RequestParam(value = "isbn", required = false) String isbn,
+      @PageableDefault(size = 10) Pageable pageable) {
+    return ResponseEntity.ok(SliceResponse.of(postService.findActivePosts(category, isbn, pageable)));
   }
 
   @PutMapping("/{id}")    // Put 요청과 매핑함, 수정하려면 id값이 필요함

@@ -15,6 +15,7 @@ import com.teambook.panorama.domain.post.dto.PostResponseDto;
 import com.teambook.panorama.domain.post.dto.PostSummaryResponseDto;
 import com.teambook.panorama.domain.post.entity.Post;
 import com.teambook.panorama.domain.post.entity.PostImage;
+import com.teambook.panorama.domain.post.enums.PostCategory;
 import com.teambook.panorama.domain.post.enums.PostStatus;
 import com.teambook.panorama.domain.post.repositories.PostImageRepository;
 import com.teambook.panorama.domain.post.repositories.PostLikeRepository;
@@ -80,9 +81,8 @@ public class PostService {
   }
 
   @Transactional(readOnly = true)
-  public Slice<PostSummaryResponseDto> findActivePosts(Pageable pageable) {
-    Slice<Post> sliceList = postRepository.findByStatusOrderByCreatedAtDesc(PostStatus.ACTIVE, pageable);
-    return sliceList.map(PostSummaryResponseDto::from);
+  public Slice<PostSummaryResponseDto> findActivePosts(PostCategory category, String isbn, Pageable pageable) {
+    return postRepository.findActiveSummaries(PostStatus.ACTIVE, category, isbn, pageable);
   }
 
   @Transactional
@@ -118,8 +118,7 @@ public class PostService {
 
   @Transactional(readOnly = true)
   public Slice<PostSummaryResponseDto> findPopularPosts(Pageable pageable) {
-    Slice<Post> sliceList = postRepository.findPopular(PostStatus.ACTIVE, POPULAR_LIKE_THRESHOLD, pageable);
-    return sliceList.map(PostSummaryResponseDto::from);
+    return postRepository.findPopular(PostStatus.ACTIVE, POPULAR_LIKE_THRESHOLD, pageable);
   }
 
   private Post checkAndGetPost(Long postId) {
