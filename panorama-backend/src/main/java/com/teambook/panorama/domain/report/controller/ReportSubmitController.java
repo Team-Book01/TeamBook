@@ -1,4 +1,4 @@
-package com.teambook.panorama.domain.report;
+package com.teambook.panorama.domain.report.controller;
 
 import java.net.URI;
 
@@ -12,6 +12,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import com.teambook.panorama.domain.admin.dto.report.ReportCreateRequest;
 import com.teambook.panorama.domain.admin.service.ReportService;
+import com.teambook.panorama.domain.report.dto.ReportSubmitRequestDto;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

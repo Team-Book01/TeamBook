@@ -17,7 +17,9 @@ import com.teambook.panorama.domain.post.entity.Post;
 import com.teambook.panorama.domain.post.entity.PostImage;
 import com.teambook.panorama.domain.post.enums.PostStatus;
 import com.teambook.panorama.domain.post.repositories.PostImageRepository;
+import com.teambook.panorama.domain.post.repositories.PostLikeRepository;
 import com.teambook.panorama.domain.post.repositories.PostRepository;
+import com.teambook.panorama.domain.post.repositories.PostScrapRepository;
 import com.teambook.panorama.domain.user.entity.User;
 import com.teambook.panorama.domain.user.repository.UserRepository;
 import com.teambook.panorama.global.exception.BusinessException;
@@ -32,6 +34,8 @@ public class PostService {
   private final UserRepository userRepository;
   private final PostImageRepository postImageRepository;
   private final BookRepository bookRepository;
+  private final PostLikeRepository postLikeRepository;
+  private final PostScrapRepository postScrapRepository;
 
   @Transactional
   public Long createPost(Long userId, PostRequestDto request) {
@@ -62,13 +66,17 @@ public class PostService {
   }
 
   @Transactional
-  public PostDetailResponseDto getDetailAndIncreaseView(Long postId) {
+  public PostDetailResponseDto getDetailAndIncreaseView(Long postId, Long userId) {
     Post post = checkAndGetPost(postId);
     post.increaseViewCount();
+    
+    long likeCount = postLikeRepository.countByPost(post);
+    boolean liked = (userId == null) ? false : postLikeRepository.existsByPostAndUserId(post, userId);
+    boolean scrapped = (userId == null) ? false : postScrapRepository.existsByPostAndUserId(post, userId);
 
     return new PostDetailResponseDto(postId, (post.getBook() != null ? (post.getBook().getBookId()) : null),
         post.getUser().getId(), post.getUser().getNickname(), post.getCategory(), post.getTitle(), post.getContent(),
-        post.getViewCount(), post.getCreatedAt());
+        post.getViewCount(), post.getCreatedAt(), liked, scrapped, likeCount);
   }
 
   @Transactional(readOnly = true)

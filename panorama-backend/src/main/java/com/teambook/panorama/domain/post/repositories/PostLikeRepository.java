@@ -9,6 +9,8 @@ import com.teambook.panorama.domain.post.entity.PostLike;
 
 public interface PostLikeRepository extends JpaRepository<PostLike, Long> {
   boolean existsByPostAndUserId(Post post, Long userId);
+
   Optional<PostLike> findByPostAndUserId(Post post, Long userId);
+  
   long countByPost(Post post);
 }
