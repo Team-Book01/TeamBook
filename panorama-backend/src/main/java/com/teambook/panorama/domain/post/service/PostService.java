@@ -75,9 +75,15 @@ public class PostService {
     boolean liked = (userId == null) ? false : postLikeRepository.existsByPostAndUserId(post, userId);
     boolean scrapped = (userId == null) ? false : postScrapRepository.existsByPostAndUserId(post, userId);
 
-    return new PostDetailResponseDto(postId, (post.getBook() != null ? (post.getBook().getBookId()) : null),
-        post.getUser().getId(), post.getUser().getNickname(), post.getCategory(), post.getTitle(), post.getContent(),
-        post.getViewCount(), post.getCreatedAt(), liked, scrapped, likeCount);
+    Book book = post.getBook();
+
+    return new PostDetailResponseDto(postId, (book != null ? book.getBookId() : null),
+      post.getUser().getId(), post.getUser().getNickname(), post.getCategory(), post.getTitle(), post.getContent(),
+      post.getViewCount(), post.getCreatedAt(), liked, scrapped, likeCount,
+      (book != null ? book.getTitle() : null),
+      (book != null ? book.getAuthor() : null),
+      (book != null ? book.getImageUrl() : null),
+      (book != null ? book.getIsbn() : null));
   }
 
   @Transactional(readOnly = true)
