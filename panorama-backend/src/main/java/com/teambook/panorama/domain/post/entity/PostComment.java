@@ -42,6 +42,10 @@ public class PostComment extends BaseTimeEntity {
     @JoinColumn(name = "parent_comment_id")
     private PostComment parent;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "mention_user_id")
+    private User mentionUser;
+
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
@@ -50,10 +54,11 @@ public class PostComment extends BaseTimeEntity {
     private CommentStatus status = CommentStatus.ACTIVE;
 
     @Builder
-    public PostComment(Post post, User user, PostComment parent, String content) {
+    public PostComment(Post post, User user, PostComment parent, User mentionUser, String content) {
         this.post = post;
         this.user = user;
         this.parent = parent;
+        this.mentionUser = mentionUser;
         this.content = content;
     }
 

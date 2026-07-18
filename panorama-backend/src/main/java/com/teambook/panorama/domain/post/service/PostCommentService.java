@@ -62,6 +62,7 @@ public class PostCommentService {
     PostComment comment = PostComment.builder().post(post)
         .user(user)
         .parent(parent)
+        .mentionUser(target != null ? target.getUser() : null)
         .content(request.content())
         .build();
 
@@ -78,7 +79,8 @@ public class PostCommentService {
     Map<Long, List<PostCommentReplyResponseDto>> box = new HashMap<>();
     for (PostComment reply : replies) {
       box.computeIfAbsent(reply.getParent().getCommentId(), k -> new ArrayList<>()).add(new PostCommentReplyResponseDto(
-          reply.getCommentId(), reply.getUser().getNickname(), maskComment(reply), reply.getCreatedAt()));
+          reply.getCommentId(), reply.getUser().getNickname(), maskComment(reply), reply.getCreatedAt(),
+          reply.getMentionUser() != null ? reply.getMentionUser().getNickname() : null));
     }
 
     // slice(루트 댓글 목록)를 루트 DTO로 변환하고, 루트가 box에서 답글 꺼내서 붙이기
