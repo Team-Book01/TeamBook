@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Star, Heart, BookOpen } from "lucide-react";
+import { Star, Heart, BookOpen, Info } from "lucide-react";
 
 import type { BookItem } from "@/types/book";
+import { hasIsbn, NO_ISBN_MESSAGE } from "@/api/book";
 
 /** yyyymmdd → yyyy.mm (없으면 빈 문자열) */
 function formatPubdate(pubdate: string): string {
@@ -30,10 +31,12 @@ export function BookCard({
 }) {
   const [imgError, setImgError] = useState(false);
   const price = formatPrice(book.discount);
-  // isbn 이 없으면 상세 진입 비활성화
-  const canOpen = book.isbn.length > 0;
+  // isbn 이 없는 도서(전집·세트 등)는 상세/북마크의 키가 없어 해당 동작을 막는다.
+  const canOpen = hasIsbn(book.isbn);
 
-  const open = () => canOpen && onSelect(book.isbn);
+  const open = () => {
+    if (canOpen) onSelect(book.isbn.trim());
+  };
 
   return (
     <div className="flex gap-4 bg-white border border-[#EAEAEA] rounded-2xl p-4 hover:shadow-[0_4px_20px_rgba(0,0,0,0.07)] transition-shadow duration-200 items-stretch">
@@ -55,8 +58,11 @@ export function BookCard({
       <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
         <div>
           <h3
-            className="text-base font-bold text-[#1A1A1A] leading-snug mb-1 cursor-pointer hover:text-[#2E7D6B] transition-colors"
+            className={`text-base font-bold text-[#1A1A1A] leading-snug mb-1 transition-colors ${
+              canOpen ? "cursor-pointer hover:text-[#2E7D6B]" : "cursor-default"
+            }`}
             onClick={open}
+            title={canOpen ? undefined : NO_ISBN_MESSAGE}
           >
             {book.title}
           </h3>
@@ -73,6 +79,13 @@ export function BookCard({
             </span>
             {book.reviewCount > 0 && <span className="text-[12px] text-[#aaa]">({book.reviewCount.toLocaleString()})</span>}
           </div>
+          {/* isbn 이 없는 도서 — 상세/북마크 불가 사유 안내 */}
+          {!canOpen && (
+            <p className="flex items-center gap-1 text-[11px] text-[#aaa] mb-2.5">
+              <Info size={11} className="flex-shrink-0" />
+              {NO_ISBN_MESSAGE}
+            </p>
+          )}
         </div>
         {(price || book.link) && (
           <div className="flex items-center gap-2">
@@ -92,9 +105,12 @@ export function BookCard({
       </div>
 
       <div className="self-center flex-shrink-0 flex flex-col items-center gap-1">
+        {/* isbn 이 없으면 북마크 불가 (백엔드가 isbn 을 키로 저장) */}
         <button
           onClick={() => onToggleBookmark(book)}
-          className="p-2 rounded-full hover:bg-[#FFF0F0] transition-colors"
+          disabled={!canOpen}
+          title={canOpen ? undefined : NO_ISBN_MESSAGE}
+          className="p-2 rounded-full transition-colors enabled:hover:bg-[#FFF0F0] disabled:opacity-30 disabled:cursor-not-allowed"
         >
           <Heart size={20} className={`transition-colors ${book.isBookmarked ? "fill-rose-500 stroke-rose-500" : "stroke-[#ccc] fill-transparent"}`} />
         </button>

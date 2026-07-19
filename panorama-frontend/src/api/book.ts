@@ -22,13 +22,28 @@ import type {
   BookSearchParams,
   BookSearchResponse,
   CreateReviewRequest,
-  DeleteReviewResponse,
   LibraryListResponse,
   LibraryParams,
+  MyBookmarkResponse,
+  MyReviewResponse,
   Review,
   ReviewListResponse,
   UpdateReviewRequest,
 } from '@/types/book'
+
+// ── isbn 유효성 ──────────────────────────────────────────────────────────────
+/**
+ * 상세 조회가 가능한 도서인지 판별한다.
+ *
+ * 네이버 검색 결과에는 isbn 이 없는 도서(전집·세트 상품 등)가 섞여 있다.
+ * 이런 도서는 상세/북마크/리뷰/도서관 API 의 키가 없으므로 진입 자체를 막는다.
+ */
+export function hasIsbn(isbn?: string | null): boolean {
+  return typeof isbn === 'string' && isbn.trim().length > 0
+}
+
+/** isbn 이 없는 도서에 공통으로 노출하는 안내 문구 */
+export const NO_ISBN_MESSAGE = '상세 정보를 제공하지 않는 도서입니다'
 
 // ── 상수: 서울시 구 지역코드 ─────────────────────────────────────────────────
 // 소장 도서관 조회(getLibraries)의 region 파라미터에 사용.
@@ -73,6 +88,10 @@ export const bookKeys = {
     [...bookKeys.all, 'reviews', isbn, { page, size }] as const,
   libraries: (isbn: string, params: LibraryParams) =>
     [...bookKeys.all, 'libraries', isbn, params] as const,
+  myBookmarks: () => [...bookKeys.all, 'my', 'bookmarks'] as const,
+  myBookmarkCount: () => [...bookKeys.all, 'my', 'bookmarkCount'] as const,
+  myReviews: () => [...bookKeys.all, 'my', 'reviews'] as const,
+  myReviewCount: () => [...bookKeys.all, 'my', 'reviewCount'] as const,
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -110,13 +129,25 @@ export async function getBook(isbn: string): Promise<BookDetail> {
   return data
 }
 
-/** POST /api/v1/books/bookmark — 북마크 토글 (로그인 필요) */
+/** POST /api/v1/bookmark/toggle — 북마크 토글 (로그인 필요) */
 export async function toggleBookmark(body: BookmarkRequest): Promise<BookmarkResponse> {
-  const { data } = await client.post<BookmarkResponse>('/books/bookmark', body)
+  const { data } = await client.post<BookmarkResponse>('/bookmark/toggle', body)
   return data
 }
 
-/** GET /api/v1//reviews/{isbn} — 리뷰 목록 */
+/** GET /api/v1/bookmark/myBookmarks — 내 북마크 목록 (로그인 필요) */
+export async function getMyBookmarks(): Promise<MyBookmarkResponse> {
+  const { data } = await client.get<MyBookmarkResponse>('/bookmark/myBookmarks')
+  return data
+}
+
+/** GET /api/v1/bookmark/myBookmarkCount — 내 북마크 개수 (로그인 필요) */
+export async function getMyBookmarkCount(): Promise<number> {
+  const { data } = await client.get<number>('/bookmark/myBookmarkCount')
+  return data
+}
+
+/** GET /api/v1/reviews/{isbn} — 리뷰 목록 */
 export async function getReviews(
   isbn: string,
   page = 1,
@@ -128,12 +159,12 @@ export async function getReviews(
   return data
 }
 
-/** POST /api/v1/books/{isbn}/reviews — 리뷰 작성 (로그인 필요) */
+/** POST /api/v1/reviews/{isbn} — 리뷰 작성 (로그인 필요) */
 export async function createReview(
   isbn: string,
   body: CreateReviewRequest,
 ): Promise<Review> {
-  const { data } = await client.post<Review>(`/books/${isbn}/reviews`, body)
+  const { data } = await client.post<Review>(`/reviews/${isbn}`, body)
   return data
 }
 
@@ -146,18 +177,29 @@ export async function updateReview(
   return data
 }
 
-/** DELETE /api/v1/reviews/{reviewId} — 리뷰 삭제 (로그인 필요) */
-export async function deleteReview(reviewId: number): Promise<DeleteReviewResponse> {
-  const { data } = await client.delete<DeleteReviewResponse>(`/reviews/${reviewId}`)
+/** DELETE /api/v1/reviews/{reviewId} — 리뷰 삭제 (로그인 필요). 성공 시 204 No Content. */
+export async function deleteReview(reviewId: number): Promise<void> {
+  await client.delete<void>(`/reviews/${reviewId}`)
+}
+
+/** GET /api/v1/reviews/myReviewList — 내 리뷰 목록 (로그인 필요) */
+export async function getMyReviews(): Promise<MyReviewResponse> {
+  const { data } = await client.get<MyReviewResponse>('/reviews/myReviewList')
   return data
 }
 
-/** GET /api/v1/books/{isbn}/libraries — 소장 도서관 + 대출 가능 여부 */
+/** GET /api/v1/reviews/myReviewCount — 내 리뷰 개수 (로그인 필요) */
+export async function getMyReviewCount(): Promise<number> {
+  const { data } = await client.get<number>('/reviews/myReviewCount')
+  return data
+}
+
+/** GET /api/v1/library/{isbn}?regionCode= — 소장 도서관 + 대출 가능 여부 */
 export async function getLibraries(
   isbn: string,
   params: LibraryParams,
 ): Promise<LibraryListResponse> {
-  const { data } = await client.get<LibraryListResponse>(`/books/${isbn}/libraries`, {
+  const { data } = await client.get<LibraryListResponse>(`/library/${isbn}`, {
     params,
   })
   return data
@@ -243,7 +285,7 @@ export function useBook(isbn: string) {
   return useQuery({
     queryKey: bookKeys.detail(isbn),
     queryFn: () => getBook(isbn),
-    enabled: isbn.length > 0,
+    enabled: hasIsbn(isbn),
     initialData: cached?.data,
     initialDataUpdatedAt: cached?.updatedAt,
   })
@@ -255,16 +297,62 @@ export function useBookReviews(isbn: string, page = 1, size = 10) {
     queryKey: bookKeys.reviews(isbn, page, size),
     queryFn: () => getReviews(isbn, page, size),
     // isbn 이 빈 값/누락(null)이어도 렌더 중 터지지 않도록 방어적으로 체크
-    enabled: !!isbn && isbn.length > 0,
+    enabled: hasIsbn(isbn),
   })
 }
 
-/** 소장 도서관 목록 (region 필수) */
-export function useBookLibraries(isbn: string, params: LibraryParams) {
+/**
+ * 소장 도서관 목록 (regionCode 필수).
+ * `enabled` 로 조회 시점을 호출부가 제어한다(지역 선택 후 "찾기" 를 눌렀을 때만 요청).
+ */
+export function useBookLibraries(
+  isbn: string,
+  params: LibraryParams,
+  options?: { enabled?: boolean },
+) {
   return useQuery({
     queryKey: bookKeys.libraries(isbn, params),
     queryFn: () => getLibraries(isbn, params),
-    enabled: isbn.length > 0 && params.region.length > 0,
+    enabled:
+      (options?.enabled ?? true) && hasIsbn(isbn) && params.regionCode.length > 0,
+  })
+}
+
+// ── 마이페이지 (로그인 필요) ─────────────────────────────────────────────────
+
+/** 내 북마크 목록 */
+export function useMyBookmarks(options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: bookKeys.myBookmarks(),
+    queryFn: getMyBookmarks,
+    enabled: options?.enabled ?? true,
+  })
+}
+
+/** 내 북마크 개수 */
+export function useMyBookmarkCount(options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: bookKeys.myBookmarkCount(),
+    queryFn: getMyBookmarkCount,
+    enabled: options?.enabled ?? true,
+  })
+}
+
+/** 내 리뷰 목록 */
+export function useMyReviews(options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: bookKeys.myReviews(),
+    queryFn: getMyReviews,
+    enabled: options?.enabled ?? true,
+  })
+}
+
+/** 내 리뷰 개수 */
+export function useMyReviewCount(options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: bookKeys.myReviewCount(),
+    queryFn: getMyReviewCount,
+    enabled: options?.enabled ?? true,
   })
 }
 
@@ -339,6 +427,8 @@ export function useBookmarkMutation() {
         isBookmarked: data.isBookmarked,
         bookmarkCount: data.bookmarkCount,
       }))
+      // 마이페이지 북마크 목록/개수는 서버 재조회 (네이버 API 를 타지 않아 부담이 적다)
+      queryClient.invalidateQueries({ queryKey: [...bookKeys.all, 'my'] })
     },
   })
 }
@@ -351,6 +441,7 @@ export function useCreateReview(isbn: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [...bookKeys.all, 'reviews', isbn] })
       queryClient.invalidateQueries({ queryKey: bookKeys.detail(isbn) })
+      queryClient.invalidateQueries({ queryKey: [...bookKeys.all, 'my'] })
     },
   })
 }
@@ -364,6 +455,7 @@ export function useUpdateReview(isbn: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [...bookKeys.all, 'reviews', isbn] })
       queryClient.invalidateQueries({ queryKey: bookKeys.detail(isbn) })
+      queryClient.invalidateQueries({ queryKey: [...bookKeys.all, 'my'] })
     },
   })
 }
@@ -376,6 +468,7 @@ export function useDeleteReview(isbn: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [...bookKeys.all, 'reviews', isbn] })
       queryClient.invalidateQueries({ queryKey: bookKeys.detail(isbn) })
+      queryClient.invalidateQueries({ queryKey: [...bookKeys.all, 'my'] })
     },
   })
 }
