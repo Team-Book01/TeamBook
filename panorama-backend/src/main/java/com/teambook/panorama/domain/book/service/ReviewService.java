@@ -145,7 +145,7 @@ public class ReviewService {
   //마이페이지_리뷰전체
   public MyReviewResponse findMyReviews(Long userId){
     //리뷰 전체 갖고오기
-    List<BookReview> reviews = reviewRepository.findByUserIdAndStatus(userId, ReviewStatus.ACTIVE);
+    List<BookReview> reviews = reviewRepository.findByUserIdAndStatusWithBook(userId, ReviewStatus.ACTIVE);
     //정보 매핑(list.of myReviewItem)
     List<MyReviewItem> myReviewItems = reviews.stream().map(review -> {
       return
