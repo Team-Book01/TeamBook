@@ -1,9 +1,11 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { Loader2, CheckCircle2, XCircle } from 'lucide-react'
 import { AuthLayout } from '@/components/auth/AuthLayout'
 import { SocialButtons } from '@/components/auth/SocialButtons'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { PasswordInput } from '@/components/ui/PasswordInput'
 import { Label } from '@/components/ui/Label'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { checkExists, signup } from '@/api/auth'
@@ -15,82 +17,153 @@ import {
   isValidPassword,
   LOGIN_ID_MESSAGE,
   NICKNAME_MESSAGE,
-  PASSWORD_MESSAGE,
+  NICKNAME_MAX_LENGTH,
+  LOGIN_ID_MAX_LENGTH,
 } from '@/lib/validation'
 
 /**
  * 회원가입 화면.
- * 백엔드 SignUpDto.Request 규칙에 맞춰 검증 → 아이디/닉네임 중복 확인(/users/exists)
- * → 가입(POST /users) → 성공 시 로그인 화면으로 이동.
+ * - 아이디·닉네임: 입력 0.5초 후 /users/exists 로 실시간 중복 확인(사용 가능 여부 표시)
+ * - 비밀번호·확인: 형식/일치 여부를 실시간 표시
+ * - 모두 통과해야 가입 버튼 활성화 → POST /users → 로그인 화면으로 이동
+ * 이메일은 가입 시 받지 않고, 가입 후 설정에서 등록·인증한다.
  */
+type CheckStatus = 'idle' | 'checking' | 'available' | 'taken' | 'invalid'
+
+/** 아이디·닉네임 실시간 확인 결과 한 줄. */
+function StatusLine({
+  status,
+  invalidMsg,
+  takenMsg,
+  availableMsg,
+}: {
+  status: CheckStatus
+  invalidMsg: string
+  takenMsg: string
+  availableMsg: string
+}) {
+  return (
+    <div className="min-h-[1.25rem] text-xs">
+      {status === 'checking' && (
+        <span className="flex items-center gap-1 text-muted-foreground">
+          <Loader2 className="size-3 animate-spin" />
+          확인 중...
+        </span>
+      )}
+      {status === 'available' && (
+        <span className="flex items-center gap-1 text-primary">
+          <CheckCircle2 className="size-3" />
+          {availableMsg}
+        </span>
+      )}
+      {status === 'taken' && (
+        <span className="flex items-center gap-1 text-destructive">
+          <XCircle className="size-3" />
+          {takenMsg}
+        </span>
+      )}
+      {status === 'invalid' && (
+        <span className="flex items-center gap-1 text-destructive">
+          <XCircle className="size-3" />
+          {invalidMsg}
+        </span>
+      )}
+    </div>
+  )
+}
+
 export default function SignupPage() {
   const navigate = useNavigate()
-  const [errors, setErrors] = useState<Record<string, string>>({})
+
+  const [loginId, setLoginId] = useState('')
+  const [nickname, setNickname] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirm, setConfirm] = useState('')
+  const [agree, setAgree] = useState(false)
+
+  const [loginIdStatus, setLoginIdStatus] = useState<CheckStatus>('idle')
+  const [nickStatus, setNickStatus] = useState<CheckStatus>('idle')
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
-  // 백엔드 SignUpDto.Request 규칙과 일치시킨 클라이언트 검증
-  function validate(v: {
-    loginId: string
-    nickname: string
-    password: string
-    confirm: string
-    agree: boolean
-  }): Record<string, string> {
-    const e: Record<string, string> = {}
-    if (!isValidLoginId(v.loginId)) e.loginId = LOGIN_ID_MESSAGE
-    if (!isValidNickname(v.nickname)) e.nickname = NICKNAME_MESSAGE
-    if (!isValidPassword(v.password)) e.password = PASSWORD_MESSAGE
-    if (v.password !== v.confirm) e.confirm = '비밀번호가 일치하지 않아요.'
-    if (!v.agree) e.agree = '약관에 동의해 주세요.'
-    return e
-  }
+  const passwordValid = isValidPassword(password)
+  const confirmMatch = confirm.length > 0 && password === confirm
+
+  // 아이디: 입력 0.5초 뒤 형식 검사 → DB 중복 확인
+  useEffect(() => {
+    const trimmed = loginId.trim()
+    if (trimmed === '') {
+      setLoginIdStatus('idle')
+      return
+    }
+    if (!isValidLoginId(trimmed)) {
+      setLoginIdStatus('invalid')
+      return
+    }
+    setLoginIdStatus('checking')
+    let cancelled = false
+    const timer = setTimeout(async () => {
+      try {
+        const taken = await checkExists({ loginId: trimmed })
+        if (!cancelled) setLoginIdStatus(taken ? 'taken' : 'available')
+      } catch {
+        if (!cancelled) setLoginIdStatus('idle')
+      }
+    }, 500)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [loginId])
+
+  // 닉네임: 입력 0.5초 뒤 형식 검사 → DB 중복 확인
+  useEffect(() => {
+    const trimmed = nickname.trim()
+    if (trimmed === '') {
+      setNickStatus('idle')
+      return
+    }
+    if (!isValidNickname(trimmed)) {
+      setNickStatus('invalid')
+      return
+    }
+    setNickStatus('checking')
+    let cancelled = false
+    const timer = setTimeout(async () => {
+      try {
+        const taken = await checkExists({ nickname: trimmed })
+        if (!cancelled) setNickStatus(taken ? 'taken' : 'available')
+      } catch {
+        if (!cancelled) setNickStatus('idle')
+      }
+    }, 500)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [nickname])
+
+  const canSubmit =
+    loginIdStatus === 'available' &&
+    nickStatus === 'available' &&
+    passwordValid &&
+    confirmMatch &&
+    agree
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    const form = new FormData(e.currentTarget)
-    const values = {
-      loginId: String(form.get('loginId') ?? '').trim(),
-      nickname: String(form.get('nickname') ?? '').trim(),
-      password: String(form.get('password') ?? ''),
-      confirm: String(form.get('confirm') ?? ''),
-      agree: form.get('agree') === 'on',
-    }
-
-    const next = validate(values)
-    if (Object.keys(next).length > 0) {
-      setErrors(next)
-      return
-    }
-
-    setErrors({})
+    if (!canSubmit) return
     setSubmitError(null)
     setSubmitting(true)
     try {
-      // 1) 아이디·닉네임 중복 확인 (병렬)
-      const [loginIdTaken, nicknameTaken] = await Promise.all([
-        checkExists({ loginId: values.loginId }),
-        checkExists({ nickname: values.nickname }),
-      ])
-      const dup: Record<string, string> = {}
-      if (loginIdTaken) dup.loginId = '이미 사용 중인 아이디예요.'
-      if (nicknameTaken) dup.nickname = '이미 사용 중인 닉네임이에요.'
-      if (Object.keys(dup).length > 0) {
-        setErrors(dup)
-        return
-      }
-
-      // 2) 가입 요청 (이메일은 가입 후 설정에서 등록·인증)
       await signup({
-        loginId: values.loginId,
-        password: values.password,
-        nickname: values.nickname,
+        loginId: loginId.trim(),
+        password,
+        nickname: nickname.trim(),
       })
-
       toast.success('가입 완료! 로그인해 주세요.')
       navigate('/login', { replace: true })
     } catch (err) {
-      // 409(중복) 등 서버 에러는 백엔드 메시지를 그대로 노출
       setSubmitError(getErrorMessage(err, '회원가입 중 오류가 발생했어요. 잠시 후 다시 시도해 주세요.'))
     } finally {
       setSubmitting(false)
@@ -119,45 +192,100 @@ export default function SignupPage() {
             name="loginId"
             placeholder="영문·숫자·밑줄(_), 6~15자"
             autoComplete="username"
+            maxLength={LOGIN_ID_MAX_LENGTH}
+            value={loginId}
+            onChange={(e) => setLoginId(e.target.value)}
           />
-          {errors.loginId && <p className="text-xs text-destructive">{errors.loginId}</p>}
+          <StatusLine
+            status={loginIdStatus}
+            invalidMsg={LOGIN_ID_MESSAGE}
+            takenMsg="이미 사용 중인 아이디예요."
+            availableMsg="사용 가능한 아이디예요."
+          />
         </div>
+
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="nickname">닉네임</Label>
-          <Input id="nickname" name="nickname" placeholder="한글·영문·숫자·밑줄(_), 1~10자" />
-          {errors.nickname && <p className="text-xs text-destructive">{errors.nickname}</p>}
+          <Input
+            id="nickname"
+            name="nickname"
+            placeholder="한글·영문·숫자·밑줄(_), 1~10자"
+            maxLength={NICKNAME_MAX_LENGTH}
+            value={nickname}
+            onChange={(e) => setNickname(e.target.value)}
+          />
+          <StatusLine
+            status={nickStatus}
+            invalidMsg={NICKNAME_MESSAGE}
+            takenMsg="이미 사용 중인 닉네임이에요."
+            availableMsg="사용 가능한 닉네임이에요."
+          />
         </div>
+
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="password">비밀번호</Label>
-          <Input
+          <PasswordInput
             id="password"
             name="password"
-            type="password"
             placeholder="8~15자, 대소문자·특수문자 포함"
             autoComplete="new-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
           />
-          {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
+          <div className="min-h-[1.25rem] text-xs">
+            {password.length > 0 && !passwordValid && (
+              <span className="flex items-center gap-1 text-destructive">
+                <XCircle className="size-3" />
+                비밀번호는 8~15자, 대소문자·특수문자를 포함해야 해요.
+              </span>
+            )}
+            {password.length > 0 && passwordValid && (
+              <span className="flex items-center gap-1 text-primary">
+                <CheckCircle2 className="size-3" />
+                사용 가능한 비밀번호예요.
+              </span>
+            )}
+          </div>
         </div>
+
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="confirm">비밀번호 확인</Label>
-          <Input
+          <PasswordInput
             id="confirm"
             name="confirm"
-            type="password"
             placeholder="비밀번호를 다시 입력"
             autoComplete="new-password"
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
           />
-          {errors.confirm && <p className="text-xs text-destructive">{errors.confirm}</p>}
+          <div className="min-h-[1.25rem] text-xs">
+            {confirm.length > 0 && !confirmMatch && (
+              <span className="flex items-center gap-1 text-destructive">
+                <XCircle className="size-3" />
+                비밀번호가 일치하지 않아요.
+              </span>
+            )}
+            {confirm.length > 0 && confirmMatch && (
+              <span className="flex items-center gap-1 text-primary">
+                <CheckCircle2 className="size-3" />
+                비밀번호가 일치해요.
+              </span>
+            )}
+          </div>
         </div>
 
         <label className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Checkbox id="agree" name="agree" />
+          <Checkbox
+            id="agree"
+            name="agree"
+            checked={agree}
+            onChange={(e) => setAgree(e.target.checked)}
+          />
           <span>
             <span className="font-medium text-foreground">이용약관</span> 및{' '}
             <span className="font-medium text-foreground">개인정보 처리방침</span>에 동의합니다.
           </span>
         </label>
-        {errors.agree && <p className="-mt-2 text-xs text-destructive">{errors.agree}</p>}
 
         {submitError && (
           <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
@@ -165,7 +293,7 @@ export default function SignupPage() {
           </p>
         )}
 
-        <Button type="submit" size="lg" className="mt-2 h-11" disabled={submitting}>
+        <Button type="submit" size="lg" className="mt-2 h-11" disabled={!canSubmit || submitting}>
           {submitting ? '가입 중...' : '회원가입'}
         </Button>
       </form>
