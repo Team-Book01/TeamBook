@@ -30,6 +30,9 @@ spring:
 mybatis:
   configuration:
     map-underscore-to-camel-case: true
+    # 레코드(record) DTO 생성자 매핑을 '컬럼 순서'가 아닌 '인자 이름' 기준으로 한다.
+    # → SELECT 컬럼 순서/개수가 생성자와 달라도 이름으로 안전하게 매핑(레코드 필수).
+    arg-name-based-constructor-auto-mapping: true
   type-aliases-package: com.teambook.panorama.domain
   mapper-locations: classpath:mapper/**/*.xml
 
@@ -46,9 +49,10 @@ logging:
     root: INFO
     com.teambook.panorama: INFO
 naver:
-  client-id: nQurbUEhBwlMSPQUzmCA
-  client-secret: 6hMR4MFVAG
-
+  client-id: ${NAVER_CLIENT_ID}
+  client-secret: ${NAVER_CLIENT_SECRET}
+library-bigdata:
+  auth-key: ${LIBRARY_BIGDATA_AUTH_KEY}
 app:
   https: false
   upload:
@@ -61,3 +65,4 @@ data4library:
 vision:
   api:
     key: ${VISION_API_KEY:}
+
