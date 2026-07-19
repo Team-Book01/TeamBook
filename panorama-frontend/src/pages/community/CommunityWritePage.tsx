@@ -13,6 +13,7 @@ import {
   usePost,
   useUpdatePost,
 } from '@/api/community'
+import { extractIsbnFromImage, searchBooks } from '@/api/book'
 import { getErrorMessage } from '@/api/client'
 import ToastEditor from './components/ToastEditor'
 import BookSearchModal from './components/BookSearchModal'
@@ -56,6 +57,43 @@ function WriteForm({ post }: { post?: PostDetail }) {
       : null,
   )
   const [bookModalOpen, setBookModalOpen] = useState(false)
+
+  // 에디터는 마운트 시 1회만 생성되어 onImageUpload 클로저가 고정된다(ToastEditor deps []).
+  // 훅 안에서 최신 첨부 상태를 보려면 ref 미러가 필요하다.
+  const attachedBookRef = useRef(attachedBook)
+  attachedBookRef.current = attachedBook
+  // OCR 자동 첨부는 "제안" 이므로 1회만. 사용자가 해제한 뒤 다음 이미지에서 되살아나지 않게 한다.
+  const bookSuggestedRef = useRef(false)
+
+  /**
+   * 이미지 OCR → ISBN → 도서 검색 → 결과 1건이면 자동 첨부(제안).
+   * 이미지에 책이 없는 건 정상 상황이라 실패는 전부 침묵한다(토스트/alert 금지).
+   */
+  const suggestBookFromImage = async (blob: Blob | File) => {
+    if (bookSuggestedRef.current || attachedBookRef.current) return
+
+    const isbn = await extractIsbnFromImage(blob)
+    if (!isbn) return
+
+    const items = await searchBooks({ keyword: isbn }).then(
+      (res) => res.items,
+      () => [],
+    )
+    // 정확히 1건일 때만 자동 선택 — 후보가 여럿이면 사용자가 직접 고르게 둔다
+    if (items.length !== 1) return
+    const [book] = items
+    if (!book.isbn) return
+
+    // await 사이에 사용자가 직접 첨부했을 수 있으므로 재확인 (사용자 선택 우선)
+    if (bookSuggestedRef.current || attachedBookRef.current) return
+    bookSuggestedRef.current = true
+    setAttachedBook({
+      isbn: book.isbn,
+      title: book.title,
+      author: book.author,
+      imageUrl: book.image,
+    })
+  }
 
   const createPost = useCreatePost()
   const updatePost = useUpdatePost(post?.postId ?? 0)
@@ -169,6 +207,9 @@ function WriteForm({ post }: { post?: PostDetail }) {
         editorRef={editorRef}
         initialHtml={post?.content}
         onImageUpload={async (blob, callback) => {
+          // 책 표지 OCR 제안 — 업로드와 별개로 병행 실행하며 업로드 흐름을 막지 않는다
+          void suggestBookFromImage(blob).catch(() => {})
+
           // 이미지 업로드: 서버에 올리고 절대 URL 로 본문 삽입 + imageKey 수집
           try {
             const [image] = await uploadPostImages([blob as File])
