@@ -3,6 +3,7 @@ package com.teambook.panorama.domain.auth.service;
 import java.time.Duration;
 import java.time.LocalDateTime;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -82,6 +83,16 @@ public class EmailVerificationServiceImpl implements EmailVerificationService {
         }
 
         ev.getUser().registerVerifiedEmail(ev.getTargetEmail());     // users.email 로 승격(dirty checking)
+
+        // existsByEmail 통과 후 커밋 전 찰나에 다른 유저가 같은 주소를 확정하는 경쟁이 남아 있다.
+        // dirty checking UPDATE 는 트랜잭션 커밋 시점에 flush 되므로, 그대로 두면 UNIQUE 위반이
+        // 메서드 밖에서 터져 500 이 된다. 여기서 명시적으로 flush 해 위반을 이 자리에서 표면화하고,
+        // A010(이미 사용 중인 이메일)으로 변환한다.
+        try {
+            userRepository.flush();
+        } catch (DataIntegrityViolationException e) {
+            throw new BusinessException(ErrorCode.EMAIL_ALREADY_USED);
+        }
     }
 
     /**
