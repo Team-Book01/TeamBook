@@ -25,25 +25,26 @@ public class LibraryClient {
   public LibSrchResponse searchLib(String isbn, String regionCode) {
     try {
       return libraryRestClient.get()
-    .uri("/libSrchByBook?authKey={a}&isbn={i}&region={r}", this.authKey, isbn, regionCode)
+    .uri("/libSrchByBook?authKey={a}&isbn={i}&region={r}&format=json", this.authKey, isbn, regionCode)
     .retrieve()
-    .body(LibSrchResponse.class);  
+    .body(LibSrchResponse.class);
     } catch (RestClientException e) {
       throw new BusinessException(ErrorCode.LIBRARY_API_ERROR);
     }
-    
+
   }
   //해당 대출 가능 여부 파악
+  // 파라미터명은 isbn 이 아니라 isbn13 이다(isbn 으로 보내면 isbnLengthErr).
   public LibBookAvailability checkBookAvailability(String libCode, String isbn){
     try {
       return libraryRestClient.get()
-    .uri("/bookExist?authKey={a}&libCode={l}&isbn={i}", this.authKey, libCode, isbn)
+    .uri("/bookExist?authKey={a}&libCode={l}&isbn13={i}&format=json", this.authKey, libCode, isbn)
     .retrieve()
-    .body(LibBookAvailability.class);  
+    .body(LibBookAvailability.class);
     } catch (RestClientException e) {
       throw new BusinessException(ErrorCode.LIBRARY_API_ERROR);
     }
-    
+
   }
   
 }
