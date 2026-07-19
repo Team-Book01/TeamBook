@@ -1,6 +1,5 @@
 package com.teambook.panorama.domain.book.controller;
 
-import org.apache.catalina.connector.Response;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -12,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.teambook.panorama.domain.book.dto.review.MyReviewResponse;
 import com.teambook.panorama.domain.book.dto.review.ReviewItem;
 import com.teambook.panorama.domain.book.dto.review.ReviewRequest;
 import com.teambook.panorama.domain.book.dto.review.ReviewResponse;
@@ -39,7 +39,7 @@ public class ReviewController {
   }
 
   //리뷰 작성하기
-  @Operation
+  @Operation(summary = "리뷰 작성하기")
   @PostMapping("/{isbn}")
   public ResponseEntity<ReviewItem> createReview(@Valid @RequestBody ReviewRequest request,
   @PathVariable("isbn") String isbn,
@@ -48,7 +48,7 @@ public class ReviewController {
     return ResponseEntity.ok(reviewService.saveReview(request, isbn, userId));
   }
   //리뷰 수정하기
-  @Operation
+  @Operation(summary = "리뷰 수정하기")
   @PutMapping("{reviewId}")
   public ResponseEntity<ReviewItem> updateReview(@Valid @RequestBody ReviewRequest request,
     @PathVariable("reviewId") Long reviewId,
@@ -57,12 +57,24 @@ public class ReviewController {
     return ResponseEntity.ok(reviewService.updateReveiw(request, reviewId, userId));
   }
   //리뷰 삭제하기
-  @Operation
+  @Operation(summary = "리뷰 삭제하기")
   @DeleteMapping("{reviewId}")
   public ResponseEntity<Void> deleteReview(@PathVariable("reviewId") Long reviewId,
     @AuthenticationPrincipal Long userId){
       reviewService.deleteReveiw(reviewId, userId);
       return ResponseEntity.noContent().build();
     }
+  //마이페이지 리뷰 카운트
+  @Operation(summary = "마이페이지 리뷰수 가져오기")
+  @GetMapping("/myReviewCount")
+  public ResponseEntity<Long> getMyReveiwCount(@AuthenticationPrincipal Long userId){
+    return ResponseEntity.ok(reviewService.findMyReviewCount(userId));
+  }
+  //마이페이지 리뷰 전체
+  @Operation(summary = "마이페이지 리뷰리스트 가져오기")
+  @GetMapping("/myReviewList")
+  public ResponseEntity<MyReviewResponse> getMyReviews(@AuthenticationPrincipal Long userId){
+    return ResponseEntity.ok(reviewService.findMyReviews(userId));
 
+  }
 }
