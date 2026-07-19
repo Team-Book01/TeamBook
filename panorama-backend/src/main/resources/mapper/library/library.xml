@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.teambook.panorama.domain.library.repository.LibraryQueryMapper">
+
+    <!-- record(LibraryResponse)는 setter가 없으므로 생성자(constructor) 매핑 사용 -->
+    <resultMap id="libraryResponseMap"
+               type="com.teambook.panorama.domain.library.dto.LibraryResponse">
+        <constructor>
+            <idArg column="lib_id"          name="libId"          javaType="java.lang.Long"/>
+            <arg   column="name"            name="name"           javaType="java.lang.String"/>
+            <arg   column="address"         name="address"        javaType="java.lang.String"/>
+            <arg   column="tel"             name="tel"            javaType="java.lang.String"/>
+            <arg   column="latitude"        name="latitude"       javaType="java.math.BigDecimal"/>
+            <arg   column="longitude"       name="longitude"      javaType="java.math.BigDecimal"/>
+            <arg   column="homepage_url"    name="homepageUrl"    javaType="java.lang.String"/>
+            <arg   column="operating_hours" name="operatingHours" javaType="java.lang.String"/>
+            <arg   column="closed_days"     name="closedDays"     javaType="java.lang.String"/>
+            <arg   column="book_count"      name="bookCount"      javaType="java.lang.Integer"/>
+        </constructor>
+    </resultMap>
+
+    <!-- 좌표가 있는 전체 도서관 목록. 지도 마커용. (동기화 시 lat/lng NOT NULL 이라 전건 반환) -->
+    <select id="selectAll" resultMap="libraryResponseMap">
+        SELECT lib_id, name, address, tel, latitude, longitude,
+               homepage_url, operating_hours, closed_days, book_count
+        FROM library
+        ORDER BY name
+    </select>
+</mapper>

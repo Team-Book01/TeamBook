@@ -60,6 +60,7 @@ public class SecurityConfig {
                 "/api/v1/auth/**",
                 "/api/v1/users",
                 "/api/v1/books/search",
+                "/api/v1/libraries",
                 "/api/v1/users/exists",   // 회원가입 전 아이디·닉네임 중복 확인 (로그인 불필요)
                 "/oauth2/**",          // 로그인 시작: /oauth2/authorization/google
                 "/login/oauth2/**",     // 구글 콜백: /login/oauth2/code/google
