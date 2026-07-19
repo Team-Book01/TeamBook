@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/Label'
 import { toast } from '@/lib/toast'
 import { requestPasswordReset } from '@/api/auth'
 import { getErrorMessage } from '@/api/client'
+import { isValidEmail } from '@/lib/validation'
 
 /**
  * 비밀번호 찾기(초기화) 요청 화면 (/forgot-password).
@@ -23,7 +24,7 @@ export default function ForgotPasswordPage() {
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
 
-  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+  const emailValid = isValidEmail(email.trim())
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
