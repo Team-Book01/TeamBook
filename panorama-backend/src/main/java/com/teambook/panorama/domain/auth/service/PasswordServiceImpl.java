@@ -93,6 +93,12 @@ public class PasswordServiceImpl implements PasswordService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND)); // U001
 
+        // 소셜 계정은 로컬 비밀번호가 없어(password null) 변경 대상이 아니다.
+        // 대조(matches) 전에 막아, null 해시 대조 경로를 타지 않게 한다. (A012)
+        if (user.getProvider() != Provider.LOCAL) {
+            throw new BusinessException(ErrorCode.SOCIAL_PASSWORD_NOT_SUPPORTED);
+        }
+
         // 현재 비밀번호 대조 — 틀리면 A009
         if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
             throw new BusinessException(ErrorCode.PASSWORD_MISMATCH); // A009
