@@ -6,12 +6,13 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
 
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.teambook.panorama.domain.book.client.NaverBookClient;
 import com.teambook.panorama.domain.book.dto.naver.NaverBookItem;
+import com.teambook.panorama.domain.book.dto.review.MyReviewItem;
+import com.teambook.panorama.domain.book.dto.review.MyReviewResponse;
 import com.teambook.panorama.domain.book.dto.review.ReviewItem;
 import com.teambook.panorama.domain.book.dto.review.ReviewRequest;
 import com.teambook.panorama.domain.book.dto.review.ReviewResponse;
@@ -113,7 +114,7 @@ public class ReviewService {
   @Transactional
   public ReviewItem updateReveiw(ReviewRequest request, Long reveiwId, Long userId){
     BookReview foundReview = reviewRepository.findById(reveiwId).orElseThrow();
-    if (foundReview.getUserId() != userId) {
+    if (!foundReview.getUserId().equals(userId)) {
       throw new RuntimeException();
     }
     foundReview.update(request.rating(), request.content(), foundReview.getStatus());
@@ -131,10 +132,33 @@ public class ReviewService {
   @Transactional
   public void deleteReveiw(Long reveiwId, Long userId){
     BookReview foundReview = reviewRepository.findById(reveiwId).orElseThrow();
-    if (foundReview.getUserId() != userId) {
+    if (!foundReview.getUserId().equals(userId)) {
       throw new RuntimeException();
     }
     foundReview.update(foundReview.getRating(), foundReview.getContent(), ReviewStatus.DELETED);    
+  }
+  //마이페이지_리뷰개수
+  public Long findMyReviewCount(Long userId){
+    return reviewRepository.countByUserId(userId);
+  }
+  //마이페이지_리뷰전체
+  public MyReviewResponse findMyReviews(Long userId){
+    //리뷰 전체 갖고오기
+    List<BookReview> reviews = reviewRepository.findByUserId(userId);
+    //정보 매핑(list.of myReviewItem)
+    List<MyReviewItem> myReviewItems = reviews.stream().map(review -> {
+      return
+      MyReviewItem.builder()
+      .bookImage(review.getBook().getImageUrl())
+      .bookTitle(review.getBook().getTitle())
+      .content(review.getContent())
+      .createdAt(review.getCreatedAt())
+      .isbn(review.getBook().getIsbn())
+      .rating(review.getRating())
+      .reviewId(review.getReviewId())
+      .build();
+    }).toList();
+    return new MyReviewResponse(myReviewItems.size(), myReviewItems);
   }
   
 
