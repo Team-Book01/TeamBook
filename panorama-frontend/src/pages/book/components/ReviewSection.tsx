@@ -1,11 +1,18 @@
 import { useState } from "react";
 import { Star, ChevronLeft, ChevronRight, Pencil, Trash2 } from "lucide-react";
 
-import { useBookReviews } from "@/api/book";
+import {
+  useBookReviews,
+  useCreateReview,
+  useDeleteReview,
+  useUpdateReview,
+} from "@/api/book";
 import { getErrorMessage } from "@/api/client";
+import { useRequireLogin } from "@/hooks/useRequireLogin";
 import { StarRating } from "./primitives";
 
 const PER_PAGE = 10;
+const MAX_CONTENT = 500;
 
 /** ISO-8601(2026-07-01T12:00:00) → 2026.07.01 */
 function formatDate(iso: string): string {
@@ -21,9 +28,13 @@ function initial(nickname: string): string {
 /**
  * 평점 & 리뷰 섹션.
  * - 상단 요약(평균 별점 / 참여 수): 도서 상세에서 받은 avgRating·reviewCount 재사용(props).
- * - 별점 분포: 리뷰 API 의 ratingDistribution(0.5 단위 10버킷) → 정수 5행으로 합산.
- * - 전체 리뷰 수 / 리뷰 목록: 리뷰 API(reviewItems, total) 연동 + 페이지네이션.
- * - "내 평가"(작성): 아직 미구현 → 별점 UI 만 두고 등록은 준비 중 안내.
+ * - 별점 분포: 리뷰 API 의 ratingDistribution(0.5 단위 10버킷).
+ * - 목록/작성/수정/삭제 모두 백엔드 ReviewController 연동.
+ *   · GET    /api/v1/reviews/{isbn}?page&size
+ *   · POST   /api/v1/reviews/{isbn}
+ *   · PUT    /api/v1/reviews/{reviewId}
+ *   · DELETE /api/v1/reviews/{reviewId}
+ * - 작성/수정/삭제는 로그인 필요 → useRequireLogin 으로 먼저 걸러낸다.
  */
 export function ReviewSection({
   isbn,
@@ -36,6 +47,11 @@ export function ReviewSection({
 }) {
   const [page, setPage] = useState(1);
   const { data, isLoading, isError, error } = useBookReviews(isbn, page, PER_PAGE);
+
+  const { ensureLoggedIn } = useRequireLogin();
+  const createReview = useCreateReview(isbn);
+  const updateReview = useUpdateReview(isbn);
+  const deleteReview = useDeleteReview(isbn);
 
   const reviews = data?.reviewItems ?? [];
   const total = data?.total ?? 0;
@@ -50,8 +66,60 @@ export function ReviewSection({
   });
   const maxCount = Math.max(0, ...buckets.map((b) => b.count));
 
-  // "내 평가" — 작성 기능은 준비 중(별점만 눌러볼 수 있게 UI 유지)
+  // ── 작성 폼 ──
   const [myRating, setMyRating] = useState(0);
+  const [myContent, setMyContent] = useState("");
+
+  // ── 수정 폼 (인라인) ──
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editRating, setEditRating] = useState(0);
+  const [editContent, setEditContent] = useState("");
+
+  const pending = createReview.isPending || updateReview.isPending || deleteReview.isPending;
+  const mutationError =
+    createReview.error ?? updateReview.error ?? deleteReview.error ?? null;
+
+  const handleCreate = () => {
+    if (!ensureLoggedIn()) return;
+    if (myRating <= 0) return;
+    createReview.mutate(
+      { rating: myRating, content: myContent.trim() || undefined },
+      {
+        onSuccess: () => {
+          setMyRating(0);
+          setMyContent("");
+          setPage(1);
+        },
+      },
+    );
+  };
+
+  const startEdit = (reviewId: number, rating: number, content: string) => {
+    if (!ensureLoggedIn()) return;
+    setEditingId(reviewId);
+    setEditRating(Math.round(rating));
+    setEditContent(content ?? "");
+  };
+
+  const handleUpdate = () => {
+    if (editingId === null || editRating <= 0) return;
+    updateReview.mutate(
+      { reviewId: editingId, body: { rating: editRating, content: editContent.trim() || undefined } },
+      { onSuccess: () => setEditingId(null) },
+    );
+  };
+
+  const handleDelete = (reviewId: number) => {
+    if (!ensureLoggedIn()) return;
+    if (!window.confirm("이 리뷰를 삭제할까요?")) return;
+    deleteReview.mutate(reviewId, {
+      onSuccess: () => {
+        if (editingId === reviewId) setEditingId(null);
+        // 마지막 항목을 지워 현재 페이지가 비면 이전 페이지로
+        if (reviews.length === 1 && page > 1) setPage((p) => p - 1);
+      },
+    });
+  };
 
   return (
     <section className="bg-white border border-[#EAEAEA] rounded-2xl overflow-hidden">
@@ -104,12 +172,50 @@ export function ReviewSection({
           </div>
         </div>
 
-        {/* Write review — 준비 중 */}
+        {/* Write review */}
         <div className="mb-8 pb-8 border-b border-[#F5F5F5]">
           <p className="text-[13px] font-semibold text-[#1A1A1A] mb-3">내 평가</p>
           <StarRating value={myRating} onChange={setMyRating} size={32} />
           {myRating > 0 && (
-            <p className="mt-3 text-[12px] text-[#aaa]">리뷰 작성 기능은 준비 중입니다.</p>
+            <div className="mt-4">
+              <textarea
+                value={myContent}
+                onChange={(e) => setMyContent(e.target.value.slice(0, MAX_CONTENT))}
+                rows={3}
+                placeholder="이 책에 대한 생각을 남겨주세요. (선택, 최대 500자)"
+                className="w-full resize-none rounded-xl border border-[#EAEAEA] px-4 py-3 text-[13px] text-[#1A1A1A] focus:border-[#2E7D6B] focus:outline-none"
+              />
+              <div className="mt-2 flex items-center justify-between">
+                <span className="text-[11px] text-[#aaa]">
+                  {myContent.length} / {MAX_CONTENT}
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMyRating(0);
+                      setMyContent("");
+                    }}
+                    className="rounded-lg border border-[#EAEAEA] px-3 py-1.5 text-[12px] text-[#555] hover:bg-[#F9F9F9] transition-colors"
+                  >
+                    취소
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCreate}
+                    disabled={pending}
+                    className="rounded-lg bg-[#1E4A38] px-4 py-1.5 text-[12px] font-semibold text-white hover:bg-[#2E7D6B] disabled:opacity-60 transition-colors"
+                  >
+                    {createReview.isPending ? "등록 중…" : "등록"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+          {mutationError && (
+            <p className="mt-3 text-[12px] text-rose-500">
+              {getErrorMessage(mutationError, "리뷰 처리 중 오류가 발생했습니다.")}
+            </p>
           )}
         </div>
 
@@ -145,12 +251,12 @@ export function ReviewSection({
                     )}
                     <StarRating value={Math.round(r.rating)} readOnly size={11} />
                     <span className="text-[11px] text-[#aaa]">{formatDate(r.createdAt)}</span>
-                    {/* 내 리뷰 수정/삭제 (기능은 준비 중 — 클릭 동작 없음) */}
-                    {r.isMine && (
+                    {r.isMine && editingId !== r.reviewId && (
                       <div className="flex items-center gap-0.5 ml-auto flex-shrink-0">
                         <button
                           type="button"
                           title="수정"
+                          onClick={() => startEdit(r.reviewId, r.rating, r.content)}
                           className="p-1 rounded-md text-[#bbb] hover:text-[#2E7D6B] hover:bg-[#F5F5F5] transition-colors"
                         >
                           <Pencil size={13} />
@@ -158,14 +264,51 @@ export function ReviewSection({
                         <button
                           type="button"
                           title="삭제"
-                          className="p-1 rounded-md text-[#bbb] hover:text-rose-400 hover:bg-[#FFF0F0] transition-colors"
+                          onClick={() => handleDelete(r.reviewId)}
+                          disabled={pending}
+                          className="p-1 rounded-md text-[#bbb] hover:text-rose-400 hover:bg-[#FFF0F0] disabled:opacity-40 transition-colors"
                         >
                           <Trash2 size={13} />
                         </button>
                       </div>
                     )}
                   </div>
-                  <p className="text-[13px] text-[#555] leading-relaxed">{r.content}</p>
+
+                  {editingId === r.reviewId ? (
+                    <div className="mt-2">
+                      <StarRating value={editRating} onChange={setEditRating} size={20} />
+                      <textarea
+                        value={editContent}
+                        onChange={(e) => setEditContent(e.target.value.slice(0, MAX_CONTENT))}
+                        rows={3}
+                        className="mt-2 w-full resize-none rounded-xl border border-[#EAEAEA] px-3 py-2 text-[13px] text-[#1A1A1A] focus:border-[#2E7D6B] focus:outline-none"
+                      />
+                      <div className="mt-2 flex items-center justify-between">
+                        <span className="text-[11px] text-[#aaa]">
+                          {editContent.length} / {MAX_CONTENT}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setEditingId(null)}
+                            className="rounded-lg border border-[#EAEAEA] px-3 py-1.5 text-[12px] text-[#555] hover:bg-[#F9F9F9] transition-colors"
+                          >
+                            취소
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleUpdate}
+                            disabled={pending || editRating <= 0}
+                            className="rounded-lg bg-[#1E4A38] px-4 py-1.5 text-[12px] font-semibold text-white hover:bg-[#2E7D6B] disabled:opacity-60 transition-colors"
+                          >
+                            {updateReview.isPending ? "저장 중…" : "저장"}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-[13px] text-[#555] leading-relaxed">{r.content}</p>
+                  )}
                 </div>
               </div>
             ))}

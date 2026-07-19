@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Star, Heart, ChevronLeft, ChevronUp, BookOpen } from "lucide-react";
 
-import { useBook, useBookmarkMutation } from "@/api/book";
+import { hasIsbn, NO_ISBN_MESSAGE, useBook, useBookmarkMutation } from "@/api/book";
 import { getErrorMessage } from "@/api/client";
 import { useRequireLogin } from "@/hooks/useRequireLogin";
 import { LibraryFinder, ReviewSection } from "./components";
@@ -56,7 +56,7 @@ export default function BookDetailPage() {
   };
 
   const handleToggleBookmark = () => {
-    if (!book) return;
+    if (!book || !hasIsbn(isbn)) return;
     // 프론트 토큰 검증: 없으면 로그인으로, 있으면 요청 발사 → 백엔드 토글
     if (!ensureLoggedIn()) return;
     bookmark.mutate({
@@ -80,6 +80,24 @@ export default function BookDetailPage() {
   //     검색 결과로 돌아가기
   //   </button>
   // );
+
+  // ── isbn 없는 도서(전집·세트 등)로 직접 진입한 경우 — 상세 조회 자체가 불가능 ──
+  if (!hasIsbn(isbn)) {
+    return (
+      <main className="max-w-[1440px] mx-auto px-10 py-8">
+        <div className="flex flex-col items-center gap-4 py-40">
+          <p className="text-[14px] text-[#777]">{NO_ISBN_MESSAGE}</p>
+          <button
+            onClick={() => navigate("/books")}
+            className="flex items-center gap-1.5 rounded-xl bg-[#1E4A38] px-4 py-2 text-[13px] font-semibold text-white hover:bg-[#2E7D6B] transition-colors"
+          >
+            <ChevronLeft size={14} />
+            도서 검색으로 돌아가기
+          </button>
+        </div>
+      </main>
+    );
+  }
 
   // ── 로딩 (캐시 미스: 새로고침/URL 직접 접근/공유 링크) ──
   if (isLoading) {
@@ -225,10 +243,10 @@ export default function BookDetailPage() {
         </div>
       </section>
 
-      {/* ── Library finder (준비 중 — 목업) ── */}
-      <LibraryFinder />
+      {/* ── Library finder (소장 도서관 조회) ── */}
+      <LibraryFinder isbn={isbn} />
 
-      {/* ── Reviews (요약만 실데이터, 목록은 준비 중 — 목업) ── */}
+      {/* ── Reviews ── */}
       <div ref={reviewRef}>
         <ReviewSection isbn={isbn} avgRating={book.avgRating} reviewCount={book.reviewCount} />
       </div>

@@ -90,8 +90,15 @@ public class SecurityConfig {
                                 .requestMatchers(HttpMethod.GET, "/api/v1/libraries").permitAll()
                                 .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                                 .requestMatchers(HttpMethod.GET, "/api/v1/books/**").permitAll()
+                                // 마이페이지 조회는 인증 필요. 아래 /reviews/** permitAll 보다 먼저 와야 한다.
+                                // (Spring Security 는 먼저 매칭된 규칙이 적용되므로 순서를 바꾸면 뚫린다)
+                                .requestMatchers(HttpMethod.GET,
+                                                "/api/v1/reviews/myReviewList",
+                                                "/api/v1/reviews/myReviewCount").authenticated()
                                 // 리뷰 목록 조회는 공개(도서 상세와 동일). 작성/수정/삭제는 인증 필요.
                                 .requestMatchers(HttpMethod.GET, "/api/v1/reviews/**").permitAll()
+                                // 소장 도서관 조회는 도서 상세에 딸린 공개 정보(비로그인도 조회 가능).
+                                .requestMatchers(HttpMethod.GET, "/api/v1/library/**").permitAll()
                                 .anyRequest().authenticated()
                         )
                         // 인증/인가 실패 처리: 인증 안 됨 → 401, 권한 부족 → 403

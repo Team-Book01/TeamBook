@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { ChevronDown, ChevronUp } from "lucide-react";
 
 import type { BookItem, BookSort } from "@/types/book";
-import { useBookSearch, useBookmarkMutation } from "@/api/book";
+import { hasIsbn, useBookSearch, useBookmarkMutation } from "@/api/book";
 import { getErrorMessage } from "@/api/client";
 import { useRequireLogin } from "@/hooks/useRequireLogin";
 import { BookCard, ProfileCard, PopularBooksCard } from "./components";
@@ -86,11 +86,12 @@ export default function BookSearchPage() {
   };
 
   const handleToggleBookmark = (book: BookItem) => {
-    if (!book.isbn) return;
+    // isbn 없는 도서(전집·세트 등)는 북마크 불가 — 카드에서도 버튼이 비활성화돼 있다.
+    if (!hasIsbn(book.isbn)) return;
     // 프론트 토큰 검증: 없으면 로그인으로, 있으면 요청 발사 → 백엔드 토글
     if (!ensureLoggedIn()) return;
     bookmark.mutate({
-      isbn: book.isbn,
+      isbn: book.isbn.trim(),
       title: book.title,
       author: book.author,
       publisher: book.publisher,
