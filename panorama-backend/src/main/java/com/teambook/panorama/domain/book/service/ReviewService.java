@@ -23,6 +23,8 @@ import com.teambook.panorama.domain.book.mapper.ReviewMapper;
 import com.teambook.panorama.domain.book.repository.BookRepository;
 import com.teambook.panorama.domain.book.repository.ReviewRepository;
 import com.teambook.panorama.domain.user.repository.UserRepository;
+import com.teambook.panorama.global.exception.BusinessException;
+import com.teambook.panorama.global.exception.ErrorCode;
 
 import lombok.RequiredArgsConstructor;
 
@@ -89,9 +91,8 @@ public class ReviewService {
       .title(naverBookItem.title())
       .build());
     });
-    //리뷰쓴 적 있는 사람인지 - > 예외 수정 필요
-    if(reviewRepository.existsByUserIdAndBook_BookId(userId, book.getBookId())) {
-      throw new RuntimeException();
+    if(reviewRepository.existsByUserIdAndBook_BookIdAndStatus(userId, book.getBookId(), ReviewStatus.ACTIVE)) {
+      throw new BusinessException(ErrorCode.REVIEW_ALREADY_EXISTS);
     }
     //리뷰 생성
     BookReview review = reviewRepository.save(BookReview.builder()
@@ -105,46 +106,46 @@ public class ReviewService {
   .content(review.getContent())
   .createdAt(review.getCreatedAt())
   .isMine(true)
-  .nickname(userRepository.findById(userId).get().getNickname())
+  .nickname(userRepository.findById(userId).orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND)).getNickname())
   .rating(review.getRating())
   .reviewId(review.getReviewId())
   .build();  
   }
-  //리뷰 수정. 예외 처리 수정 필요.
+  //리뷰 수정
   @Transactional
-  public ReviewItem updateReveiw(ReviewRequest request, Long reveiwId, Long userId){
-    BookReview foundReview = reviewRepository.findById(reveiwId).orElseThrow();
+  public ReviewItem updateReview(ReviewRequest request, Long reviewId, Long userId){
+    BookReview foundReview = reviewRepository.findById(reviewId).orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_NOT_FOUND));
     if (!foundReview.getUserId().equals(userId)) {
-      throw new RuntimeException();
+      throw new BusinessException(ErrorCode.NOT_REVIEW_OWNER);
     }
     foundReview.update(request.rating(), request.content(), foundReview.getStatus());
-    String nickname = userRepository.findById(userId).orElseThrow().getNickname();
+    String nickname = userRepository.findById(userId).orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND)).getNickname();
     return ReviewItem.builder()
     .content(request.content())
     .createdAt(foundReview.getCreatedAt())
     .isMine(true)
-    .reviewId(reveiwId)
+    .reviewId(reviewId)
     .nickname(nickname)
     .rating(request.rating())
     .build();
   }
-  //리뷰 삭제하기, 예외 처리 수정필요
+  //리뷰 삭제하기
   @Transactional
-  public void deleteReveiw(Long reveiwId, Long userId){
-    BookReview foundReview = reviewRepository.findById(reveiwId).orElseThrow();
+  public void deleteReview(Long reviewId, Long userId){
+    BookReview foundReview = reviewRepository.findById(reviewId).orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_NOT_FOUND));
     if (!foundReview.getUserId().equals(userId)) {
-      throw new RuntimeException();
+      throw new BusinessException(ErrorCode.NOT_REVIEW_OWNER);
     }
     foundReview.update(foundReview.getRating(), foundReview.getContent(), ReviewStatus.DELETED);    
   }
   //마이페이지_리뷰개수
   public Long findMyReviewCount(Long userId){
-    return reviewRepository.countByUserId(userId);
+    return reviewRepository.countByUserIdAndStatus(userId, ReviewStatus.ACTIVE);
   }
   //마이페이지_리뷰전체
   public MyReviewResponse findMyReviews(Long userId){
     //리뷰 전체 갖고오기
-    List<BookReview> reviews = reviewRepository.findByUserId(userId);
+    List<BookReview> reviews = reviewRepository.findByUserIdAndStatus(userId, ReviewStatus.ACTIVE);
     //정보 매핑(list.of myReviewItem)
     List<MyReviewItem> myReviewItems = reviews.stream().map(review -> {
       return

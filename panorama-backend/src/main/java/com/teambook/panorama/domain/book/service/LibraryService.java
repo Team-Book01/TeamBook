@@ -38,8 +38,8 @@ public class LibraryService {
     //대출 가능 여부 조회 -> 도서관 코드와 맵으로 만들기
     Map<String, LibBookAvailability> bookAvMap = new HashMap<>();
     for (String libCode : libCodes) {
-      //예외 처리필요
       var libBookAvailability = libraryClient.checkBookAvailability(libCode, isbn);
+      if(libBookAvailability == null) 
       bookAvMap.put(libCode, libBookAvailability);
     }
 

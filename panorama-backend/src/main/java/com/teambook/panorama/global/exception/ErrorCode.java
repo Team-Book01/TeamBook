@@ -49,8 +49,14 @@ public enum ErrorCode {
   // community content (도메인 접두어 P)
   CONTENT_NOT_FOUND(HttpStatus.NOT_FOUND, "P001", "존재하지 않는 콘텐츠입니다."),
   
-  // book(임시작업용)
+  // book
   BOOK_NOT_FOUND(HttpStatus.NOT_FOUND, "B001", "존재하지 않는 책입니다."),
+  NAVER_API_ERROR(HttpStatus.BAD_GATEWAY, "B002", "도서 검색 API 호출에 실패했습니다."),
+  LIBRARY_API_ERROR(HttpStatus.BAD_GATEWAY, "B003", "도서관 API 호출에 실패했습니다."),
+  REVIEW_ALREADY_EXISTS(HttpStatus.CONFLICT, "B004", "이미 작성한 리뷰가 있습니다."),
+  REVIEW_NOT_FOUND(HttpStatus.NOT_FOUND, "B005", "존재하지 않는 리뷰입니다."),
+  NOT_REVIEW_OWNER(HttpStatus.FORBIDDEN, "B006", "리뷰의 작성자가 아닙니다."),
+  
   
   // post (도메인 접두어 P + 3자리 일련번호)
   POST_NOT_FOUND(HttpStatus.NOT_FOUND, "P001", "존재하지 않는 게시글입니다."),

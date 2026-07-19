@@ -15,6 +15,8 @@ import com.teambook.panorama.domain.book.dto.naver.NaverBookResponse;
 import com.teambook.panorama.domain.book.dto.search.BookSearchItem;
 import com.teambook.panorama.domain.book.dto.search.BookSearchResponse;
 import com.teambook.panorama.domain.book.mapper.BookStatsMapper;
+import com.teambook.panorama.global.exception.BusinessException;
+import com.teambook.panorama.global.exception.ErrorCode;
 
 import lombok.RequiredArgsConstructor;
 
@@ -88,8 +90,7 @@ public class BookSearchService {
     //네이버 단건 조회 -> 없는 isbn 예외 처리
     var items = naverBookClient.search(isbn, 1, 1, "sim").items();
     if (items.isEmpty()) {
-      //예외 수정필요!!
-      throw new RuntimeException();
+      throw new BusinessException(ErrorCode.BOOK_NOT_FOUND);
     }
     NaverBookItem item = items.getFirst();
     //DB stats조회
