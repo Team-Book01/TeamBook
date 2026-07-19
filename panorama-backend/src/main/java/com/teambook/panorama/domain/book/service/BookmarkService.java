@@ -61,7 +61,7 @@ public class BookmarkService {
   //마이페이지용 북마크 리스트 가져오기
   public MyBookmarkResponse findMyBookmarks(Long userId) {
     //북마크 리스트 가져오기
-    List<Bookmark> myBookmarks = bookmarkRepository.findByUserId(userId);
+    List<Bookmark> myBookmarks = bookmarkRepository.findByUserIdWithBook(userId);
     //북마크아이템리스트
     List<MyBookmarkItem> myBookmarkItems = myBookmarks.stream().map(bookmark -> {
       return
@@ -77,9 +77,6 @@ public class BookmarkService {
 
 
   }
-
-
-
 
     private Book createBook(BookmarkRequest request){
      return Book.builder()
