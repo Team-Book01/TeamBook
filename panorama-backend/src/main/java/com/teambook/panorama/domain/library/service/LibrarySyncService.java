@@ -11,7 +11,8 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.teambook.panorama.domain.library.client.Data4LibraryClient;
 import com.teambook.panorama.domain.library.dto.LibrarySearchResponse;
@@ -24,7 +25,6 @@ import com.teambook.panorama.domain.library.repository.LibraryRepository;
 import com.teambook.panorama.global.exception.BusinessException;
 import com.teambook.panorama.global.exception.ErrorCode;
 
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -40,7 +40,6 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class LibrarySyncService {
 
   /** 한 페이지에 가져올 건수. */
@@ -52,6 +51,12 @@ public class LibrarySyncService {
   private final LibraryRepository libraryRepository;
 
   /**
+   * 트랜잭션 경계를 코드로 직접 잡기 위해 사용한다.
+   * (@Transactional 을 sync() 에 걸면 커밋이 메서드 리턴 "이후"라 락보다 늦게 끝난다 — 아래 sync() 주석 참고)
+   */
+  private final TransactionTemplate transactionTemplate;
+
+  /**
    * 수동 실행(POST /admin/libraries/sync)과 월간 스케줄러의 동시 실행을 막는 락.
    * 둘이 겹치면 같은 findAll() 스냅샷 기준으로 같은 lib_code 를 insert 하려다
    * UNIQUE 제약 위반으로 한쪽이 롤백될 수 있어, 먼저 잡은 쪽만 실행하고 나머지는 즉시 거절한다.
@@ -59,14 +64,31 @@ public class LibrarySyncService {
    */
   private final ReentrantLock syncLock = new ReentrantLock();
 
-  @Transactional
+  public LibrarySyncService(Data4LibraryClient data4LibraryClient,
+      LibraryRepository libraryRepository, PlatformTransactionManager transactionManager) {
+    this.data4LibraryClient = data4LibraryClient;
+    this.libraryRepository = libraryRepository;
+    this.transactionTemplate = new TransactionTemplate(transactionManager);
+  }
+
+  /**
+   * 동기화 진입점. <b>락이 트랜잭션을 감싸야 한다.</b>
+   *
+   * <p>이 메서드에 {@code @Transactional} 을 걸면 안 된다. 스프링 프록시는 메서드가 리턴한 <i>뒤에</i>
+   * 커밋하는데 {@code unlock()} 은 finally(리턴 직전)에서 실행되므로, "락은 풀렸는데 아직 커밋 안 된" 창이 생긴다.
+   * 그 창에서 다른 동기화가 시작하면 {@code findAll()} 이 미커밋 insert 를 보지 못해 같은 lib_code 를 다시
+   * insert 하고 UNIQUE 제약에 걸린다 — 락으로 막으려던 바로 그 상황이다.
+   *
+   * <p>그래서 트랜잭션을 어노테이션 대신 {@link TransactionTemplate} 으로 연다.
+   * execute() 는 커밋까지 끝낸 뒤 반환하므로 unlock 이 항상 커밋 이후가 된다.
+   */
   public LibrarySyncResult sync() {
     // 이미 동기화가 돌고 있으면 대기하지 않고 바로 거절(409). tryLock 은 즉시 반환하므로 커넥션을 붙잡지 않는다.
     if (!syncLock.tryLock()) {
       throw new BusinessException(ErrorCode.LIBRARY_SYNC_IN_PROGRESS);
     }
     try {
-      return doSync();
+      return transactionTemplate.execute(status -> doSync());
     } finally {
       syncLock.unlock();
     }
@@ -78,6 +100,7 @@ public class LibrarySyncService {
         .collect(Collectors.toMap(Library::getLibCode, Function.identity(), (a, b) -> a, HashMap::new));
 
     List<Library> toInsert = new ArrayList<>();
+    List<Library> toDelete = new ArrayList<>(); // 데이터 오류로 저장하지 않기로 한 기존 행
     int inserted = 0;
     int updated = 0;
     int skipped = 0;
@@ -121,6 +144,24 @@ public class LibrarySyncService {
           continue;
         }
 
+        // 원본의 알려진 오류 보정 (주소 → 이름 순서. 이름 보정이 보정된 주소의 시/도를 참조한다)
+        address = LibraryDataSanitizer.normalizeAddress(address);
+        name = LibraryDataSanitizer.normalizeName(name, address);
+
+        // 좌표가 주소의 시/도와 어긋나면 원본이 깨진 것이다. 지도에 엉뚱한 도시로 찍히느니 빼는 게 낫다.
+        if (!LibraryDataSanitizer.isCoordinatePlausible(address, latitude, longitude)) {
+          skipped++;
+          // 저장하지 않기로 한 이상, 예전 동기화 때 들어온 행이 남아 있으면 지워야 보정이 실제로 적용된다.
+          // (원본 좌표가 고쳐지면 다음 동기화에서 다시 insert 되므로 되돌릴 수 있는 동작이다)
+          Library stale = byLibCode.remove(libCode);
+          if (stale != null) {
+            toDelete.add(stale);
+          }
+          log.warn("[library-sync] 주소와 어긋나는 좌표 → 저장 안 함{}: libCode={}, name={}, address={}, lat={}, lng={}",
+              stale != null ? " (기존 행 삭제)" : "", libCode, name, address, latitude, longitude);
+          continue;
+        }
+
         String tel = emptyToNull(lib.tel());
         String fax = emptyToNull(lib.fax());
         String homepageUrl = emptyToNull(lib.homepage());
@@ -160,10 +201,11 @@ public class LibrarySyncService {
       pageNo++;
     }
 
+    libraryRepository.deleteAll(toDelete); // 데이터 오류로 더는 저장하지 않는 행 제거
     libraryRepository.saveAll(toInsert); // update 는 더티체킹으로 flush
 
     LibrarySyncResult result = new LibrarySyncResult(inserted + updated, inserted, updated, skipped,
-        LocalDateTime.now());
+        toDelete.size(), LocalDateTime.now());
     log.info("[library-sync] 완료: {}", result);
     return result;
   }
