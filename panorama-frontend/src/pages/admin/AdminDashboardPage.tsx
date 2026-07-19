@@ -4,17 +4,20 @@ import {
   Activity,
   AlertCircle,
   ArrowRight,
+  CheckCircle2,
   ChevronRight,
   FileText,
   Flag,
   Inbox,
+  Library,
   MessageSquare,
+  RefreshCw,
   Users,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getErrorMessage } from '@/api/client'
-import { useAdminDashboard } from '@/api/admin'
+import { useAdminDashboard, useSyncLibraries } from '@/api/admin'
 import type { PostCategory, ReportReason } from '@/types/admin'
 
 // ── enum 라벨 ────────────────────────────────────────────────────────────────
@@ -50,6 +53,55 @@ function CardHeader({ title, right }: { title: string; right?: React.ReactNode }
     <div className="flex items-center justify-between gap-2 px-5 py-3.5 border-b border-[#f0f0f0] shrink-0">
       <h2 className="text-[13px] font-bold text-foreground">{title}</h2>
       {right}
+    </div>
+  )
+}
+
+// 도서관 데이터 동기화 — 정보나루(data4library) 수동 upsert 실행 + 결과 표시
+function LibrarySyncCard() {
+  const { mutate, isPending, data: result, error, isError, isSuccess } = useSyncLibraries()
+
+  return (
+    <div className="bg-white border border-border rounded-xl shadow-sm px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-4">
+      <span className="w-10 h-10 rounded-lg bg-admin-light flex items-center justify-center shrink-0">
+        <Library size={18} className="text-admin-point" />
+      </span>
+
+      <div className="min-w-0 flex-1">
+        <p className="text-[13px] font-bold text-foreground">도서관 데이터 동기화</p>
+        {isError ? (
+          <p className="text-[11.5px] text-red-600 mt-0.5 flex items-center gap-1">
+            <AlertCircle size={12} className="shrink-0" />
+            {getErrorMessage(error, '동기화에 실패했습니다.')}
+          </p>
+        ) : isSuccess && result ? (
+          <p className="text-[11.5px] text-admin-point mt-0.5 flex items-center gap-1">
+            <CheckCircle2 size={12} className="shrink-0" />
+            처리 {result.processed.toLocaleString()}건
+            <span className="text-muted-foreground">
+              (신규 {result.inserted.toLocaleString()} · 수정 {result.updated.toLocaleString()} · 건너뜀{' '}
+              {result.skipped.toLocaleString()}
+              {result.removed > 0 && ` · 삭제 ${result.removed.toLocaleString()}`})
+            </span>
+          </p>
+        ) : (
+          <p className="text-[11.5px] text-muted-foreground mt-0.5">정보나루(data4library) 도서관 목록을 조회해 최신 정보로 갱신합니다.</p>
+        )}
+      </div>
+
+      <button
+        type="button"
+        onClick={() => mutate()}
+        disabled={isPending}
+        className={cn(
+          'shrink-0 inline-flex items-center justify-center gap-1.5 rounded-lg px-3.5 py-2 text-[12.5px] font-semibold transition-colors',
+          'bg-admin text-white hover:bg-admin-point disabled:opacity-60 disabled:cursor-not-allowed',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-admin-point focus-visible:ring-offset-2',
+        )}
+      >
+        <RefreshCw size={14} className={cn(isPending && 'animate-spin')} />
+        {isPending ? '동기화 중…' : '지금 동기화'}
+      </button>
     </div>
   )
 }
@@ -141,6 +193,9 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="p-6 sm:p-7 space-y-5">
+      {/* ── 도서관 데이터 동기화 (정보나루 수동 실행) ─────────────── */}
+      <LibrarySyncCard />
+
       {/* ── 처리 필요 (액션 · 클릭 이동) ───────────────────────────── */}
       <div>
         <p className="text-[12px] font-medium text-muted-foreground mb-2">처리 필요</p>

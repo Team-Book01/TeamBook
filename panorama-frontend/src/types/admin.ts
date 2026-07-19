@@ -59,6 +59,17 @@ export interface DashboardResponse {
   recentContents: RecentContentResponse[]
 }
 
+// ── 도서관 데이터 동기화 ──────────────────────────────────────────────────────
+// 정보나루(data4library) libSrch 를 전체 조회해 lib_code 기준 upsert 한 결과.
+export interface LibrarySyncResult {
+  processed: number // DB 반영 총 건수(insert + update)
+  inserted: number // 신규
+  updated: number // 수정
+  skipped: number // 필수값 누락·데이터 오류로 저장 안 함
+  removed: number // 그중 이전에 저장돼 있어 삭제한 건수
+  syncedAt: string // 완료 시각(ISO)
+}
+
 // ── 사용자 관리 ──────────────────────────────────────────────────────────────
 export interface UserResponse {
   userId: number
