@@ -85,8 +85,15 @@ public class ReportServiceImpl implements ReportService {
     LocalDateTime now = LocalDateTime.now();
 
     // ① 원본 콘텐츠 실제 조치 (타입별 status 변경)
+    //
+    // 변경 행 수를 반드시 확인한다. 원본이 이미 하드삭제됐거나 target_type 이 알 수 없는 값이면
+    // 0행이 바뀌는데(매퍼의 otherwise 는 no-op), 그대로 진행하면 콘텐츠는 그대로인 채
+    // 신고만 RESOLVED 로 종결되고 "조치했다"는 로그까지 남아 감사 기록이 사실과 어긋난다.
     String contentStatus = resolveContentStatus(key.targetType(), request.action());
-    reportMapper.updateTargetStatus(key.targetType(), key.targetId(), contentStatus);
+    int affected = reportMapper.updateTargetStatus(key.targetType(), key.targetId(), contentStatus);
+    if (affected == 0) {
+      throw new BusinessException(ErrorCode.CONTENT_NOT_FOUND);
+    }
 
     // ② 같은 대상의 미처리 신고를 모두 RESOLVED (유령 신고 방지) — 현재 신고도 여기서 종결됨
     reportMapper.resolveReportsByTarget(key.targetType(), key.targetId(),
