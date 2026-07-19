@@ -1,174 +1,90 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { CheckCircle2, XCircle } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Mail } from 'lucide-react'
 import { AuthLayout } from '@/components/auth/AuthLayout'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
 import { toast } from '@/lib/toast'
-import { isValidLoginId, isValidPassword, PASSWORD_MESSAGE } from '@/lib/validation'
+import { requestPasswordReset } from '@/api/auth'
+import { getErrorMessage } from '@/api/client'
 
 /**
- * 비밀번호 찾기(초기화) 화면 — 페이지 흐름만 설계.
+ * 비밀번호 찾기(초기화) 요청 화면 (/forgot-password).
  *
- * 전제: 이메일은 가입 시 받지 않고, 설정(SettingsPage)에서 등록·인증한다.
- *       인증된 이메일이 있는 계정만 이 흐름으로 비밀번호를 재설정할 수 있다.
+ * 전제: 이메일은 설정(SettingsPage)에서 등록·인증한다. 인증된 이메일이 있는 계정만 재설정 가능.
+ * 흐름: 이메일 입력 → POST /auth/password/reset-request → 등록된 이메일로 재설정 링크 발송.
+ *       링크를 누르면 /reset-password 에서 새 비밀번호로 변경한다.
  *
- * 2단계:
- *   1) 아이디 입력 → 등록된 이메일로 6자리 인증코드 전송
- *   2) 인증코드 + 새 비밀번호 입력 → 재설정
- *
- * ⚠️ 백엔드 이메일 발송·비밀번호 초기화(PasswordService/EmailVerificationService)는
- *    현재 스텁이라, 실제 전송·재설정은 '준비 중' 안내로 대체한다(화면 흐름만 동작).
+ * 계정 유무를 노출하지 않기 위해 백엔드는 항상 202로 응답하므로, 화면도 항상 "보냈어요"로 안내한다.
  */
-type Step = 'request' | 'reset'
-
 export default function ForgotPasswordPage() {
-  const navigate = useNavigate()
-  const [step, setStep] = useState<Step>('request')
+  const [email, setEmail] = useState('')
+  const [sending, setSending] = useState(false)
+  const [sent, setSent] = useState(false)
 
-  // 1단계
-  const [loginId, setLoginId] = useState('')
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
 
-  // 2단계
-  const [code, setCode] = useState('')
-  const [newPassword, setNewPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-
-  const loginIdValid = isValidLoginId(loginId.trim())
-  const codeValid = /^\d{6}$/.test(code)
-  const passwordValid = isValidPassword(newPassword)
-  const confirmMatch = confirmPassword.length > 0 && newPassword === confirmPassword
-  const canReset = codeValid && passwordValid && confirmMatch
-
-  // 1단계: 아이디 입력 → 등록 이메일로 인증코드 전송(준비 중)
-  function handleSendCode(e: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    if (!loginIdValid) return
-    setStep('reset')
-    toast.info('등록된 이메일로 인증코드를 전송했어요. (메일 발송은 준비 중이에요)')
-  }
-
-  // 2단계: 인증코드 + 새 비밀번호 → 재설정(준비 중)
-  function handleReset(e: FormEvent<HTMLFormElement>) {
-    e.preventDefault()
-    if (!canReset) return
-    toast.info('비밀번호 초기화는 준비 중이에요. (백엔드 연동 예정)')
-    navigate('/login', { replace: true })
+    if (!emailValid) return
+    setSending(true)
+    try {
+      await requestPasswordReset(email.trim())
+      setSent(true)
+    } catch (err) {
+      toast.error(getErrorMessage(err, '메일 발송에 실패했어요. 잠시 후 다시 시도해 주세요.'))
+    } finally {
+      setSending(false)
+    }
   }
 
   return (
     <AuthLayout
       eyebrow="비밀번호를 잊으셨나요?"
       title="비밀번호 찾기"
-      subtitle={
-        step === 'request'
-          ? '가입한 아이디를 입력하면 등록·인증된 이메일로 인증코드를 보내드려요.'
-          : '이메일로 받은 인증코드와 새 비밀번호를 입력해 주세요.'
-      }
+      subtitle="설정에서 등록·인증한 이메일로 재설정 링크를 보내드려요."
     >
-      {step === 'request' ? (
-        <form onSubmit={handleSendCode} className="flex flex-col gap-4" noValidate>
+      {sent ? (
+        <div className="flex flex-col items-center gap-4 py-4">
+          <Mail className="size-12 text-primary" />
+          <p className="text-center text-sm font-medium">메일을 확인해 주세요.</p>
+          <p className="text-center text-xs text-muted-foreground">
+            입력하신 이메일이 등록되어 있다면 재설정 링크를 보냈어요. (15분 내 유효)
+            <br />
+            메일의 링크를 눌러 새 비밀번호를 설정해 주세요.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-2"
+            onClick={() => setSent(false)}
+          >
+            다른 이메일로 다시 보내기
+          </Button>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="loginId">아이디</Label>
+            <Label htmlFor="email">이메일</Label>
             <Input
-              id="loginId"
-              name="loginId"
-              placeholder="가입한 아이디"
-              autoComplete="username"
-              value={loginId}
-              onChange={(e) => setLoginId(e.target.value)}
+              id="email"
+              name="email"
+              type="email"
+              placeholder="설정에서 인증한 이메일"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
             />
           </div>
 
-          <Button type="submit" size="lg" className="mt-2 h-11" disabled={!loginIdValid}>
-            인증코드 전송
+          <Button type="submit" size="lg" className="mt-2 h-11" disabled={!emailValid || sending}>
+            {sending ? '보내는 중...' : '재설정 메일 보내기'}
           </Button>
 
           <p className="text-center text-xs text-muted-foreground">
             이메일을 아직 등록하지 않았다면, 로그인 후 설정에서 등록·인증할 수 있어요.
           </p>
-        </form>
-      ) : (
-        <form onSubmit={handleReset} className="flex flex-col gap-4" noValidate>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="code">인증코드</Label>
-            <Input
-              id="code"
-              name="code"
-              inputMode="numeric"
-              maxLength={6}
-              placeholder="메일로 받은 6자리 숫자"
-              value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
-            />
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="newPassword">새 비밀번호</Label>
-            <Input
-              id="newPassword"
-              name="newPassword"
-              type="password"
-              placeholder="8~15자, 대소문자·특수문자 포함"
-              autoComplete="new-password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-            />
-            <div className="min-h-[1.25rem] text-xs">
-              {newPassword.length > 0 && !passwordValid && (
-                <span className="flex items-center gap-1 text-destructive">
-                  <XCircle className="size-3" />
-                  {PASSWORD_MESSAGE}
-                </span>
-              )}
-              {newPassword.length > 0 && passwordValid && (
-                <span className="flex items-center gap-1 text-primary">
-                  <CheckCircle2 className="size-3" />
-                  사용 가능한 비밀번호입니다
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="confirmPassword">새 비밀번호 확인</Label>
-            <Input
-              id="confirmPassword"
-              name="confirmPassword"
-              type="password"
-              placeholder="비밀번호를 다시 입력"
-              autoComplete="new-password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-            />
-            <div className="min-h-[1.25rem] text-xs">
-              {confirmPassword.length > 0 && !confirmMatch && (
-                <span className="flex items-center gap-1 text-destructive">
-                  <XCircle className="size-3" />
-                  비밀번호가 일치하지 않습니다
-                </span>
-              )}
-              {confirmPassword.length > 0 && confirmMatch && (
-                <span className="flex items-center gap-1 text-primary">
-                  <CheckCircle2 className="size-3" />
-                  비밀번호가 일치합니다
-                </span>
-              )}
-            </div>
-          </div>
-
-          <Button type="submit" size="lg" className="mt-2 h-11" disabled={!canReset}>
-            비밀번호 재설정
-          </Button>
-
-          <button
-            type="button"
-            className="text-center text-xs text-muted-foreground hover:underline"
-            onClick={() => setStep('request')}
-          >
-            아이디를 다시 입력할게요
-          </button>
         </form>
       )}
 

@@ -20,6 +20,8 @@ import LoginPage from '@/pages/auth/LoginPage'
 import SignupPage from '@/pages/auth/SignupPage'
 import SettingsPage from '@/pages/auth/SettingsPage'
 import ForgotPasswordPage from '@/pages/auth/ForgotPasswordPage'
+import ResetPasswordPage from '@/pages/auth/ResetPasswordPage'
+import VerifyEmailPage from '@/pages/auth/VerifyEmailPage'
 import OAuthCallbackPage from '@/pages/auth/OAuthCallbackPage'
 
 // 관리자 페이지
@@ -56,6 +58,8 @@ export default function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/verify-email" element={<VerifyEmailPage />} />
       <Route path="/oauth/callback" element={<OAuthCallbackPage />} />
 
       {/* 로그인이 필요한 페이지 (비로그인 시 /login 으로 리다이렉트) */}
