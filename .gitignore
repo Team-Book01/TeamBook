@@ -13,3 +13,7 @@ Thumbs.db
 
 # claude.md
 CLAUDE.md
+.claude/
+
+# 첨부파일
+uploads/

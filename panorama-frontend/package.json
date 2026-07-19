@@ -13,7 +13,9 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.101.2",
+    "@toast-ui/editor": "^3.2.2",
     "axios": "^1.18.1",
+    "dompurify": "^3.4.12",
     "lucide-react": "^0.487.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",

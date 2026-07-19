@@ -83,6 +83,25 @@ export async function searchBooks(params: BookSearchParams): Promise<BookSearchR
   return data
 }
 
+/**
+ * POST /api/v1/books/ocr — 이미지에서 ISBN 추출 (로그인 필요)
+ *
+ * 이미지에 책이 없는 건 정상 상황이라 실패를 예외로 올리지 않는다.
+ * 404(OCR001)·권한·네트워크 등 모든 에러는 삼키고 null 을 돌려주며, 호출부는 침묵한다.
+ */
+export async function extractIsbnFromImage(image: Blob | File): Promise<string | null> {
+  const form = new FormData()
+  form.append('image', image)
+  try {
+    const { data } = await client.post<{ isbn: string }>('/books/ocr', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+    return data.isbn?.trim() ? data.isbn.trim() : null
+  } catch {
+    return null
+  }
+}
+
 /** GET /api/v1/books/{isbn} — 도서 상세 */
 export async function getBook(isbn: string): Promise<BookDetail> {
   const { data } = await client.get<BookDetail>(`/books/${isbn}`)

@@ -62,7 +62,8 @@ public class SecurityConfig {
                 "/api/v1/books/search",
                 "/api/v1/users/exists",   // 회원가입 전 아이디·닉네임 중복 확인 (로그인 불필요)
                 "/oauth2/**",          // 로그인 시작: /oauth2/authorization/google
-                "/login/oauth2/**"     // 구글 콜백: /login/oauth2/code/google
+                "/login/oauth2/**",     // 구글 콜백: /login/oauth2/code/google
+                "/images/**"    // 업로드 이미지 정적 서빙 (브라우저 img 태그는 토큰을 실을 수 없음)
         };
 
         @Bean

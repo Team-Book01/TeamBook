@@ -52,10 +52,21 @@ public enum ErrorCode {
   // post (도메인 접두어 P + 3자리 일련번호)
   POST_NOT_FOUND(HttpStatus.NOT_FOUND, "P001", "존재하지 않는 게시글입니다."),
   NOT_POST_OWNER(HttpStatus.FORBIDDEN, "P002", "게시글 소유자가 아닙니다."),
+  ALREADY_LIKED_POST(HttpStatus.CONFLICT, "P003", "이미 추천한 게시글입니다."),
+  ALREADY_SCRAPPED_POST(HttpStatus.CONFLICT, "P004", "이미 스크랩한 게시글입니다."),
   
   // comment (도메인 접두어 CM + 3자리 일련번호)
   COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "CM001", "존재하지 않는 댓글입니다."),
   NOT_COMMENT_OWNER(HttpStatus.FORBIDDEN, "CM002", "댓글 소유자가 아닙니다."),
+
+  // image (도메인 접두어 IMG + 3자리 일련번호)
+  IMAGE_NOT_FOUND(HttpStatus.NOT_FOUND, "IMG001", "존재하지 않는 이미지입니다."),
+  ALREADY_ATTACHED_IMAGE(HttpStatus.CONFLICT, "IMG002", "이미 사용중인 이미지입니다."),
+  INVALID_IMAGE_TYPE(HttpStatus.BAD_REQUEST, "IMG003", "이미지가 아닌 파일은 사용할 수 없습니다."),
+  INVALID_IMAGE_SIZE(HttpStatus.BAD_REQUEST, "IMG004", "이미지 파일 용량이 너무 큽니다."),
+
+  // ocr (도메인 접두어 OCR + 3자리 일련번호)
+  ISBN_NOT_FOUND(HttpStatus.NOT_FOUND, "OCR001", "이미지에서 ISBN을 찾을 수 없습니다."),
 
   // notice (도메인 접두어 N)
   NOTICE_NOT_FOUND(HttpStatus.NOT_FOUND, "N001", "존재하지 않는 공지입니다."),

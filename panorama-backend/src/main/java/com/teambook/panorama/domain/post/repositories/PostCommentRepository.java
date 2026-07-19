@@ -13,6 +13,6 @@ import com.teambook.panorama.domain.post.entity.PostComment;
 public interface PostCommentRepository extends JpaRepository<PostComment, Long> {
     @EntityGraph(attributePaths = "user")
     Slice<PostComment> findByPostAndParentIsNullOrderByCreatedAtAsc(Post post, Pageable pageable);
-    @EntityGraph(attributePaths = "user")
+    @EntityGraph(attributePaths = {"user", "mentionUser"})
     List<PostComment> findByParentInOrderByCreatedAtAsc(List<PostComment> parents);
 }

@@ -22,6 +22,10 @@ spring:
     baseline-on-migrate: true
     baseline-version: 0
     validate-on-migrate: true
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 10MB
 
 mybatis:
   configuration:
@@ -47,6 +51,13 @@ naver:
 
 app:
   https: false
+  upload:
+    dir: ./uploads
+    
 data4library:
   base-url: http://data4library.kr
   auth-key: ${DATA4LIBRARY_AUTH_KEY}
+
+vision:
+  api:
+    key: ${VISION_API_KEY:}
