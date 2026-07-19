@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { BookOpen, Search, Bell, User } from 'lucide-react'
+import { BookOpen, Search, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/authStore'
 import { logout as logoutApi } from '@/api/auth'
@@ -113,16 +113,8 @@ export default function Header() {
   </form>
 )}
 
-        {/* 우측: 알림 + 로그인 (로그인 연동 전 상태) */}
+        {/* 우측: 로그인 (로그인 연동 전 상태) */}
         <div className="flex items-center gap-2 ml-auto flex-shrink-0">
-          <button
-            type="button"
-            aria-label="알림"
-            className="relative p-2 hover:bg-[#F5F5F5] rounded-full transition-colors"
-          >
-            <Bell size={19} className="text-[#555]" />
-            <span className="absolute top-[7px] right-[7px] w-[7px] h-[7px] bg-red-500 rounded-full border-[1.5px] border-white" />
-          </button>
           {/* 세션 복원 전(!authReady)에는 렌더를 보류해 잘못된 버튼이 잠깐 보이는 깜빡임을 막는다 */}
           {authReady &&
             (isAuthenticated ? (

@@ -26,9 +26,8 @@ public class PasswordController {
 
     @Operation(
             summary = "비밀번호 재설정 메일 발송 요청",
-            description = "가입 시 등록한 이메일로 재설정 토큰(링크)을 발송한다. "
-                    + "이메일 열거 방지를 위해 존재하지 않는 이메일이어도 성공(202)으로 응답한다. Local 계정만 대상. "
-                    + "※ SMTP 미설정으로 현재 로직은 미구현(확장 예정).")
+            description = "등록·인증된 이메일로 재설정 토큰(링크)을 발송한다(15분 유효). "
+                    + "이메일 열거 방지를 위해 존재하지 않는 이메일이어도 항상 성공(202)으로 응답한다. Local 계정만 대상.")
     @ApiResponses({
             @ApiResponse(responseCode = "202", description = "재설정 메일 발송 접수 (본문 없음)"),
             @ApiResponse(responseCode = "400", description = "입력값 검증 실패 (C001)")
@@ -41,8 +40,7 @@ public class PasswordController {
 
     @Operation(
             summary = "비밀번호 재설정 확정",
-            description = "재설정 메일로 받은 토큰과 새 비밀번호로 비밀번호를 변경한다. "
-                    + "※ SMTP 미설정으로 현재 로직은 미구현(확장 예정).")
+            description = "재설정 메일로 받은 토큰과 새 비밀번호로 비밀번호를 변경한다. 토큰은 1회용.")
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "재설정 성공 (본문 없음)"),
             @ApiResponse(responseCode = "400", description = "입력값 검증 실패 (C001) · 유효하지 않거나 만료된 토큰 (A008)")

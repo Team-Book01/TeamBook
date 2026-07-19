@@ -6,8 +6,6 @@ import {
   User,
   Lock,
   Trash2,
-  Bell,
-  Eye,
   Mail,
   Loader2,
   CheckCircle2,
@@ -16,19 +14,20 @@ import {
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
+import { PasswordInput } from '@/components/ui/PasswordInput'
 import { Separator } from '@/components/ui/Separator'
-import { Switch } from '@/components/ui/Switch'
 import { checkExists, logout as logoutApi } from '@/api/auth'
-import { changePassword, updateNickname, withdraw } from '@/api/user'
+import { changePassword, updateNickname, withdraw, requestEmailVerification, fetchMe } from '@/api/user'
 import { getErrorCode, getErrorMessage } from '@/api/client'
 import { useAuthStore } from '@/store/authStore'
 import { toast } from '@/lib/toast'
-import { isValidNickname, isValidPassword, NICKNAME_MAX_LENGTH } from '@/lib/validation'
+import { isValidNickname, isValidPassword, isValidEmail, NICKNAME_MAX_LENGTH } from '@/lib/validation'
 
 /**
  * 계정 설정 화면 (백엔드 연동).
  * - 닉네임: 입력 0.5초 후 /users/exists 로 1차 중복확인 → 저장 시 PATCH /users/me 에서 2차 검증
- * - 비밀번호: emailVerified 가 true 면 변경 폼, false 면 이메일 인증 안내(백엔드 미구현 → 준비중)
+ * - 비밀번호 수정: 현재/새 비밀번호로 PATCH /users/me/password (로컬 계정만)
+ * - 이메일 인증: 이메일 입력 → POST /users/me/email 로 인증 링크 메일 발송(링크 방식). 완료는 /verify-email
  * - 계정 삭제: 비밀번호 입력 후 DELETE /users/me
  */
 
@@ -51,6 +50,15 @@ export default function SettingsPage() {
   useEffect(() => {
     setNickname(currentNickname)
   }, [currentNickname])
+
+  // 화면 진입 시 내 정보를 최신화한다. (다른 탭에서 이메일 인증을 마치고 돌아왔을 때 인증 상태 반영)
+  useEffect(() => {
+    fetchMe()
+      .then(setUser)
+      .catch(() => {
+        /* 실패 시 기존 스토어 값 유지 */
+      })
+  }, [setUser])
 
   // 입력이 끝난 0.5초 뒤 1차 중복확인 (DB 조회)
   useEffect(() => {
@@ -124,6 +132,29 @@ export default function SettingsPage() {
       toast.error(getErrorMessage(err, '비밀번호 변경에 실패했어요.'))
     } finally {
       setSavingPassword(false)
+    }
+  }
+
+  // ── 이메일 등록·인증 (비밀번호 찾기 활성화용) ────────────
+  // 링크 방식: 이메일 입력 → 인증 메일 발송 → 메일의 링크(/verify-email)를 눌러 완료.
+  const [emailInput, setEmailInput] = useState('')
+  const [sendingMail, setSendingMail] = useState(false)
+  const [mailSent, setMailSent] = useState(false)
+  const alreadyVerified = Boolean(user?.emailVerified)
+
+  const emailFormatValid = isValidEmail(emailInput.trim())
+
+  async function handleSendVerificationMail() {
+    if (!emailFormatValid) return
+    setSendingMail(true)
+    try {
+      await requestEmailVerification(emailInput.trim())
+      setMailSent(true)
+      toast.success('인증 메일을 보냈어요. 메일의 링크를 눌러 인증을 완료해 주세요.')
+    } catch (err) {
+      toast.error(getErrorMessage(err, '인증 메일 발송에 실패했어요.'))
+    } finally {
+      setSendingMail(false)
     }
   }
 
@@ -289,18 +320,16 @@ export default function SettingsPage() {
         >
           <div className="flex items-center gap-3">
             <Lock className="size-5 text-primary" />
-            <h2 className="text-lg font-semibold">비밀번호 변경</h2>
+            <h2 className="text-lg font-semibold">비밀번호 수정</h2>
           </div>
           <Separator className="my-4" />
 
-          {user?.emailVerified ? (
-            <form className="flex flex-col gap-4" onSubmit={handlePasswordSave} noValidate>
+          <form className="flex flex-col gap-4" onSubmit={handlePasswordSave} noValidate>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="currentPassword">현재 비밀번호</Label>
-                <Input
+                <PasswordInput
                   id="currentPassword"
                   name="currentPassword"
-                  type="password"
                   placeholder="현재 비밀번호"
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
@@ -309,10 +338,9 @@ export default function SettingsPage() {
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="newPassword">새 비밀번호</Label>
-                <Input
+                <PasswordInput
                   id="newPassword"
                   name="newPassword"
-                  type="password"
                   placeholder="8~15자, 대소문자·특수문자 포함"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
@@ -335,10 +363,9 @@ export default function SettingsPage() {
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="newPasswordConfirm">새 비밀번호 확인</Label>
-                <Input
+                <PasswordInput
                   id="newPasswordConfirm"
                   name="newPasswordConfirm"
-                  type="password"
                   placeholder="비밀번호를 다시 입력"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
@@ -361,98 +388,84 @@ export default function SettingsPage() {
               </div>
               <div className="flex justify-end">
                 <Button type="submit" size="sm" disabled={!passwordCanSave || savingPassword}>
-                  {savingPassword ? '변경 중...' : '변경'}
+                  {savingPassword ? '변경 중...' : '수정'}
                 </Button>
               </div>
             </form>
+        </section>
+        )}
+
+        {/* Email 등록·인증 (로컬 계정만 · 비밀번호 찾기 활성화용) */}
+        {isLocalAccount && (
+        <section
+          className="mt-6 rounded-2xl border border-border bg-card p-6"
+          style={{ boxShadow: 'var(--shadow-card)' }}
+        >
+          <div className="flex items-center gap-3">
+            <Mail className="size-5 text-primary" />
+            <h2 className="text-lg font-semibold">이메일 인증</h2>
+          </div>
+          <Separator className="my-4" />
+          <p className="text-xs text-muted-foreground">
+            이메일을 등록·인증해 두면 비밀번호를 잊었을 때 로그인 화면의 &lsquo;비밀번호 찾기&rsquo;로
+            재설정할 수 있어요.
+          </p>
+
+          {alreadyVerified ? (
+            <div className="mt-4 flex items-center gap-2 rounded-xl bg-secondary/50 p-4 text-sm">
+              <CheckCircle2 className="size-4 shrink-0 text-primary" />
+              <span>
+                {user?.email ? (
+                  <>
+                    인증된 이메일: <span className="font-medium text-foreground">{user.email}</span>
+                  </>
+                ) : (
+                  '이메일 인증이 완료된 계정입니다.'
+                )}
+              </span>
+            </div>
           ) : (
-            // 이메일 미인증 → 인증 안내 (백엔드 미구현이라 클릭 시 준비중)
-            <div className="flex flex-col items-start gap-3 rounded-xl bg-secondary/50 p-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-start gap-3">
-                <Mail className="mt-0.5 size-5 shrink-0 text-primary" />
-                <div>
-                  <p className="text-sm font-medium">이메일 인증이 필요합니다</p>
-                  <p className="text-xs text-muted-foreground">
-                    비밀번호를 변경하려면 먼저 이메일 인증을 완료해 주세요.
-                  </p>
+            <div className="mt-4 flex flex-col gap-4">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="verifyEmail">이메일</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="verifyEmail"
+                    type="email"
+                    placeholder="you@example.com"
+                    autoComplete="email"
+                    value={emailInput}
+                    onChange={(e) => {
+                      setEmailInput(e.target.value)
+                      setMailSent(false)
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0"
+                    onClick={handleSendVerificationMail}
+                    disabled={!emailFormatValid || sendingMail}
+                  >
+                    {sendingMail ? '보내는 중...' : mailSent ? '재발송' : '인증 메일 보내기'}
+                  </Button>
                 </div>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => toast.info('이메일 인증은 준비 중이에요.')}
-              >
-                이메일 인증하기
-              </Button>
+
+              {mailSent && (
+                <div className="flex items-start gap-2 rounded-xl bg-secondary/50 p-4 text-xs text-muted-foreground">
+                  <Mail className="mt-0.5 size-4 shrink-0 text-primary" />
+                  <span>
+                    <span className="font-medium text-foreground">{emailInput.trim()}</span> 로 인증 링크를
+                    보냈어요. 메일의 링크를 눌러 인증을 완료해 주세요. (30분 내 유효)
+                  </span>
+                </div>
+              )}
             </div>
           )}
         </section>
         )}
-
-        {/* Notifications section (변경 없음) */}
-        <section
-          className="mt-6 rounded-2xl border border-border bg-card p-6"
-          style={{ boxShadow: 'var(--shadow-card)' }}
-        >
-          <div className="flex items-center gap-3">
-            <Bell className="size-5 text-primary" />
-            <h2 className="text-lg font-semibold">알림 설정</h2>
-          </div>
-          <Separator className="my-4" />
-
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">독서 인증 리마인더</p>
-                <p className="text-xs text-muted-foreground">매일 독서 인증을 잊지 않도록 알려드려요.</p>
-              </div>
-              <Switch defaultChecked />
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">새 리뷰·댓글 알림</p>
-                <p className="text-xs text-muted-foreground">내 글에 달린 반응을 받아보세요.</p>
-              </div>
-              <Switch defaultChecked />
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">마케팅·이벤트</p>
-                <p className="text-xs text-muted-foreground">책방의 새로운 소식과 이벤트를 받아보세요.</p>
-              </div>
-              <Switch />
-            </div>
-          </div>
-        </section>
-
-        {/* Privacy section (변경 없음) */}
-        <section
-          className="mt-6 rounded-2xl border border-border bg-card p-6"
-          style={{ boxShadow: 'var(--shadow-card)' }}
-        >
-          <div className="flex items-center gap-3">
-            <Eye className="size-5 text-primary" />
-            <h2 className="text-lg font-semibold">프라이버시</h2>
-          </div>
-          <Separator className="my-4" />
-
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">프로필 공개</p>
-                <p className="text-xs text-muted-foreground">다른 사용자가 내 프로필을 볼 수 있어요.</p>
-              </div>
-              <Switch defaultChecked />
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">독후감 공개</p>
-                <p className="text-xs text-muted-foreground">작성한 독후감을 모두에게 공개할까요?</p>
-              </div>
-              <Switch defaultChecked />
-            </div>
-          </div>
-        </section>
 
         {/* Danger zone */}
         <section className="mt-6 rounded-2xl border border-destructive/20 bg-card p-6">
@@ -493,9 +506,8 @@ export default function SettingsPage() {
             </p>
             <div className="mt-4 flex flex-col gap-1.5">
               <Label htmlFor="deletePassword">비밀번호</Label>
-              <Input
+              <PasswordInput
                 id="deletePassword"
-                type="password"
                 placeholder="현재 비밀번호"
                 value={deletePassword}
                 onChange={(e) => setDeletePassword(e.target.value)}

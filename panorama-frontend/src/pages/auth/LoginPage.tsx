@@ -4,6 +4,7 @@ import { AuthLayout } from '@/components/auth/AuthLayout'
 import { SocialButtons } from '@/components/auth/SocialButtons'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { PasswordInput } from '@/components/ui/PasswordInput'
 import { Label } from '@/components/ui/Label'
 import { loginWithPassword } from '@/api/auth'
 import { getErrorMessage } from '@/api/client'
@@ -78,10 +79,9 @@ export default function LoginPage() {
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="password">비밀번호</Label>
-          <Input
+          <PasswordInput
             id="password"
             name="password"
-            type="password"
             placeholder="비밀번호를 입력하세요"
             autoComplete="current-password"
           />

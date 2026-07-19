@@ -45,11 +45,10 @@ public class User extends BaseTimeEntity{
   @Column(nullable = false, unique = true, length = 20)
   private String nickname;
 
-  @Column(nullable = true)
+  // email 에는 "인증이 완료된 주소"만 저장한다. 인증 대기 중인 주소는 여기 넣지 않고
+  // email_verifications.target_email 에 보관하다가, 인증 성공 시점에만 이 컬럼으로 승격한다.
+  @Column(nullable = true, unique = true)
   private String email;
-
-  @Column(name = "email_verified", nullable = false)
-  private boolean emailVerified;
 
   @Column(name = "profile_image_url", nullable = true)
   private String profileImageUrl;
@@ -115,8 +114,17 @@ public class User extends BaseTimeEntity{
       this.status = Status.DELETED;
   }
 
-  public void verifyEmail(){
-    this.emailVerified = true;
+  /**
+   * 이메일 인증 완료 여부. 인증된 주소만 email 에 저장하므로 "email 존재 ⟺ 인증 완료"가 된다.
+   * 호출부에서 getEmail()!=null 을 흩뿌리지 말고 이 메서드로 모은다.
+   */
+  public boolean hasVerifiedEmail() {
+    return this.email != null;
+  }
+
+  /** 인증이 완료된 email 을 승격 저장한다. (confirmVerification 성공 시점에만 호출) */
+  public void registerVerifiedEmail(String email) {
+    this.email = email;
   }
 
   public void updatePassword(String encodedPassword){
