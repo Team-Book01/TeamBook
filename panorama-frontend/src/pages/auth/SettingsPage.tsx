@@ -21,7 +21,7 @@ import { changePassword, updateNickname, withdraw, requestEmailVerification, fet
 import { getErrorCode, getErrorMessage } from '@/api/client'
 import { useAuthStore } from '@/store/authStore'
 import { toast } from '@/lib/toast'
-import { isValidNickname, isValidPassword, NICKNAME_MAX_LENGTH } from '@/lib/validation'
+import { isValidNickname, isValidPassword, isValidEmail, NICKNAME_MAX_LENGTH } from '@/lib/validation'
 
 /**
  * 계정 설정 화면 (백엔드 연동).
@@ -142,7 +142,7 @@ export default function SettingsPage() {
   const [mailSent, setMailSent] = useState(false)
   const alreadyVerified = Boolean(user?.emailVerified)
 
-  const emailFormatValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInput.trim())
+  const emailFormatValid = isValidEmail(emailInput.trim())
 
   async function handleSendVerificationMail() {
     if (!emailFormatValid) return

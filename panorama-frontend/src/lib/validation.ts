@@ -33,3 +33,10 @@ export const PASSWORD_MESSAGE = '비밀번호는 8~15자, 대소문자·특수�
 export function isValidPassword(value: string): boolean {
   return PASSWORD_REGEX.test(value)
 }
+
+// ── 이메일: 공백 없는 local@domain.tld 형식(간이 검증) ─────────────
+// 서버가 최종 검증(@Email)하므로 여기선 명백한 오타만 거르는 수준으로 둔다.
+export const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+export function isValidEmail(value: string): boolean {
+  return EMAIL_REGEX.test(value)
+}
