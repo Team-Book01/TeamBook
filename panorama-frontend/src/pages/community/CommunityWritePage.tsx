@@ -148,12 +148,43 @@ function WriteForm({ post }: { post?: PostDetail }) {
 
   return (
     <>
-      {/* 카테고리 + 제목 */}
+      {/* 첨부된 책 카드 — 상세 화면과 동일하게 제목 줄 위에 놓는다 */}
+      {attachedBook && (
+        <div className="flex items-center gap-3 border border-[#D5EAE4] bg-[#F7FAF9] rounded-xl px-4 py-3">
+          <BookCoverThumb imageUrl={attachedBook.imageUrl} title={attachedBook.title} width={44} height={62} />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-[#1A1A1A] truncate m-0">{attachedBook.title}</p>
+            <p className="text-xs text-[#999] truncate mt-0.5 m-0">{attachedBook.author}</p>
+          </div>
+          <button
+            onClick={() => setBookModalOpen(true)}
+            className="text-xs font-semibold text-[#2E7D6B] px-3 py-1.5 rounded-lg border border-[#D5EAE4] bg-white cursor-pointer flex-shrink-0"
+          >
+            교체
+          </button>
+          <button
+            onClick={() => setAttachedBook(null)}
+            className="flex items-center gap-1 text-xs font-semibold text-[#888] px-3 py-1.5 rounded-lg border border-[#E0E0E0] bg-white cursor-pointer flex-shrink-0"
+          >
+            <X size={12} /> 첨부 해제
+          </button>
+        </div>
+      )}
+
+      {/* 책 첨부 + 카테고리 + 제목 — 앞 두 요소는 min-w-[100px] 로 현재 크기를 하한 삼고, 라벨이 길어지면 내용만큼 늘어난다 */}
       <div className="flex gap-3">
+        {!attachedBook && (
+          <button
+            onClick={() => setBookModalOpen(true)}
+            className="inline-flex items-center justify-center gap-2 min-w-[100px] text-sm font-semibold text-[#2E7D6B] px-4 py-2.5 rounded-xl border border-[#D5EAE4] bg-white hover:bg-[#EFF6F2] transition-colors cursor-pointer flex-shrink-0 whitespace-nowrap"
+          >
+            <BookPlus size={15} /> 책 첨부
+          </button>
+        )}
         <select
           value={category}
           onChange={(e) => setCategory(e.target.value as PostCategory)}
-          className="text-sm font-semibold text-[#333] bg-white border border-[#E0E0E0] rounded-xl px-3 py-2.5 cursor-pointer focus:outline-none focus:border-[#2E7D6B] transition-colors flex-shrink-0"
+          className="min-w-[100px] text-sm font-semibold text-[#333] bg-white border border-[#E0E0E0] rounded-xl px-3 py-2.5 cursor-pointer focus:outline-none focus:border-[#2E7D6B] transition-colors flex-shrink-0"
         >
           {POST_CATEGORIES.map((c) => (
             <option key={c} value={c}>
@@ -166,40 +197,8 @@ function WriteForm({ post }: { post?: PostDetail }) {
           onChange={(e) => setTitle(e.target.value)}
           maxLength={255}
           placeholder="제목을 입력하세요"
-          className="flex-1 text-[15px] font-semibold text-[#1A1A1A] bg-white border border-[#E0E0E0] rounded-xl px-4 py-2.5 outline-none focus:border-[#2E7D6B] transition-colors placeholder:text-[#ccc]"
+          className="flex-1 min-w-0 text-[15px] font-semibold text-[#1A1A1A] bg-white border border-[#E0E0E0] rounded-xl px-4 py-2.5 outline-none focus:border-[#2E7D6B] transition-colors placeholder:text-[#ccc]"
         />
-      </div>
-
-      {/* 책 첨부 */}
-      <div className="flex flex-col gap-2">
-        {attachedBook ? (
-          <div className="flex items-center gap-3 border border-[#D5EAE4] bg-[#F7FAF9] rounded-xl px-4 py-3">
-            <BookCoverThumb imageUrl={attachedBook.imageUrl} title={attachedBook.title} width={44} height={62} />
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-[#1A1A1A] truncate m-0">{attachedBook.title}</p>
-              <p className="text-xs text-[#999] truncate mt-0.5 m-0">{attachedBook.author}</p>
-            </div>
-            <button
-              onClick={() => setBookModalOpen(true)}
-              className="text-xs font-semibold text-[#2E7D6B] px-3 py-1.5 rounded-lg border border-[#D5EAE4] bg-white cursor-pointer flex-shrink-0"
-            >
-              교체
-            </button>
-            <button
-              onClick={() => setAttachedBook(null)}
-              className="flex items-center gap-1 text-xs font-semibold text-[#888] px-3 py-1.5 rounded-lg border border-[#E0E0E0] bg-white cursor-pointer flex-shrink-0"
-            >
-              <X size={12} /> 첨부 해제
-            </button>
-          </div>
-        ) : (
-          <button
-            onClick={() => setBookModalOpen(true)}
-            className="inline-flex items-center gap-2 self-start text-sm font-semibold text-[#2E7D6B] px-4 py-2.5 rounded-xl border border-[#D5EAE4] bg-white hover:bg-[#EFF6F2] transition-colors cursor-pointer"
-          >
-            <BookPlus size={15} /> 책 첨부
-          </button>
-        )}
       </div>
 
       {/* 에디터 (수정 모드는 initialHtml 로 기존 본문 주입) */}
