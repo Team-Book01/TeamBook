@@ -31,7 +31,10 @@ public class UserDto {
             @Schema(description = "권한", example = "USER")
             Role role,
 
-            @Schema(description = "이메일 인증 여부 (비밀번호 변경 등에 사용)", example = "false")
+            @Schema(description = "인증 완료된 이메일 (미인증·소셜은 null)", example = "user@example.com", nullable = true)
+            String email,
+
+            @Schema(description = "이메일 인증 여부 (email 존재 여부와 동일)", example = "false")
             boolean emailVerified
     ) {
         public static Response from(User user) {
@@ -42,7 +45,8 @@ public class UserDto {
                     user.getProfileImageUrl(),
                     user.getProvider(),
                     user.getRole(),
-                    user.isEmailVerified()
+                    user.getEmail(),          // 인증된 주소만 저장돼 있음(미인증·소셜은 null)
+                    user.hasVerifiedEmail()   // 인증 완료 여부 = email 존재 여부 파생
             );
         }
     }
