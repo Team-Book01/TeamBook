@@ -39,7 +39,6 @@ public class LibraryService {
     Map<String, LibBookAvailability> bookAvMap = new HashMap<>();
     for (String libCode : libCodes) {
       var libBookAvailability = libraryClient.checkBookAvailability(libCode, isbn);
-      if(libBookAvailability == null) 
       bookAvMap.put(libCode, libBookAvailability);
     }
 
