@@ -14,9 +14,10 @@ import {
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
+import { PasswordInput } from '@/components/ui/PasswordInput'
 import { Separator } from '@/components/ui/Separator'
 import { checkExists, logout as logoutApi } from '@/api/auth'
-import { changePassword, updateNickname, withdraw } from '@/api/user'
+import { changePassword, updateNickname, withdraw, requestEmailVerification, fetchMe } from '@/api/user'
 import { getErrorCode, getErrorMessage } from '@/api/client'
 import { useAuthStore } from '@/store/authStore'
 import { toast } from '@/lib/toast'
@@ -25,7 +26,8 @@ import { isValidNickname, isValidPassword, NICKNAME_MAX_LENGTH } from '@/lib/val
 /**
  * 계정 설정 화면 (백엔드 연동).
  * - 닉네임: 입력 0.5초 후 /users/exists 로 1차 중복확인 → 저장 시 PATCH /users/me 에서 2차 검증
- * - 비밀번호: emailVerified 가 true 면 변경 폼, false 면 이메일 인증 안내(백엔드 미구현 → 준비중)
+ * - 비밀번호 수정: 현재/새 비밀번호로 PATCH /users/me/password (로컬 계정만)
+ * - 이메일 인증: 이메일 입력 → POST /users/me/email 로 인증 링크 메일 발송(링크 방식). 완료는 /verify-email
  * - 계정 삭제: 비밀번호 입력 후 DELETE /users/me
  */
 
@@ -48,6 +50,15 @@ export default function SettingsPage() {
   useEffect(() => {
     setNickname(currentNickname)
   }, [currentNickname])
+
+  // 화면 진입 시 내 정보를 최신화한다. (다른 탭에서 이메일 인증을 마치고 돌아왔을 때 인증 상태 반영)
+  useEffect(() => {
+    fetchMe()
+      .then(setUser)
+      .catch(() => {
+        /* 실패 시 기존 스토어 값 유지 */
+      })
+  }, [setUser])
 
   // 입력이 끝난 0.5초 뒤 1차 중복확인 (DB 조회)
   useEffect(() => {
@@ -125,24 +136,26 @@ export default function SettingsPage() {
   }
 
   // ── 이메일 등록·인증 (비밀번호 찾기 활성화용) ────────────
-  // 백엔드 발송/인증 미구현(스텁) → 화면 흐름만 설계(전송·인증은 '준비 중' 안내).
-  const [emailInput, setEmailInput] = useState(user?.email ?? '')
-  const [codeSent, setCodeSent] = useState(false)
-  const [verifyCode, setVerifyCode] = useState('')
-  const alreadyVerified = Boolean(user?.emailVerified && user?.email)
+  // 링크 방식: 이메일 입력 → 인증 메일 발송 → 메일의 링크(/verify-email)를 눌러 완료.
+  const [emailInput, setEmailInput] = useState('')
+  const [sendingMail, setSendingMail] = useState(false)
+  const [mailSent, setMailSent] = useState(false)
+  const alreadyVerified = Boolean(user?.emailVerified)
 
   const emailFormatValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInput.trim())
-  const codeValid = /^\d{6}$/.test(verifyCode)
 
-  function handleSendCode() {
+  async function handleSendVerificationMail() {
     if (!emailFormatValid) return
-    setCodeSent(true)
-    toast.info('인증코드를 전송했어요. (메일 발송은 준비 중이에요)')
-  }
-
-  function handleVerifyCode() {
-    if (!codeValid) return
-    toast.info('이메일 인증은 준비 중이에요. (백엔드 연동 예정)')
+    setSendingMail(true)
+    try {
+      await requestEmailVerification(emailInput.trim())
+      setMailSent(true)
+      toast.success('인증 메일을 보냈어요. 메일의 링크를 눌러 인증을 완료해 주세요.')
+    } catch (err) {
+      toast.error(getErrorMessage(err, '인증 메일 발송에 실패했어요.'))
+    } finally {
+      setSendingMail(false)
+    }
   }
 
   // ── 계정 삭제 ─────────────────────────────────────────
@@ -314,10 +327,9 @@ export default function SettingsPage() {
           <form className="flex flex-col gap-4" onSubmit={handlePasswordSave} noValidate>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="currentPassword">현재 비밀번호</Label>
-                <Input
+                <PasswordInput
                   id="currentPassword"
                   name="currentPassword"
-                  type="password"
                   placeholder="현재 비밀번호"
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
@@ -326,10 +338,9 @@ export default function SettingsPage() {
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="newPassword">새 비밀번호</Label>
-                <Input
+                <PasswordInput
                   id="newPassword"
                   name="newPassword"
-                  type="password"
                   placeholder="8~15자, 대소문자·특수문자 포함"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
@@ -352,10 +363,9 @@ export default function SettingsPage() {
               </div>
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="newPasswordConfirm">새 비밀번호 확인</Label>
-                <Input
+                <PasswordInput
                   id="newPasswordConfirm"
                   name="newPasswordConfirm"
-                  type="password"
                   placeholder="비밀번호를 다시 입력"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
@@ -405,7 +415,13 @@ export default function SettingsPage() {
             <div className="mt-4 flex items-center gap-2 rounded-xl bg-secondary/50 p-4 text-sm">
               <CheckCircle2 className="size-4 shrink-0 text-primary" />
               <span>
-                인증된 이메일: <span className="font-medium text-foreground">{user?.email}</span>
+                {user?.email ? (
+                  <>
+                    인증된 이메일: <span className="font-medium text-foreground">{user.email}</span>
+                  </>
+                ) : (
+                  '이메일 인증이 완료된 계정입니다.'
+                )}
               </span>
             </div>
           ) : (
@@ -419,46 +435,31 @@ export default function SettingsPage() {
                     placeholder="you@example.com"
                     autoComplete="email"
                     value={emailInput}
-                    onChange={(e) => setEmailInput(e.target.value)}
+                    onChange={(e) => {
+                      setEmailInput(e.target.value)
+                      setMailSent(false)
+                    }}
                   />
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     className="shrink-0"
-                    onClick={handleSendCode}
-                    disabled={!emailFormatValid}
+                    onClick={handleSendVerificationMail}
+                    disabled={!emailFormatValid || sendingMail}
                   >
-                    {codeSent ? '재전송' : '인증코드 전송'}
+                    {sendingMail ? '보내는 중...' : mailSent ? '재발송' : '인증 메일 보내기'}
                   </Button>
                 </div>
               </div>
 
-              {codeSent && (
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="verifyCode">인증코드</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="verifyCode"
-                      inputMode="numeric"
-                      maxLength={6}
-                      placeholder="메일로 받은 6자리 숫자"
-                      value={verifyCode}
-                      onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, ''))}
-                    />
-                    <Button
-                      type="button"
-                      size="sm"
-                      className="shrink-0"
-                      onClick={handleVerifyCode}
-                      disabled={!codeValid}
-                    >
-                      확인
-                    </Button>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    메일로 받은 6자리 인증코드를 입력해 주세요.
-                  </p>
+              {mailSent && (
+                <div className="flex items-start gap-2 rounded-xl bg-secondary/50 p-4 text-xs text-muted-foreground">
+                  <Mail className="mt-0.5 size-4 shrink-0 text-primary" />
+                  <span>
+                    <span className="font-medium text-foreground">{emailInput.trim()}</span> 로 인증 링크를
+                    보냈어요. 메일의 링크를 눌러 인증을 완료해 주세요. (30분 내 유효)
+                  </span>
                 </div>
               )}
             </div>
@@ -505,9 +506,8 @@ export default function SettingsPage() {
             </p>
             <div className="mt-4 flex flex-col gap-1.5">
               <Label htmlFor="deletePassword">비밀번호</Label>
-              <Input
+              <PasswordInput
                 id="deletePassword"
-                type="password"
                 placeholder="현재 비밀번호"
                 value={deletePassword}
                 onChange={(e) => setDeletePassword(e.target.value)}

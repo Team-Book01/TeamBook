@@ -27,6 +27,7 @@ interface MeResponse {
   profileImageUrl: string | null
   provider: Provider
   role: 'USER' | 'ADMIN'
+  email: string | null
   emailVerified: boolean
 }
 
@@ -95,6 +96,30 @@ export async function signup(body: SignupRequest): Promise<void> {
 }
 
 /**
+ * 이메일 인증 콜백 (POST /auth/email/verify). 비로그인 가능(토큰으로 신원 특정).
+ * 메일 링크의 토큰을 검증해 인증을 완료한다(204). 유효하지 않으면 400(A011).
+ */
+export async function confirmEmailVerification(token: string): Promise<void> {
+  await client.post('/auth/email/verify', { token })
+}
+
+/**
+ * 비밀번호 재설정 메일 발송 요청 (POST /auth/password/reset-request). 비로그인.
+ * 등록·인증된 이메일로 재설정 링크를 보낸다. 계정 유무와 무관하게 항상 202(열거 방지).
+ */
+export async function requestPasswordReset(email: string): Promise<void> {
+  await client.post('/auth/password/reset-request', { email })
+}
+
+/**
+ * 비밀번호 재설정 확정 (POST /auth/password/reset). 비로그인.
+ * 메일 링크의 토큰 + 새 비밀번호로 변경한다(204). 유효하지 않은 토큰이면 400(A008).
+ */
+export async function confirmPasswordReset(token: string, newPassword: string): Promise<void> {
+  await client.post('/auth/password/reset', { token, newPassword })
+}
+
+/**
  * 아이디/닉네임 중복 확인 (GET /users/exists).
  * loginId 또는 nickname 중 정확히 하나만 넘긴다. exists=true 면 이미 사용 중.
  */
@@ -119,7 +144,7 @@ export async function getMe(accessToken: string): Promise<User> {
   return {
     id: data.userId,
     nickname: data.nickname,
-    email: '', // /me 응답에 email 없음 — 추후 백엔드 확장 시 채운다
+    email: data.email ?? '', // 인증 완료된 이메일 (미인증·소셜은 null → '')
     role: data.role,
     loginId: data.loginId,
     provider: data.provider,
