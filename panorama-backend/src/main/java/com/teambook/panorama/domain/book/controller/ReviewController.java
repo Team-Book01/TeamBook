@@ -54,14 +54,14 @@ public class ReviewController {
     @PathVariable("reviewId") Long reviewId,
     @AuthenticationPrincipal Long userId
   ){
-    return ResponseEntity.ok(reviewService.updateReveiw(request, reviewId, userId));
+    return ResponseEntity.ok(reviewService.updateReview(request, reviewId, userId));
   }
   //리뷰 삭제하기
   @Operation(summary = "리뷰 삭제하기")
   @DeleteMapping("{reviewId}")
   public ResponseEntity<Void> deleteReview(@PathVariable("reviewId") Long reviewId,
     @AuthenticationPrincipal Long userId){
-      reviewService.deleteReveiw(reviewId, userId);
+      reviewService.deleteReview(reviewId, userId);
       return ResponseEntity.noContent().build();
     }
   //마이페이지 리뷰 카운트
