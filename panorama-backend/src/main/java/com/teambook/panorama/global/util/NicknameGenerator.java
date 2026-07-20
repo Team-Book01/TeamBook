@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 public class NicknameGenerator {
 
     private static final String PREFIX = "u_";
-    private static final String CHARS = "abcdefghijklmnopqrstuvwxyz0123456789";
+    private static final String CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     private static final int SUFFIX_LEN = 8;
 
     public String generate() {
