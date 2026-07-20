@@ -106,8 +106,8 @@ public class AuthServiceImpl implements AuthService {
         // refresh 쿠키 만료는 컨트롤러에서 처리
     }
 
-    @Transactional
-    public void saveRefreshToken(Long userId, String rawRefresh) {
+    // 항상 @Transactional 메서드(login·recordSocialLogin) 내부에서만 호출된다.
+    private void saveRefreshToken(Long userId, String rawRefresh) {
         String hash = tokenHashUtil.sha256Hex(rawRefresh);
         LocalDateTime expiresAt = LocalDateTime.now().plus(Duration.ofMillis(jwtProperties.refreshTokenExpiration()));
         refreshTokenRepository.findByUserId(userId)
