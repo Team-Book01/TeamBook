@@ -5,6 +5,8 @@ import { getErrorMessage } from "@/api/client";
 import {
   toLibrary,
   inBounds,
+  boundsCenter,
+  haversineKm,
   matchRank,
   RADIUS_KM,
   SEARCH_RESULT_LIMIT,
@@ -172,11 +174,24 @@ export default function LibraryMapPage() {
     // 탐색·지역 모드는 대상이 넓어 수백~수천이 될 수 있다 → 상한을 둔다.
     if (mode === "explore" || mode === "area") {
       const cap = mode === "explore" ? SEARCH_RESULT_LIMIT : AREA_RESULT_LIMIT;
+
+      // 지도 모드의 정렬 기준은 "지금 보고 있는 화면의 중심"이다. 기준점(내 위치/서울시청)이 아니다.
+      //
+      // 기준점으로 자르면: 지도를 전국이 보이게 축소하고 검색해도 상한(200곳)이
+      //   서울시청에서 가까운 순으로 채워져 서울만 나온다. 화면은 전국인데 마커는 서울뿐.
+      // 화면 중심으로 자르면 보고 있는 영역을 고르게 채운다.
+      // (카드에 적히는 '1.2km' 거리 자체는 그대로 기준점 대비 값이다. 그건 "나에게서 얼마나 먼가"라 의미가 다르다)
+      const center = mode === "area" ? boundsCenter(areaBounds as Bounds) : null;
+      const rank = center
+        ? new Map(matched.map((lib) => [lib.id, haversineKm(center, lib)]))
+        : null;
+      const dist = (lib: (typeof matched)[number]) => rank?.get(lib.id) ?? lib.distanceKm;
+
       // 검색어가 있으면 매칭 강도(이름 > 주소)를 먼저, 같으면 거리순.
       matched.sort((a, b) =>
         needle
-          ? matchRank(a, needle) - matchRank(b, needle) || a.distanceKm - b.distanceKm
-          : a.distanceKm - b.distanceKm,
+          ? matchRank(a, needle) - matchRank(b, needle) || dist(a) - dist(b)
+          : dist(a) - dist(b),
       );
       const list = matched.slice(0, cap);
 
@@ -232,11 +247,14 @@ export default function LibraryMapPage() {
           .filter(Boolean)
           .join(" · ") + " 결과"
       : mode === "area"
-        ? "이 지역의 도서관"
+        ? "이 지도의 도서관"
         : "내 주변 도서관";
+  // 지도 모드의 "가까운"은 화면 중심 기준이라 문구를 달리한다(기준점 기준이 아니다).
   const countNote =
     matchedCount > limit
-      ? `${matchedCount.toLocaleString()}곳 중 가까운 ${limit}곳만 표시`
+      ? mode === "area"
+        ? `${matchedCount.toLocaleString()}곳 중 화면 중심에서 가까운 ${limit}곳만 표시`
+        : `${matchedCount.toLocaleString()}곳 중 가까운 ${limit}곳만 표시`
       : undefined;
 
   return (

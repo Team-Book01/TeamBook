@@ -679,7 +679,7 @@ export function MapPanel({
           disableClickZoom: false,
         });
 
-        // 사용자가 지도를 직접 움직였을 때만 "이 지역에서 검색" 버튼을 띄운다.
+        // 사용자가 지도를 직접 움직였을 때만 "이 지도에서 검색" 버튼을 띄운다.
         kakao.maps.event.addListener(map, "idle", () => {
           if (programmaticRef.current) {
             programmaticRef.current = false; // 우리가 옮긴 것 → 버튼 띄우지 않음
@@ -914,14 +914,14 @@ export function MapPanel({
         </button>
       )}
 
-      {/* "이 지역에서 검색" — 사용자가 지도를 직접 움직였을 때만 노출 */}
+      {/* "이 지도에서 검색" — 사용자가 지도를 직접 움직였을 때만 노출 */}
       {status === "ready" && showAreaButton && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
           <button
             onClick={searchThisArea}
             className="flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-md text-[13px] font-medium text-[#1A1A1A] border border-[#EAEAEA] hover:shadow-lg hover:border-[#C8DDD6] transition-all"
           >
-            <RotateCcw size={13} style={{ color: "#2E7D6B" }} strokeWidth={2} />이 지역에서 검색
+            <RotateCcw size={13} style={{ color: "#2E7D6B" }} strokeWidth={2} />이 지도에서 검색
           </button>
         </div>
       )}
