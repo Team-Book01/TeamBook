@@ -20,7 +20,11 @@ public class LibraryController {
 
   @GetMapping("/{isbn}")
   public ResponseEntity<LibraryListResponse> getLibraryList(@PathVariable("isbn") String isbn,
-  @RequestParam("regionCode") String regionCode) {
-    return ResponseEntity.ok(libraryService.findLibAndBook(isbn, regionCode));
+  @RequestParam("regionCode") String regionCode,
+  @RequestParam(value = "dtlRegion", required = false) String dtlRegion,
+  @RequestParam(value = "pageNo", defaultValue = "1") Integer pageNo,
+  @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize
+) {
+    return ResponseEntity.ok(libraryService.findLibAndBook(isbn, regionCode, dtlRegion, pageNo, pageSize));
   }
 }
