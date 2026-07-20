@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.teambook.panorama.domain.admin.dto.user.UserDetailResponse;
+import com.teambook.panorama.domain.admin.dto.user.UserDetailView;
 import com.teambook.panorama.domain.admin.dto.user.UserProcessRequest;
 import com.teambook.panorama.domain.admin.dto.user.UserResponse;
 import com.teambook.panorama.domain.admin.dto.user.UserSearchRequest;
@@ -41,10 +41,10 @@ public class UserManagerController {
     return ResponseEntity.ok(userService.getUsers(request));
   }
 
-  /** 사용자 - 상세 (프로필 + 받은 신고 수) */
-  @Operation(summary = "사용자 상세 조회", description = "사용자 단건의 프로필과 해당 사용자가 받은 신고 수를 함께 조회한다.")
+  /** 사용자 - 상세 (프로필 + 받은 신고 수 + 관리자 조치 이력) */
+  @Operation(summary = "사용자 상세 조회", description = "사용자 단건의 프로필, 받은 신고 수, 관리자 조치 이력을 함께 조회한다.")
   @GetMapping("/{userId}")
-  public ResponseEntity<UserDetailResponse> getUserDetail(@PathVariable("userId") Long userId) {
+  public ResponseEntity<UserDetailView> getUserDetail(@PathVariable("userId") Long userId) {
     return ResponseEntity.ok(userService.getUserDetail(userId));
   }
 
@@ -57,7 +57,5 @@ public class UserManagerController {
     userService.processUser(userId, request);
     return ResponseEntity.ok().build(); // 처리 후 최신 데이터는 프론트가 재조회
   }
-
-  // 사용자 - 신고 -> 원본 이동 ? (보류: 의미 확정 후 구현)
 
 }

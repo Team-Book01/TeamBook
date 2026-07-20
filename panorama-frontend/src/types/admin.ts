@@ -96,6 +96,19 @@ export interface UserDetailResponse {
   updatedAt: string
 }
 
+/** 관리자 조치 이력 1건 (admin_action_log) */
+export interface AdminActionLogResponse {
+  actionType: 'SUSPEND' | 'ACTIVATE' | 'DELETE'
+  reason: string | null
+  handlerNickname: string | null
+  createdAt: string
+}
+
+export interface UserDetailView {
+  user: UserDetailResponse
+  actionLogs: AdminActionLogResponse[]
+}
+
 export interface UserSearchRequest {
   searchString?: string
   status?: UserStatus

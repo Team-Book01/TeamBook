@@ -1,6 +1,6 @@
 package com.teambook.panorama.domain.admin.service;
 
-import com.teambook.panorama.domain.admin.dto.user.UserDetailResponse;
+import com.teambook.panorama.domain.admin.dto.user.UserDetailView;
 import com.teambook.panorama.domain.admin.dto.user.UserProcessRequest;
 import com.teambook.panorama.domain.admin.dto.user.UserResponse;
 import com.teambook.panorama.domain.admin.dto.user.UserSearchRequest;
@@ -13,7 +13,7 @@ public interface UserManagerService {
 
   PageResponse<UserResponse> getUsers(UserSearchRequest request);
 
-  UserDetailResponse getUserDetail(Long userId);
+  UserDetailView getUserDetail(Long userId);
 
   void processUser(Long userId, UserProcessRequest request);
 }

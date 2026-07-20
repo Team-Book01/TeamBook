@@ -91,6 +91,33 @@
         WHERE u.user_id = #{userId}
     </select>
 
+    <!-- 관리자 조치 이력. admin_action_log 는 대상 단위로 쌓이는데, 사용자는 조치 1건이
+         사용자 1명에 대응해 target_id 로 그대로 읽힌다. (신고는 대상 조치 1건이 신고 N건을
+         종결시켜 행을 짝지을 수 없어 reports.process_reason 을 따로 둔 것이다)
+         handler 는 LEFT JOIN — 조치한 관리자 계정이 지워져도 이력은 남아야 한다. -->
+    <resultMap id="adminActionLogMap"
+               type="com.teambook.panorama.domain.admin.dto.user.AdminActionLogResponse">
+        <constructor>
+            <arg column="action_type"      name="actionType"      javaType="java.lang.String"/>
+            <arg column="reason"           name="reason"          javaType="java.lang.String"/>
+            <arg column="handler_nickname" name="handlerNickname" javaType="java.lang.String"/>
+            <arg column="created_at"       name="createdAt"       javaType="java.time.LocalDateTime"/>
+        </constructor>
+    </resultMap>
+
+    <select id="selectUserActionLogs" resultMap="adminActionLogMap">
+        SELECT
+            l.action_type,
+            l.reason,
+            h.nickname AS handler_nickname,
+            l.created_at
+        FROM admin_action_log l
+        LEFT JOIN users h ON h.user_id = l.user_id
+        WHERE l.target_type = 'USER'
+          AND l.target_id = #{userId}
+        ORDER BY l.created_at DESC, l.admin_action_log_id DESC
+    </select>
+
     <!-- ══════════════ 처리 ══════════════ -->
     <select id="selectUserStatus" resultType="string">
         SELECT status FROM users WHERE user_id = #{userId}

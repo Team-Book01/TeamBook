@@ -18,7 +18,7 @@ import type {
   NoticeCreateRequest,
   NoticeUpdateRequest,
   UserResponse,
-  UserDetailResponse,
+  UserDetailView,
   UserSearchRequest,
   UserProcessRequest,
   CommunityContentResponse,
@@ -143,8 +143,8 @@ export async function getAdminUsers(body: UserSearchRequest = {}): Promise<PageR
   return data
 }
 
-export async function getAdminUser(userId: number): Promise<UserDetailResponse> {
-  const { data } = await client.get<UserDetailResponse>(`/admin/users/${userId}`)
+export async function getAdminUser(userId: number): Promise<UserDetailView> {
+  const { data } = await client.get<UserDetailView>(`/admin/users/${userId}`)
   return data
 }
 

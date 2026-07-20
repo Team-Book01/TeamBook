@@ -6,6 +6,7 @@ import java.util.Optional;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import com.teambook.panorama.domain.admin.dto.user.AdminActionLogResponse;
 import com.teambook.panorama.domain.admin.dto.user.UserDetailResponse;
 import com.teambook.panorama.domain.admin.dto.user.UserResponse;
 import com.teambook.panorama.domain.admin.dto.user.UserSearchRequest;
@@ -23,6 +24,9 @@ public interface UserMapper {
 
   // 상세
   Optional<UserDetailResponse> selectUserDetail(@Param("userId") Long userId);
+
+  /** 이 사용자에 대한 관리자 조치 이력 (최신순) */
+  List<AdminActionLogResponse> selectUserActionLogs(@Param("userId") Long userId);
 
   // 처리
   /** 존재 확인 + 현재 상태 (없으면 empty) */
