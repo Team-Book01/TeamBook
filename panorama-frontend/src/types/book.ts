@@ -163,10 +163,23 @@ export interface MyReviewResponse {
 
 // ── 소장 도서관 ──────────────────────────────────────────────────────────────
 
-/** GET /api/v1/library/{isbn} 요청 쿼리 */
+/**
+ * GET /api/v1/library/{isbn} 요청 쿼리.
+ * 지역은 두 단계로 나뉜다 (원본 도서관정보나루 API 의 region / dtl_region).
+ * @see src/api/regionCodes.ts (시도·시군구 코드 테이블)
+ */
 export interface LibraryParams {
-  /** 지역 코드 (필수) — SEOUL_DISTRICTS 참고. 백엔드 @RequestParam("regionCode") */
+  /** 시도 코드 2자리 (필수, 예: '11' = 서울). 백엔드 @RequestParam("regionCode") */
   regionCode: string
+  /** 시군구 코드 5자리 (선택, 예: '11010' = 종로구). 생략하면 시도 전체 조회 */
+  dtlRegion?: string
+  /**
+   * 페이지 번호 (1부터). 백엔드 기본값도 1이지만, 페이지네이션 상태를 명시적으로
+   * 넘기기 위해 프론트에서는 항상 보낸다.
+   */
+  pageNo: number
+  /** 페이지당 건수 (선택, 백엔드 기본값 10) */
+  pageSize?: number
 }
 
 /** 도서관 1건 (백엔드 LibraryResponseItem) */

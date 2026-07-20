@@ -17,15 +17,6 @@ export interface Book {
   likes: number;
 }
 
-export interface LibraryItem {
-  id: number;
-  name: string;
-  district: string;
-  address: string;
-  available: boolean;
-  total: number;
-  loan: number;
-}
 
 export interface Review {
   id: number;
@@ -88,48 +79,7 @@ export const BOOK_EXTRA: Record<number, { isbn: string; pages: number; category:
   10: { isbn: "978-89-374-4283-9", pages: 280, category: "한국소설", postCount: 42 },
 };
 
-export const SEOUL_DISTRICTS = [
-  "전체", "강남구", "강동구", "강북구", "강서구", "관악구", "광진구", "구로구",
-  "금천구", "노원구", "도봉구", "동대문구", "동작구", "마포구", "서대문구",
-  "서초구", "성동구", "성북구", "송파구", "양천구", "영등포구", "용산구",
-  "은평구", "종로구", "중구", "중랑구",
-];
 
-export const ALL_LIBRARIES: LibraryItem[] = [
-  { id: 1,  name: "국립중앙도서관",          district: "서초구",   address: "반포대로 201",     available: true,  total: 3, loan: 1 },
-  { id: 2,  name: "서울도서관",              district: "중구",     address: "세종대로 110",     available: true,  total: 2, loan: 0 },
-  { id: 3,  name: "강남구립도서관",           district: "강남구",   address: "개포로 617",       available: false, total: 2, loan: 2 },
-  { id: 4,  name: "마포구립도서관",           district: "마포구",   address: "독막로 324",       available: true,  total: 2, loan: 1 },
-  { id: 5,  name: "노원구립도서관",           district: "노원구",   address: "노해로 437",       available: true,  total: 1, loan: 0 },
-  { id: 6,  name: "송파구립도서관",           district: "송파구",   address: "올림픽로 240",     available: false, total: 3, loan: 3 },
-  { id: 7,  name: "성북구립도서관",           district: "성북구",   address: "보문로 168",       available: true,  total: 2, loan: 1 },
-  { id: 8,  name: "은평구립도서관",           district: "은평구",   address: "통일로 1049",      available: true,  total: 1, loan: 0 },
-  { id: 9,  name: "서대문구립도서관",          district: "서대문구", address: "연희로 273",       available: false, total: 2, loan: 2 },
-  { id: 10, name: "동작구립도서관",           district: "동작구",   address: "사당로 83",        available: true,  total: 2, loan: 0 },
-  { id: 11, name: "관악구립도서관",           district: "관악구",   address: "관악로 145",       available: true,  total: 1, loan: 0 },
-  { id: 12, name: "종로구립도서관",           district: "종로구",   address: "율곡로 282",       available: false, total: 2, loan: 2 },
-  { id: 13, name: "광진구립도서관",           district: "광진구",   address: "구천면로 375",     available: true,  total: 2, loan: 1 },
-  { id: 14, name: "중랑구립도서관",           district: "중랑구",   address: "봉화산로 174",     available: true,  total: 1, loan: 0 },
-  { id: 15, name: "강서구립도서관",           district: "강서구",   address: "방화대로 212",     available: false, total: 2, loan: 2 },
-  { id: 16, name: "양천구립도서관",           district: "양천구",   address: "오목로 268",       available: true,  total: 1, loan: 0 },
-  { id: 17, name: "영등포구립도서관",          district: "영등포구", address: "도신로 200",       available: true,  total: 2, loan: 1 },
-  { id: 18, name: "구로구립도서관",           district: "구로구",   address: "구로중앙로 113",   available: false, total: 1, loan: 1 },
-  { id: 19, name: "금천구립도서관",           district: "금천구",   address: "시흥대로 73길 70", available: true,  total: 2, loan: 0 },
-  { id: 20, name: "강북구립도서관",           district: "강북구",   address: "도봉로 348",       available: true,  total: 1, loan: 0 },
-  { id: 21, name: "도봉구립도서관",           district: "도봉구",   address: "마들로 657",       available: false, total: 2, loan: 2 },
-  { id: 22, name: "강동구립도서관",           district: "강동구",   address: "천호대로 1212",    available: true,  total: 2, loan: 1 },
-  { id: 23, name: "성동구립도서관",           district: "성동구",   address: "왕십리로 399",     available: true,  total: 1, loan: 0 },
-  { id: 24, name: "용산구립도서관",           district: "용산구",   address: "한강대로 405",     available: false, total: 2, loan: 2 },
-  { id: 25, name: "동대문구립도서관",          district: "동대문구", address: "무학로 16길 4",    available: true,  total: 1, loan: 0 },
-  { id: 26, name: "서초구립도서관",           district: "서초구",   address: "서초중앙로 96",    available: true,  total: 2, loan: 1 },
-  { id: 27, name: "마포중앙도서관",           district: "마포구",   address: "마포대로 195",     available: false, total: 3, loan: 3 },
-  { id: 28, name: "강남구청 어린이도서관",     district: "강남구",   address: "테헤란로 114",     available: true,  total: 1, loan: 0 },
-  { id: 29, name: "서울시립 어린이도서관",     district: "종로구",   address: "사직로9길 7",      available: true,  total: 2, loan: 1 },
-  { id: 30, name: "국회도서관",               district: "영등포구", address: "의사당대로 1",     available: false, total: 2, loan: 2 },
-  { id: 31, name: "이진아기념도서관",          district: "서대문구", address: "증가로 45",        available: true,  total: 1, loan: 0 },
-  { id: 32, name: "정독도서관",               district: "종로구",   address: "북촌로5길 48",     available: true,  total: 2, loan: 0 },
-  { id: 33, name: "남산도서관",               district: "용산구",   address: "소월로 109",       available: false, total: 1, loan: 1 },
-];
 
 export const SAMPLE_REVIEWS: Review[] = [
   { id: 1,  author: "달빛독서가",    avatar: "달", rating: 5, text: "인생에서 손에 꼽을 만한 독서 경험이었습니다. 마지막 페이지를 덮고 나서도 한참 동안 멍하니 앉아 있었어요. 문장 하나하나가 날카롭게 마음을 파고듭니다.", date: "2024.05.12", likes: 42 },

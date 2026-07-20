@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 
 import type { Library as LibraryType } from "@/types/book";
-import { SEOUL_DISTRICTS, useBookLibraries } from "@/api/book";
+import { DEFAULT_REGION_CODE, REGIONS, getDistricts, useBookLibraries } from "@/api/book";
 import { getErrorMessage } from "@/api/client";
 
 const PER_PAGE = 10;
@@ -97,20 +97,13 @@ function LibraryRow({ lib }: { lib: LibraryType }) {
               {lib.tel}
             </a>
           )}
-          {filled(lib.operatingTime) && (
-            <span className="inline-flex items-center gap-1">
-              <Clock size={10} className="flex-shrink-0" />
-              {lib.operatingTime}
-            </span>
-          )}
+         
         </div>
       </div>
 
       {/* 소장/대출 상태 — 권수가 아니라 상태만 표시 */}
       <div className="flex flex-shrink-0 items-center gap-1.5">
-        <span className={`rounded-md px-1.5 py-0.5 text-[11px] font-bold ${holding.className}`}>
-          {holding.label}
-        </span>
+      
         <span className={`rounded-md px-1.5 py-0.5 text-[11px] font-bold ${loan.className}`}>
           {loan.label}
         </span>
@@ -125,27 +118,49 @@ function LibraryRow({ lib }: { lib: LibraryType }) {
  * (도서관정보나루 API 를 2단계로 타는 무거운 조회라 자동 조회하지 않는다)
  */
 export function LibraryFinder({ isbn }: { isbn: string }) {
-  const [district, setDistrict] = useState<string>(SEOUL_DISTRICTS[0].code);
-  // "찾기" 를 눌러 확정된 지역 코드. null 이면 아직 조회 전.
-  const [submitted, setSubmitted] = useState<string | null>(null);
+  // 지역은 2단계: 시도(regionCode, 필수) → 시군구(dtlRegion, 선택 — 빈 값이면 시도 전체)
+  const [regionCode, setRegionCode] = useState<string>(DEFAULT_REGION_CODE);
+  const [dtlRegion, setDtlRegion] = useState<string>("");
+  // "찾기" 를 눌러 확정된 조회 조건. null 이면 아직 조회 전.
+  const [submitted, setSubmitted] = useState<{
+    regionCode: string;
+    dtlRegion?: string;
+  } | null>(null);
+  // 현재 페이지(1부터). 서버 페이징이라 그대로 pageNo 로 나간다.
   const [page, setPage] = useState(1);
+
+  const districts = getDistricts(regionCode);
 
   const { data, isFetching, isError, error } = useBookLibraries(
     isbn,
-    { regionCode: submitted ?? "" },
+    submitted
+      ? { ...submitted, pageNo: page, pageSize: PER_PAGE }
+      : { regionCode: "", pageNo: 1 },
     { enabled: submitted !== null },
   );
 
+  /** 시도를 바꾸면 이전 시도의 시군구 선택이 남지 않도록 초기화한다. */
+  const handleRegionChange = (code: string) => {
+    setRegionCode(code);
+    setDtlRegion("");
+  };
+
   const handleSearch = () => {
     // GET /api/v1/library/** 는 permitAll — 비로그인도 조회 가능하다.
-    setSubmitted(district);
+    setSubmitted({ regionCode, dtlRegion: dtlRegion || undefined });
     setPage(1);
   };
 
-  const libs = data?.libs ?? [];
-  const total = data?.total ?? libs.length;
-  const totalPages = Math.max(1, Math.ceil(libs.length / PER_PAGE));
-  const paged = libs.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+  // 서버 페이징: libs 는 이미 현재 페이지 분량만 담겨 있으므로 클라이언트에서 자르지 않는다.
+  // total 은 지역 전체 소장 도서관 수(원본 API 의 numFound)라 총 페이지 계산의 기준이 된다.
+  const paged = data?.libs ?? [];
+  const total = data?.total ?? paged.length;
+  const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
+  // 최초 조회 중(이전 데이터 없음)에만 스피너로 목록을 대체한다.
+  const isFirstLoad = submitted !== null && isFetching && data === undefined;
+  // 현재 페이지가 보여주는 구간 (예: 11–20)
+  const rangeStart = (page - 1) * PER_PAGE + 1;
+  const rangeEnd = rangeStart + paged.length - 1;
 
   return (
     <section className="bg-white border border-[#EAEAEA] rounded-2xl overflow-hidden">
@@ -154,14 +169,37 @@ export function LibraryFinder({ isbn }: { isbn: string }) {
         <h2 className="text-[15px] font-bold text-[#1A1A1A]">소장 도서관 찾기</h2>
       </div>
       <div className="p-6">
-        <div className="flex gap-3 mb-4">
-          <div className="relative flex-1 max-w-[280px]">
+        <div className="flex flex-wrap gap-3 mb-4">
+          {/* 시도 (regionCode) */}
+          <div className="relative flex-1 min-w-[150px] max-w-[200px]">
             <select
-              value={district}
-              onChange={(e) => setDistrict(e.target.value)}
+              value={regionCode}
+              onChange={(e) => handleRegionChange(e.target.value)}
+              aria-label="시도 선택"
               className="w-full appearance-none border border-[#EAEAEA] rounded-xl px-4 py-2.5 text-[13px] text-[#1A1A1A] bg-white focus:outline-none focus:border-[#2E7D6B] cursor-pointer"
             >
-              {SEOUL_DISTRICTS.map((d) => (
+              {REGIONS.map((r) => (
+                <option key={r.code} value={r.code}>
+                  {r.fullName}
+                </option>
+              ))}
+            </select>
+            <ChevronDown
+              size={14}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[#aaa] pointer-events-none"
+            />
+          </div>
+
+          {/* 시군구 (dtlRegion) — 빈 값이면 시도 전체 */}
+          <div className="relative flex-1 min-w-[150px] max-w-[220px]">
+            <select
+              value={dtlRegion}
+              onChange={(e) => setDtlRegion(e.target.value)}
+              aria-label="시군구 선택"
+              className="w-full appearance-none border border-[#EAEAEA] rounded-xl px-4 py-2.5 text-[13px] text-[#1A1A1A] bg-white focus:outline-none focus:border-[#2E7D6B] cursor-pointer"
+            >
+              <option value="">전체</option>
+              {districts.map((d) => (
                 <option key={d.code} value={d.code}>
                   {d.name}
                 </option>
@@ -172,6 +210,7 @@ export function LibraryFinder({ isbn }: { isbn: string }) {
               className="absolute right-3 top-1/2 -translate-y-1/2 text-[#aaa] pointer-events-none"
             />
           </div>
+
           <button
             onClick={handleSearch}
             disabled={isFetching}
@@ -188,31 +227,42 @@ export function LibraryFinder({ isbn }: { isbn: string }) {
           </p>
         )}
 
-        {submitted !== null && isFetching && (
+        {/* 최초 조회 로딩 (페이지 이동 시에는 이전 목록을 유지한 채 흐리게 처리) */}
+        {isFirstLoad && (
           <div className="flex justify-center py-8">
             <div className="w-6 h-6 border-2 border-[#2E7D6B] border-t-transparent rounded-full animate-spin" />
           </div>
         )}
 
-        {submitted !== null && !isFetching && isError && (
+        {submitted !== null && !isFirstLoad && isError && (
           <p className="text-center text-[13px] text-rose-500 py-6">
             {getErrorMessage(error, "도서관 정보를 불러오지 못했습니다.")}
           </p>
         )}
 
-        {submitted !== null && !isFetching && !isError && libs.length === 0 && (
+        {submitted !== null && !isFirstLoad && !isError && paged.length === 0 && (
           <p className="text-[13px] text-[#aaa] py-6 text-center">
             해당 지역에 소장된 도서관이 없습니다.
           </p>
         )}
 
-        {submitted !== null && !isFetching && !isError && libs.length > 0 && (
+        {submitted !== null && !isFirstLoad && !isError && paged.length > 0 && (
           <>
             <p className="text-[12px] text-[#aaa] mb-3">
               총 <span className="text-[#2E7D6B] font-bold">{total.toLocaleString()}개</span> 도서관에
               소장
+              {total > paged.length && (
+                <span className="text-[#bbb]">
+                  {" "}
+                  · {rangeStart.toLocaleString()}–{rangeEnd.toLocaleString()} 표시
+                </span>
+              )}
             </p>
-            <div className="flex flex-col divide-y divide-[#F5F5F5]">
+            <div
+              className={`flex flex-col divide-y divide-[#F5F5F5] transition-opacity ${
+                isFetching ? "opacity-50" : ""
+              }`}
+            >
               {paged.map((lib) => (
                 <LibraryRow key={lib.libCode} lib={lib} />
               ))}
