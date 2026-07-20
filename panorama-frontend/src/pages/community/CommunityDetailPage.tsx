@@ -209,6 +209,7 @@ function PostActions({ post }: { post: PostDetail }) {
     <div className="mt-12 pt-8 border-t border-black/[0.07] flex items-center justify-end gap-2.5">
       <button
         onClick={toggleLike}
+        disabled={likeMutation.isPending}
         className="flex items-center gap-2 px-5 py-2.5 rounded-full cursor-pointer transition-all"
         style={{
           border: `1.5px solid ${liked ? '#2E7D6B' : 'rgba(0,0,0,0.12)'}`,
@@ -223,6 +224,7 @@ function PostActions({ post }: { post: PostDetail }) {
 
       <button
         onClick={toggleScrap}
+        disabled={scrapMutation.isPending}
         className="flex items-center gap-2 px-5 py-2.5 rounded-full cursor-pointer transition-all"
         style={{
           border: `1.5px solid ${scrapped ? '#1E4A38' : 'rgba(0,0,0,0.12)'}`,
@@ -620,7 +622,9 @@ export default function CommunityDetailPage() {
   const postId = Number(id)
   const user = useAuthStore((s) => s.user)
 
-  const { data: post, isLoading, isError, error } = usePost(postId)
+  // isLoading 이 아니라 isPending: 세션 복원 대기(enabled:false) 구간에서 isLoading 은 false 라
+  // isLoading 으로 판단하면 부팅 중 잠깐 "불러오지 못했어요" 가 스친다.
+  const { data: post, isPending, isError, error } = usePost(postId)
 
   // 본문은 다른 사용자가 작성한 HTML → sanitize 후 렌더 (이미지 오리진 보정 포함)
   const safeHtml = useMemo(() => (post ? sanitizePostHtml(post.content) : ''), [post])
@@ -638,7 +642,7 @@ export default function CommunityDetailPage() {
         <ChevronRight size={15} style={{ transform: 'rotate(180deg)' }} /> 목록으로
       </button>
 
-      {isLoading ? (
+      {isPending ? (
         <div className="bg-white rounded-2xl border border-[#EAEAEA] p-16 text-center text-sm text-[#ccc]">
           게시글을 불러오는 중…
         </div>

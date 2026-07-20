@@ -12,17 +12,20 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.teambook.panorama.global.exception.BusinessException;
 import com.teambook.panorama.global.exception.ErrorCode;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Service
+@RequiredArgsConstructor
 @Slf4j
 public class BookOcrServiceImpl implements BookOcrService {
 
@@ -32,6 +35,11 @@ public class BookOcrServiceImpl implements BookOcrService {
     // 97[89]로 시작, 하이픈·공백 허용, 숫자 총 13자리 (줄바꿈 허용하지 않음)
     private static final Pattern ISBN_PATTERN =
         Pattern.compile("97[89][- ]?(?:\\d[- ]?){9}\\d");
+
+    // RestClient 빈이 여러 개(data4Library·naver·vision)라 필드명=빈 이름 일치로 선택된다.
+    private final RestClient visionRestClient;
+    // 스프링 부트가 제공하는 ObjectMapper 싱글턴 빈 재사용 (요청마다 new 제거)
+    private final ObjectMapper objectMapper;
 
     @Value("${vision.api.key}")
     private String apiKey;
@@ -73,17 +81,26 @@ public class BookOcrServiceImpl implements BookOcrService {
         );
         Map<String, Object> body = Map.of("requests", List.of(requestBox));
 
-        String response = RestClient.create()
-            .post()
-            .uri("https://vision.googleapis.com/v1/images:annotate?key=" + apiKey)
-            .contentType(MediaType.APPLICATION_JSON)
-            .body(body)
-            .retrieve()
-            .body(String.class);
+        String response;
+        try {
+            response = visionRestClient
+                .post()
+                .uri("/v1/images:annotate?key=" + apiKey)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(body)
+                .retrieve()
+                .body(String.class);
+        } catch (RestClientException e) {
+            // 4xx/5xx(RestClientResponseException)와 타임아웃(ResourceAccessException) 모두 여기로.
+            // 상류 실패는 우리 오류(S001 500)가 아니라 502(OCR002)로 번역.
+            // ⚠️ 예외 메시지·스택에 요청 URI(?key=<API키>)가 실릴 수 있어 클래스명만 로깅한다.
+            log.error("Vision API 호출 실패: {}", e.getClass().getSimpleName());
+            throw new BusinessException(ErrorCode.OCR_UPSTREAM_ERROR);
+        }
 
         String text;
         try {
-            JsonNode root = new ObjectMapper().readTree(response);
+            JsonNode root = objectMapper.readTree(response);
             text = root.path("responses").path(0)
                        .path("textAnnotations").path(0)
                        .path("description").asText();

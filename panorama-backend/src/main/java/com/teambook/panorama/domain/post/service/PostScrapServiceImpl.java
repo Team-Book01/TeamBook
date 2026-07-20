@@ -2,6 +2,7 @@ package com.teambook.panorama.domain.post.service;
 
 import java.util.Optional;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
@@ -29,11 +30,18 @@ public class PostScrapServiceImpl implements PostScrapService {
   public PostScrapResponseDto scrap(Long postId, Long userId) {
     Post post = checkAndGetPost(postId);
 
+    // 1차 방어: 대부분의 중복을 여기서 걸러 409로 답한다.
     if (postScrapRepository.existsByPostAndUserId(post, userId)) {
       throw new BusinessException(ErrorCode.ALREADY_SCRAPPED_POST);
     }
 
-    postScrapRepository.save(PostScrap.builder().post(post).userId(userId).build());
+    // 2차 방어(TOCTOU): 동시 요청이 exists를 함께 통과한 경우
+    // UK_POST_SCRAPS_POST_USER 위반을 이 지점에서 잡아 409(P004)로 번역. (좋아요와 동일 패턴)
+    try {
+      postScrapRepository.saveAndFlush(PostScrap.builder().post(post).userId(userId).build());
+    } catch (DataIntegrityViolationException e) {
+      throw new BusinessException(ErrorCode.ALREADY_SCRAPPED_POST);
+    }
 
     return new PostScrapResponseDto(true);
   }
