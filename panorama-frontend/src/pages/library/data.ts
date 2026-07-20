@@ -104,6 +104,11 @@ export interface Bounds {
   ne: LatLng
 }
 
+// 지도 영역의 중심.
+export function boundsCenter(b: Bounds): LatLng {
+  return { lat: (b.sw.lat + b.ne.lat) / 2, lng: (b.sw.lng + b.ne.lng) / 2 }
+}
+
 // 좌표가 지도 영역 안에 있는지.
 export function inBounds(lat: number, lng: number, b: Bounds): boolean {
   return lat >= b.sw.lat && lat <= b.ne.lat && lng >= b.sw.lng && lng <= b.ne.lng
