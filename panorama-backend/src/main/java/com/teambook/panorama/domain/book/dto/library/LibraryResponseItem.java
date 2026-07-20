@@ -1,9 +1,11 @@
 package com.teambook.panorama.domain.book.dto.library;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import lombok.Builder;
 
 @Builder
-
+@JsonIgnoreProperties(ignoreUnknown=true)
 public record LibraryResponseItem(
   String libCode,
   String libName,
