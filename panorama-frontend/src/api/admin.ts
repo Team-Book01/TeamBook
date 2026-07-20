@@ -16,6 +16,7 @@ import type {
   NoticeDetailResponse,
   NoticeSearchRequest,
   NoticeCreateRequest,
+  NoticeImageResponse,
   NoticeUpdateRequest,
   UserResponse,
   UserDetailView,
@@ -184,6 +185,19 @@ export async function getAdminReports(body: ReportSearchRequest = {}): Promise<P
 
 export async function getAdminReport(reportId: number): Promise<ReportDetailResponse> {
   const { data } = await client.get<ReportDetailResponse>(`/admin/reports/${reportId}`)
+  return data
+}
+
+/**
+ * 공지 본문 이미지 업로드. 게시글의 /posts/images 와 달리 /admin 아래라 ADMIN 권한이 필요하다.
+ * 공지를 저장하기 전에 호출되므로 서버에는 소유자 없는 이미지로 들어간다.
+ */
+export async function uploadNoticeImages(files: File[] | Blob[]): Promise<NoticeImageResponse[]> {
+  const form = new FormData()
+  files.forEach(file => form.append('images', file))
+  const { data } = await client.post<NoticeImageResponse[]>('/admin/notices/images', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
   return data
 }
 

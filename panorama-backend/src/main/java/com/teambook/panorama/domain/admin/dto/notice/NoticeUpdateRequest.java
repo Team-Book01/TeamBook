@@ -2,6 +2,8 @@ package com.teambook.panorama.domain.admin.dto.notice;
 
 import com.teambook.panorama.domain.admin.entity.type.NoticeCategory;
 
+import java.util.List;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -30,7 +32,11 @@ public record NoticeUpdateRequest(
     boolean pinned,
 
     @Schema(description = "중요 공지 여부", example = "false")
-    boolean important
+    boolean important,
+
+    // 이번 수정에서 새로 올린 이미지들만 담는다. 기존에 이미 연결된 이미지는 보낼 필요가 없다.
+    @Schema(description = "이번 수정에서 새로 추가된 이미지 키 목록")
+    List<String> imageKeys
 
     // @Schema(description = "게시 여부", example = "true")
     // boolean published

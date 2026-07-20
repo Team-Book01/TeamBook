@@ -49,12 +49,12 @@ export default function AdminNoticesPage() {
     if (drawer?.mode === 'create') {
       if (me?.id == null) return
       createMut.mutate(
-        { userId: me.id, category: f.category, title: f.title, content: f.content, pinned: f.pinned, important: f.important, status: 'ACTIVE' as NoticeStatus },
+        { userId: me.id, category: f.category, title: f.title, content: f.content, pinned: f.pinned, important: f.important, status: 'ACTIVE' as NoticeStatus, imageKeys: f.imageKeys },
         { onSuccess: () => setDrawer(null) },
       )
     } else if (drawer?.mode === 'edit' && drawer.noticeId != null) {
       updateMut.mutate(
-        { noticeId: drawer.noticeId, body: { category: f.category, title: f.title, content: f.content, pinned: f.pinned, important: f.important } },
+        { noticeId: drawer.noticeId, body: { category: f.category, title: f.title, content: f.content, pinned: f.pinned, important: f.important, imageKeys: f.imageKeys } },
         { onSuccess: () => setDrawer(null) },
       )
     }

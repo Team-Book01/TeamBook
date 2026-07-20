@@ -11,6 +11,8 @@ import com.teambook.panorama.domain.admin.dto.notice.NoticeResponse;
 import com.teambook.panorama.domain.admin.dto.notice.NoticeSearchRequest;
 import com.teambook.panorama.domain.admin.dto.notice.NoticeUpdateRequest;
 import com.teambook.panorama.domain.admin.entity.Notice;
+import com.teambook.panorama.domain.admin.entity.NoticeImage;
+import com.teambook.panorama.domain.admin.repository.NoticeImageRepository;
 import com.teambook.panorama.domain.admin.repository.NoticeMapper;
 import com.teambook.panorama.domain.admin.repository.NoticeRepository;
 import com.teambook.panorama.global.exception.BusinessException;
@@ -26,13 +28,37 @@ public class NoticeServiceImpl implements NoticeService {
 
   private final NoticeRepository noticeRepository; // 작성/수정 (JPA)
   private final NoticeMapper noticeMapper; // 조회-목록(+검색)/상세 (MyBatis)
+  private final NoticeImageRepository noticeImageRepository; // 본문 이미지 소유자 연결 (JPA)
 
   @Override
   @Transactional
   public NoticeResponse saveNotice(NoticeCreateRequest request) {
     Notice notice = noticeRepository.save(request.toEntity());
+    attachImages(notice, request.imageKeys());
     NoticeResponse response = NoticeResponse.from(notice);
     return response;
+  }
+
+  /**
+   * 에디터가 먼저 올려둔 이미지(notice_id = null)에 소유자를 채운다.
+   *
+   * <p>이 단계가 없으면 이미지가 계속 소유자 없는 상태로 남아, 고아 이미지 정리 배치가
+   * 도는 순간 본문에서 사라진다.</p>
+   *
+   * <p>키 개수가 맞지 않으면 실패시킨다. 없는 키를 조용히 넘기면 본문에는 이미지가 보이는데
+   * DB 에는 연결 기록이 없는 상태가 되어, 나중에 원인을 찾기 어렵다.</p>
+   */
+  private void attachImages(Notice notice, List<String> imageKeys) {
+    if (imageKeys == null || imageKeys.isEmpty()) {
+      return;
+    }
+    List<NoticeImage> images = noticeImageRepository.findByImageKeyIn(imageKeys);
+    if (images.size() != imageKeys.size()) {
+      throw new BusinessException(ErrorCode.IMAGE_NOT_FOUND);
+    }
+    for (NoticeImage image : images) {
+      image.attachTo(notice);
+    }
   }
 
   @Override
@@ -61,6 +87,7 @@ public class NoticeServiceImpl implements NoticeService {
         .orElseThrow(() -> new BusinessException(ErrorCode.NOTICE_NOT_FOUND));
     notice.update(request.category(), request.title(), request.content(),
         request.pinned(), request.important());
+    attachImages(notice, request.imageKeys());   // 이번 수정에서 새로 올린 이미지 연결
     noticeRepository.flush();   // 재조회 전 UPDATE를 DB에 반영
 
     return noticeMapper.selectNoticeDetail(noticeId)

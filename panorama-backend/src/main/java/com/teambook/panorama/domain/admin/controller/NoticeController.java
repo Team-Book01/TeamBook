@@ -1,5 +1,7 @@
 package com.teambook.panorama.domain.admin.controller;
 
+import java.util.List;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -10,13 +12,17 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.teambook.panorama.domain.admin.dto.notice.NoticeCreateRequest;
 import com.teambook.panorama.domain.admin.dto.notice.NoticeDetailResponse;
+import com.teambook.panorama.domain.admin.dto.notice.NoticeImageResponse;
 import com.teambook.panorama.domain.admin.dto.notice.NoticeResponse;
 import com.teambook.panorama.domain.admin.dto.notice.NoticeSearchRequest;
 import com.teambook.panorama.domain.admin.dto.notice.NoticeUpdateRequest;
+import com.teambook.panorama.domain.admin.service.NoticeImageService;
 import com.teambook.panorama.domain.admin.service.NoticeService;
 import com.teambook.panorama.global.response.PageResponse;
 
@@ -33,6 +39,21 @@ import lombok.extern.slf4j.Slf4j;
 public class NoticeController {
 
   private final NoticeService noticeService;
+  private final NoticeImageService noticeImageService;
+
+  /**
+   * 공지 본문 이미지 업로드. 에디터가 공지 저장 전에 호출하므로 아직 소유자가 없는 이미지로 들어간다.
+   *
+   * <p>게시글의 /posts/images 와 달리 이 경로는 /api/v1/admin/** 아래에 있어
+   * SecurityConfig 의 hasRole("ADMIN") 이 그대로 적용된다. 인가를 따로 코딩하지 않기 위해
+   * 범용 업로드로 합치지 않고 도메인별로 나눠 둔다.</p>
+   */
+  @Operation(summary = "공지 이미지 업로드", description = "공지 본문에 삽입할 이미지를 업로드하고 URL 을 반환한다.")
+  @PostMapping("/images")
+  public ResponseEntity<List<NoticeImageResponse>> uploadImages(
+      @RequestPart("images") List<MultipartFile> files) {
+    return ResponseEntity.status(HttpStatus.CREATED).body(noticeImageService.uploadImages(files));
+  }
 
   @Operation(summary = "공지 작성", description = "새 공지사항을 등록하고 생성된 공지를 반환한다.")
   @PostMapping

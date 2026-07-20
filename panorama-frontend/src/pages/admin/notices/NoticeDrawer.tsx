@@ -1,6 +1,13 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import type { RefObject } from 'react'
+import type Editor from '@toast-ui/editor'
 import { X, Pin } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { getErrorMessage } from '@/api/client'
+import { uploadNoticeImages } from '@/api/admin'
+import { toApiImageUrl } from '@/api/community'
+import { sanitizePostHtml } from '@/pages/community/utils'
+import ToastEditor from '@/pages/community/components/ToastEditor'
 import type { NoticeCategory, NoticeDetailResponse } from '@/types/admin'
 import { NOTICE_CATEGORY_BADGE, NOTICE_CATEGORY_OPTIONS, NOTICE_STATUS_META, formatDate } from './noticeMeta'
 import AdminSelect from '@/components/admin/AdminSelect'
@@ -11,6 +18,8 @@ export interface NoticeForm {
   content: string
   pinned: boolean
   important: boolean
+  /** 이 편집 세션에서 업로드한 이미지 키. 저장 시 서버가 소유자를 연결한다. */
+  imageKeys: string[]
 }
 
 interface Props {
@@ -31,9 +40,12 @@ export default function NoticeDrawer({ mode, detail, loading, submitting, submit
     content: '',
     pinned: false,
     important: false,
+    imageKeys: [],
   })
 
   useEffect(() => {
+    // 편집 대상이 바뀌면 이전 세션에서 모은 키를 버린다 — 다른 공지에 붙이려 하면 409 가 난다.
+    imageKeysRef.current = []
     if (mode !== 'create' && detail) {
       setForm({
         category: detail.category,
@@ -41,13 +53,27 @@ export default function NoticeDrawer({ mode, detail, loading, submitting, submit
         content: detail.content,
         pinned: detail.pinned,
         important: detail.important,
+        imageKeys: [],   // 기존 이미지는 이미 연결돼 있다. 이번에 새로 올린 것만 모은다.
       })
     } else if (mode === 'create') {
-      setForm({ category: 'GENERAL', title: '', content: '', pinned: false, important: false })
+      setForm({ category: 'GENERAL', title: '', content: '', pinned: false, important: false, imageKeys: [] })
     }
   }, [mode, detail])
 
   const isView = mode === 'view'
+  const editorRef = useRef<Editor>(null)
+  // 업로드 훅은 에디터 마운트 시 클로저가 고정되어 setForm 을 쓰면 오래된 form 을 본다.
+  // 키는 ref 에 모으고 저장 시점에 한 번에 읽는다.
+  const imageKeysRef = useRef<string[]>([])
+
+  // 본문은 에디터가 들고 있으므로 저장 시점에 꺼내 온다. 에디터가 아직 없으면(뷰 모드 등)
+  // form 값을 그대로 쓴다.
+  const handleSubmit = () =>
+    onSubmit({
+      ...form,
+      content: editorRef.current?.getHTML() ?? form.content,
+      imageKeys: imageKeysRef.current,
+    })
 
   return (
     <>
@@ -85,7 +111,15 @@ export default function NoticeDrawer({ mode, detail, loading, submitting, submit
               <ViewContent detail={detail} />
             )
           ) : (
-            <EditForm form={form} setForm={setForm} />
+            // 에디터는 마운트 시 initialHtml 을 한 번만 읽는다. 상세를 불러오기 전에 마운트되면
+            // 빈 본문으로 굳으므로, 대상이 바뀔 때 key 로 리마운트시킨다.
+            <EditForm
+              key={`${mode}-${detail?.noticeId ?? 'new'}`}
+              form={form}
+              setForm={setForm}
+              editorRef={editorRef}
+              onImageUploaded={key => imageKeysRef.current.push(key)}
+            />
           )}
         </div>
 
@@ -102,7 +136,7 @@ export default function NoticeDrawer({ mode, detail, loading, submitting, submit
           ) : (
             <>
               <button
-                onClick={() => onSubmit(form)}
+                onClick={handleSubmit}
                 disabled={submitting || !form.title.trim()}
                 className="w-full py-2.5 bg-admin text-white rounded-lg font-bold text-sm hover:bg-admin-hover transition-colors disabled:opacity-50"
               >
@@ -143,13 +177,22 @@ function ViewContent({ detail }: { detail: NoticeDetailResponse }) {
         ))}
       </div>
       <div className="border-t border-border pt-4">
-        <div className="text-[#374151] text-sm leading-[1.8] whitespace-pre-wrap">{detail.content}</div>
+        {/* 에디터가 만든 HTML. 관리자가 쓴 글이지만 계정 탈취 시 모든 사용자가 보는 화면이라
+            게시글과 같은 sanitize 를 거친다. */}
+        <div
+          className="text-[#374151] text-sm leading-[1.8] break-words
+            [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg [&_img]:my-2 [&_p]:my-1"
+          dangerouslySetInnerHTML={{ __html: sanitizePostHtml(detail.content) }}
+        />
       </div>
     </div>
   )
 }
 
-function EditForm({ form, setForm }: { form: NoticeForm; setForm: (f: NoticeForm) => void }) {
+function EditForm({ form, setForm, editorRef, onImageUploaded }: {
+  form: NoticeForm; setForm: (f: NoticeForm) => void; editorRef: RefObject<Editor | null>
+  onImageUploaded: (imageKey: string) => void
+}) {
   const fieldCls =
     'w-full px-3 py-2.5 rounded-lg border-[1.5px] border-border text-sm text-foreground bg-white outline-none focus:border-admin'
   const labelCls = 'block text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-[0.03em]'
@@ -183,11 +226,22 @@ function EditForm({ form, setForm }: { form: NoticeForm; setForm: (f: NoticeForm
       </div>
       <div>
         <label className={labelCls}>본문</label>
-        <textarea
-          className="w-full min-h-[200px] px-3 py-2.5 rounded-lg border-[1.5px] border-border text-sm text-foreground bg-white resize-y outline-none focus:border-admin leading-[1.7]"
-          placeholder="공지 내용을 입력하세요..."
-          value={form.content}
-          onChange={e => setForm({ ...form, content: e.target.value })}
+        {/* 게시글과 같은 에디터. 본문은 여기서 state 로 동기화하지 않고 저장 시 getHTML() 로 읽는다
+            (Toast UI 는 비제어 컴포넌트라 매 입력마다 state 를 갱신하면 IME 조합이 깨진다). */}
+        <ToastEditor
+          editorRef={editorRef}
+          initialHtml={form.content}
+          placeholder="공지 내용을 입력하세요"
+          height="360px"
+          onImageUpload={async (blob, callback) => {
+            try {
+              const [image] = await uploadNoticeImages([blob as File])
+              onImageUploaded(image.imageKey)   // 저장 시 공지에 연결할 키
+              callback(toApiImageUrl(image.imageUrl), 'image')
+            } catch (e) {
+              alert(getErrorMessage(e, '이미지 업로드에 실패했습니다.'))
+            }
+          }}
         />
       </div>
       <div className="flex flex-col gap-3">

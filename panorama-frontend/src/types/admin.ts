@@ -341,6 +341,12 @@ export interface NoticeDetailResponse {
   updatedAt: string
 }
 
+/** 공지 본문 이미지 업로드 응답 */
+export interface NoticeImageResponse {
+  imageKey: string
+  imageUrl: string
+}
+
 export interface NoticeSearchRequest {
   searchString?: string
   category?: NoticeCategory
@@ -358,6 +364,8 @@ export interface NoticeCreateRequest {
   important?: boolean
   viewCount?: number
   status?: NoticeStatus
+  /** 에디터가 미리 올려둔 본문 이미지 키. 이 요청으로 소유자가 정해진다. */
+  imageKeys?: string[]
 }
 
 export interface NoticeUpdateRequest {
@@ -366,6 +374,8 @@ export interface NoticeUpdateRequest {
   content?: string
   pinned?: boolean
   important?: boolean
+  /** 이번 수정에서 새로 올린 이미지 키만. 기존에 연결된 건 보내지 않는다. */
+  imageKeys?: string[]
 }
 
 // ── 도서관 동기화 ────────────────────────────────────────────────────────────
