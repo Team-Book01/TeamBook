@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Search, Send, Trash2, Image as ImageIcon, AlertCircle, Inbox, Paperclip } from 'lucide-react'
+import { Search, Send, Trash2, AlertCircle, Inbox, Paperclip } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/authStore'
 import { getErrorMessage } from '@/api/client'
+import { toApiImageUrl } from '@/api/community'
 import { useAdminInquiries, useAdminInquiry, useAnswerInquiry, useUpdateInquiryStatus } from '@/api/admin'
 import DetailDrawer from '@/components/admin/DetailDrawer'
 import AdminSelect from '@/components/admin/AdminSelect'
@@ -94,10 +95,13 @@ function InquiryDetailDrawer({ inquiryId, onClose }: { inquiryId: number; onClos
             <section>
               <p className="text-[10.5px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">첨부 이미지 ({inquiry.images.length})</p>
               <div className="flex gap-2 flex-wrap">
+                {/* imageUrl 은 서버(8080) 오리진 기준 상대경로라, 커뮤니티·공지와 같은 방식으로
+                    절대 URL 로 보정해야 img 태그가 그린다. 원본은 새 탭에서 크게 확인. */}
                 {inquiry.images.map(img => (
-                  <div key={img.inquiryImageId} title={img.originalFileName} className="w-20 h-20 rounded-xl border border-gray-200 bg-gray-100 flex items-center justify-center">
-                    <ImageIcon className="w-6 h-6 text-gray-300" />
-                  </div>
+                  <a key={img.inquiryImageId} href={toApiImageUrl(img.imageUrl)} target="_blank" rel="noopener noreferrer"
+                    title={img.originalFileName} className="block w-20 h-20 rounded-xl border border-gray-200 overflow-hidden bg-gray-100 hover:opacity-80 transition-opacity">
+                    <img src={toApiImageUrl(img.imageUrl)} alt={img.originalFileName} className="w-full h-full object-cover" />
+                  </a>
                 ))}
               </div>
             </section>

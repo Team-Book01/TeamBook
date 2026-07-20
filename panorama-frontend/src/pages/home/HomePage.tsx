@@ -18,14 +18,29 @@ import {
 } from './data'
 import type { TabKey } from './data'
 import { cn } from '@/lib/utils'
+import { useAuthStore } from '@/store/authStore'
+import InquiryModal from './components/InquiryModal'
 
 export default function HomePage() {
   const navigate = useNavigate()
+  const user = useAuthStore(s => s.user)
   const [searchMode, setSearchMode] = useState<'제목' | '저자'>('제목')
   const [query, setQuery] = useState('')
   const [activeTab, setActiveTab] = useState<TabKey>('전체')
   const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [inquiryOpen, setInquiryOpen] = useState(false)
   const carouselRef = useRef<HTMLDivElement>(null)
+
+  // 홈은 비로그인도 볼 수 있는 화면이라, 문의 팝업을 열기 전에 로그인 여부를 직접 확인해야 한다
+  // (글쓰기처럼 라우트 가드 뒤에 있는 화면이 아니다).
+  const openInquiry = () => {
+    if (!user) {
+      alert('로그인이 필요합니다.')
+      navigate('/login')
+      return
+    }
+    setInquiryOpen(true)
+  }
 
   // 검색 실행 → 검색 결과 페이지(/books?q=)로 이동
   const handleSearch = () => {
@@ -92,6 +107,9 @@ export default function HomePage() {
             {QUICK_LINKS.map(({ label, icon: Icon }) => (
               <button
                 key={label}
+                // 지금은 '문의 게시판'만 실제 동작이 있다. 나머지는 아직 목업 데이터라
+                // 연결할 실제 화면이 없어 그대로 둔다.
+                onClick={label === '문의 게시판' ? openInquiry : undefined}
                 className="flex flex-col items-center gap-1.5 group cursor-pointer"
               >
                 <div
@@ -331,6 +349,7 @@ export default function HomePage() {
           </section>
         </div>
       </main>
+      {inquiryOpen && <InquiryModal onClose={() => setInquiryOpen(false)} />}
     </div>
   )
 }
