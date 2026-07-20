@@ -3,6 +3,7 @@ package com.teambook.panorama.domain.post.service;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 
+import com.teambook.panorama.domain.post.dto.MyPageStatsResponseDto;
 import com.teambook.panorama.domain.post.dto.PostDetailResponseDto;
 import com.teambook.panorama.domain.post.dto.PostRequestDto;
 import com.teambook.panorama.domain.post.dto.PostResponseDto;
@@ -22,4 +23,8 @@ public interface PostService {
   void deletePost(Long postId, Long userId);
 
   Slice<PostSummaryResponseDto> findPopularPosts(Pageable pageable);
+
+  Slice<PostSummaryResponseDto> findMyPosts(Long userId, Pageable pageable);
+
+  MyPageStatsResponseDto findMyStats(Long userId);
 }
