@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.teambook.panorama.domain.book.client.NaverBookClient;
 import com.teambook.panorama.domain.book.dto.naver.NaverBookItem;
+import com.teambook.panorama.domain.book.dto.naver.NaverBookResponse;
 import com.teambook.panorama.domain.book.dto.review.MyReviewItem;
 import com.teambook.panorama.domain.book.dto.review.MyReviewResponse;
 import com.teambook.panorama.domain.book.dto.review.ReviewItem;
@@ -78,7 +79,9 @@ public class ReviewService {
   public ReviewItem saveReview(ReviewRequest request, String isbn, Long userId) {
     //책DB있는지부터 조회 -> 생성 //예외 수정 필요
     Book book = bookRepository.findByIsbn(isbn).orElseGet(() -> {
-      NaverBookItem naverBookItem = naverBookClient.search(isbn, 1, 1, "sim").items().getFirst();
+      NaverBookResponse response = naverBookClient.search(isbn, 1, 1, "sim");
+      if (response.items().isEmpty()) throw new BusinessException(ErrorCode.BOOK_NOT_FOUND);
+      NaverBookItem naverBookItem = response.items().getFirst();
       return
       bookRepository.save(Book.builder()
       .author(naverBookItem.author())

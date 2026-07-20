@@ -30,6 +30,29 @@ import type {
   ReviewListResponse,
   UpdateReviewRequest,
 } from '@/types/book'
+import { useAuthStore } from '@/store/authStore'
+
+// ── 인증 확정 대기 ───────────────────────────────────────────────────────────
+/**
+ * 세션 복원(useAuthBootstrap)이 끝났는지 여부. 응답이 사용자에 따라 달라지는
+ * 쿼리는 이 값이 true 가 되기 전에는 요청하지 않는다.
+ *
+ * 왜 필요한가:
+ * /books/** 는 permitAll 이라 토큰 없이도 200 이 내려온다. 다만 그때는
+ * isBookmarked 가 항상 false 다. 새로고침 직후에는 access 토큰이 메모리에만
+ * 있어(XSS 방지) reissue 로 다시 받아야 하는데, 그걸 기다리지 않고 요청하면
+ * "비로그인 응답" 이 캐시에 남아 북마크 하트가 하얗게 보인다.
+ *
+ * 나중에 invalidate 로 고치는 방식은 경쟁 조건이 있다. 토큰이 도착한 순간
+ * 그 요청이 아직 in-flight 면 invalidateQueries 는 isInvalidated 만 켜고
+ * 재요청을 걸지 않아, 뒤늦게 도착한 비로그인 응답이 그대로 남는다.
+ * → 아예 인증이 확정된 뒤에 한 번만 요청해서 경쟁 자체를 없앤다.
+ *
+ * 비로그인 사용자도 reissue 가 401 로 빠르게 끝나므로 지연은 한 번의 왕복뿐이다.
+ */
+function useAuthReady(): boolean {
+  return useAuthStore((s) => s.authReady)
+}
 
 // ── isbn 유효성 ──────────────────────────────────────────────────────────────
 /**
@@ -254,6 +277,7 @@ export function findBookInSearchCache(
  */
 export function useBookSearch(params: BookSearchParams) {
   const display = params.display ?? BOOK_SEARCH_DISPLAY
+  const authReady = useAuthReady()
   return useInfiniteQuery({
     queryKey: bookKeys.search(params),
     queryFn: ({ pageParam }) => searchBooks({ ...params, start: pageParam, display }),
@@ -263,7 +287,8 @@ export function useBookSearch(params: BookSearchParams) {
       return nextStart <= lastPage.total ? nextStart : undefined
     },
     // keyword 가 있을 때만 실행 (빈 검색어로 요청 방지)
-    enabled: params.keyword.trim().length > 0,
+    // + 세션 복원 전에는 대기 → isBookmarked 가 비로그인 값으로 굳는 것 방지
+    enabled: params.keyword.trim().length > 0 && authReady,
   })
 }
 
@@ -280,10 +305,12 @@ export function useBookSearch(params: BookSearchParams) {
 export function useBook(isbn: string) {
   const queryClient = useQueryClient()
   const cached = findBookInSearchCache(queryClient, isbn)
+  const authReady = useAuthReady()
   return useQuery({
     queryKey: bookKeys.detail(isbn),
     queryFn: () => getBook(isbn),
-    enabled: hasIsbn(isbn),
+    // 세션 복원 전에는 대기 (useAuthReady 주석 참고)
+    enabled: hasIsbn(isbn) && authReady,
     initialData: cached?.data,
     initialDataUpdatedAt: cached?.updatedAt,
   })
@@ -291,11 +318,13 @@ export function useBook(isbn: string) {
 
 /** 리뷰 목록 (page/size 페이지네이션) */
 export function useBookReviews(isbn: string, page = 1, size = 10) {
+  const authReady = useAuthReady()
   return useQuery({
     queryKey: bookKeys.reviews(isbn, page, size),
     queryFn: () => getReviews(isbn, page, size),
     // isbn 이 빈 값/누락(null)이어도 렌더 중 터지지 않도록 방어적으로 체크
-    enabled: hasIsbn(isbn),
+    // + isMine 이 비로그인 값으로 굳지 않도록 세션 복원을 기다린다
+    enabled: hasIsbn(isbn) && authReady,
   })
 }
 

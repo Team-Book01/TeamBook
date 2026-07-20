@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { BookOpen, Search, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/authStore'
@@ -29,8 +29,22 @@ const NAV_ITEMS = [
 export default function Header() {
   const location = useLocation()
   const navigate = useNavigate()
-  const [query, setQuery] = useState('')
+  const [searchParams] = useSearchParams()
+  // 검색 결과 화면의 실제 검색어(URL ?q=)를 단일 기준으로 삼는다.
+  const urlQuery = searchParams.get('q') ?? ''
+  const [query, setQuery] = useState(urlQuery)
   const [focused, setFocused] = useState(false)
+
+  // Header 는 Layout 아래에 한 번만 마운트돼 페이지를 옮겨도 state 가 남는다.
+  // 그래서 URL 의 q 가 바뀌어도(홈에서 재검색, 저자명 클릭, 뒤로/앞으로 가기)
+  // 입력창은 이전 검색어를 그대로 들고 있어 결과와 어긋났다.
+  // → q 가 바뀌면 입력창을 URL 기준으로 되맞춘다.
+  //   (effect 대신 렌더 중 조정 — 어긋난 값이 한 프레임 그려지지 않는다)
+  const [syncedQuery, setSyncedQuery] = useState(urlQuery)
+  if (syncedQuery !== urlQuery) {
+    setSyncedQuery(urlQuery)
+    setQuery(urlQuery)
+  }
   const isHome = location.pathname === '/'
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   // 부팅 시 세션 복원(reissue)이 끝났는지. false 인 동안은 로그인/마이페이지 판단을 보류해

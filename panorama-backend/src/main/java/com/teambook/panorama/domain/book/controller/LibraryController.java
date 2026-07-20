@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.RestController;
 import com.teambook.panorama.domain.book.dto.library.LibraryListResponse;
 import com.teambook.panorama.domain.book.service.LibraryService;
 
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -22,8 +24,8 @@ public class LibraryController {
   public ResponseEntity<LibraryListResponse> getLibraryList(@PathVariable("isbn") String isbn,
   @RequestParam("regionCode") String regionCode,
   @RequestParam(value = "dtlRegion", required = false) String dtlRegion,
-  @RequestParam(value = "pageNo", defaultValue = "1") Integer pageNo,
-  @RequestParam(value = "pageSize", defaultValue = "10") Integer pageSize
+  @RequestParam(value = "pageNo", defaultValue = "1") @Min(0) Integer pageNo,
+  @RequestParam(value = "pageSize", defaultValue = "10") @Min(1) @Max(10) Integer pageSize
 ) {
     return ResponseEntity.ok(libraryService.findLibAndBook(isbn, regionCode, dtlRegion, pageNo, pageSize));
   }
