@@ -47,6 +47,11 @@ public record ReportCore(
     @Schema(description = "처리 일시. 미처리면 null", example = "2026-07-10T16:00:00")
     LocalDateTime processedAt,
 
+    // 신고자가 고른 reasonType 과 혼동하지 말 것. 이쪽은 관리자가 처리하며 남긴 사유다.
+    @Schema(description = "관리자가 남긴 처리 사유. 미처리거나 사유 없이 처리했으면 null",
+        example = "욕설이 반복 확인되어 삭제 처리했습니다.")
+    String processReason,
+
     @Schema(description = "신고 일시", example = "2026-07-10T14:30:00")
     LocalDateTime createdAt,
 

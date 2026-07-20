@@ -176,6 +176,8 @@ export interface ReportCore {
   handlerUserId: number | null
   handlerNickname: string | null
   processedAt: string | null
+  /** 관리자가 남긴 처리 사유. 신고자가 고른 reasonType 과 다르다. */
+  processReason: string | null
   createdAt: string
   updatedAt: string
 }

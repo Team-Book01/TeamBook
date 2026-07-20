@@ -112,6 +112,7 @@
             <arg    column="handler_user_id"   name="handlerUserId"    javaType="java.lang.Long"/>
             <arg    column="handler_nickname"  name="handlerNickname"  javaType="java.lang.String"/>
             <arg    column="processed_at"      name="processedAt"      javaType="java.time.LocalDateTime"/>
+            <arg    column="process_reason"    name="processReason"    javaType="java.lang.String"/>
             <arg    column="created_at"        name="createdAt"        javaType="java.time.LocalDateTime"/>
             <arg    column="updated_at"        name="updatedAt"        javaType="java.time.LocalDateTime"/>
         </constructor>
@@ -130,6 +131,7 @@
             r.handler_user_id,
             hu.nickname AS handler_nickname,
             r.processed_at,
+            r.process_reason,
             r.created_at,
             r.updated_at
         FROM reports r
@@ -259,11 +261,14 @@
     </update>
 
     <!-- 같은 대상의 미처리 신고를 모두 RESOLVED (유령 신고 방지) — §8 sanctioned 벌크 -->
+    <!-- process_reason 도 함께 찍는다. 연쇄 종결되는 신고들은 같은 조치·같은 사유로 끝난 것이라
+         handler_user_id/processed_at 과 동일하게 전 행에 같은 값이 들어가는 게 맞다. -->
     <update id="resolveReportsByTarget">
         UPDATE reports
         SET status = 'RESOLVED',
             handler_user_id = #{handlerUserId},
             processed_at = #{processedAt},
+            process_reason = #{processReason},
             updated_at = #{processedAt}
         WHERE target_type = #{targetType}
           AND target_id = #{targetId}

@@ -139,6 +139,22 @@ function DetailPanel({ reportId, onClose }: { reportId: number; onClose: () => v
                 </div>
               )}
 
+              {/* 처리 내역 — 이미 처리된 신고에만. 누가·언제·왜를 한자리에 보여준다.
+                  (사유는 대상 단위라, 같은 대상의 다른 신고가 처리되면서 함께 종결된 건도 같은 값이 보인다) */}
+              {core.processedAt && (
+                <div className="px-6 mb-5">
+                  <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-2">처리 내역</div>
+                  <div className="rounded-xl border border-gray-100 bg-gray-50 p-3.5">
+                    <div className="flex items-center gap-3 text-[10px] text-muted-foreground mb-2">
+                      <span>처리자: {core.handlerNickname ?? '-'}</span><span>·</span><span>{fmt(core.processedAt)}</span>
+                    </div>
+                    <p className="text-xs text-gray-700 leading-relaxed whitespace-pre-wrap">
+                      {core.processReason || <span className="text-muted-foreground">(처리 사유 없음)</span>}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* 처리 */}
               <div className="px-6 mb-8">
                 <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-3">처리</div>

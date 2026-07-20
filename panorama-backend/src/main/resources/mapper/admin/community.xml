@@ -191,6 +191,9 @@
     </update>
 
     <!-- 같은 대상의 미처리 신고를 모두 RESOLVED (신고 처리 플로우와 동일) -->
+    <!-- process_reason 은 여기서 채우지 않는다. 이 화면에서 관리자가 적는 사유는
+         "콘텐츠를 왜 조치했나"라 신고 처리 사유와 층위가 다르다. 그래서 report.xml 의
+         같은 이름 statement 와 달리 이쪽은 신고 상태만 종결시킨다. -->
     <update id="resolveReportsByTarget">
         UPDATE reports
         SET status = 'RESOLVED',
