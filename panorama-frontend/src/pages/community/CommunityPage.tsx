@@ -270,7 +270,7 @@ export default function CommunityPage() {
           <span className="font-bold" style={{ color: '#2E7D6B' }}>
             {posts.length}
           </span>
-          개{isPopularTab && <span className="ml-1.5 text-[#ccc]"></span>}
+          개
         </p>
       </div>
 
