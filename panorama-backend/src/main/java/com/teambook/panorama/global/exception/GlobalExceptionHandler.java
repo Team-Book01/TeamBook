@@ -2,6 +2,7 @@ package com.teambook.panorama.global.exception;
 
 import java.util.List;
 
+import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -71,12 +72,20 @@ public class GlobalExceptionHandler {
     return new ResponseEntity<>(body, errorCode.getStatus());
   }
 
-  // 409 - DB 무결성 제약 위반. 사전검사(existsBy...)를 통과한 뒤 커밋 시점에 UNIQUE 등이 충돌하는
-  //       동시성 상황(동시 가입·닉네임 변경 등)을 500 대신 409로 변환한다.
+  // 409 - UNIQUE 제약 위반만 409로 변환한다. NOT NULL/FK/길이 초과 등 다른 무결성 위반은
+  //       서버 측 버그이므로 삼키지 않고 500으로 흘려보낸다(스택트레이스 로깅).
+  //       동시성(동시 가입·닉네임 변경 등)으로 UNIQUE가 커밋 시점에 충돌하는 경우만 대상.
   @ExceptionHandler(DataIntegrityViolationException.class)
   public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException e) {
-    log.warn("Data integrity violation: {}", e.getMostSpecificCause().getMessage());
-    return build(ErrorCode.DATA_INTEGRITY_VIOLATION, List.of());
+    if (e.getCause() instanceof ConstraintViolationException cve
+        && cve.getConstraintName() != null
+        && cve.getConstraintName().toUpperCase().startsWith("UK_")) {
+      // 충돌 값(이메일·닉네임 등 개인정보)은 남기지 않고 제약 이름만 로깅
+      log.warn("Unique constraint violation: {}", cve.getConstraintName());
+      return build(ErrorCode.DATA_INTEGRITY_VIOLATION, List.of());
+    }
+    log.error("Data integrity violation", e);   // 그 외는 버그로 간주 → 스택트레이스 + 500
+    return build(ErrorCode.INTERNAL_SERVER_ERROR, List.of());
   }
 
   // 500 - 예상하지 못한 모든 예외.
