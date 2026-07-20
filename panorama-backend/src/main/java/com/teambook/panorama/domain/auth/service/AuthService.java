@@ -17,9 +17,6 @@ public interface AuthService {
     /** 로그아웃 (저장된 refresh 토큰 삭제). */
     void logout(Long userId);
 
-    /** refresh 토큰 해시 저장(또는 교체). 1인 1토큰 정책. */
-    void saveRefreshToken(Long userId, String rawRefresh);
-
     /** 소셜 로그인 성공 처리 (refresh 저장 + 로그인 이력 기록). */
     void recordSocialLogin(Long userId, String rawRefresh, Provider provider);
 }
