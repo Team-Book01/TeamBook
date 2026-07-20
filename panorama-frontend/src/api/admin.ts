@@ -8,6 +8,7 @@
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { client } from './client'
+import { libraryKeys } from './library'
 import type { PageResponse } from '@/types/common'
 import type {
   DashboardResponse,
@@ -74,7 +75,13 @@ export async function syncLibraries(): Promise<LibrarySyncResult> {
 }
 
 export function useSyncLibraries() {
-  return useMutation({ mutationFn: syncLibraries })
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: syncLibraries,
+    // 동기화 직후 지도 페이지로 가면 useLibraries 의 staleTime(5분) 때문에 예전 목록을 본다.
+    // 방금 동기화한 사람에게는 "반영이 안 됐다"로 읽히므로 여기서 바로 무효화한다.
+    onSuccess: () => qc.invalidateQueries({ queryKey: libraryKeys.all }),
+  })
 }
 
 // ══ 공지 관리 ═══════════════════════════════════════════════════════════════════

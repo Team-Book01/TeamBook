@@ -650,9 +650,14 @@ export function MapPanel({
   const pinStateRef = useRef<Map<number, PinState>>(new Map());
   // 직전 선택 id. 선택이 실제로 바뀐 경우에만 지도를 옮기기 위해 추적한다.
   const prevSelectedRef = useRef<number | null>(null);
-  // 우리가 코드로 지도를 옮기는 중인지. idle 이벤트는 사용자 조작과 프로그램 이동을 구분하지 못하므로
-  // 이 플래그로 "사용자가 직접 움직인 경우"에만 지역검색 버튼을 띄운다.
-  const programmaticRef = useRef(false);
+  // 우리가 코드로 지도를 마지막으로 옮긴 시각. "사용자가 직접 움직인 경우"에만 지역검색 버튼을 띄우기 위한 것.
+  //
+  // 불리언 플래그를 세워두고 다음 이벤트가 소비하는 방식은 고착된다. setBounds/panTo 가 카메라를
+  // 실제로 움직이지 않으면(계산된 bounds 가 지금 화면과 같을 때) 이벤트가 발화하지 않아 플래그가
+  // true 로 남고, 그 다음 사용자의 조작이 그걸 대신 소비해 버튼이 한 박자 늦게 뜬다.
+  // 시각으로 두면 소비자가 없어도 스스로 만료된다.
+  const programmaticAtRef = useRef(0);
+  const PROGRAMMATIC_WINDOW_MS = 500;
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [errorMsg, setErrorMsg] = useState("");
   const [showAreaButton, setShowAreaButton] = useState(false);
@@ -680,11 +685,13 @@ export function MapPanel({
         });
 
         // 사용자가 지도를 직접 움직였을 때만 "이 지도에서 검색" 버튼을 띄운다.
-        kakao.maps.event.addListener(map, "idle", () => {
-          if (programmaticRef.current) {
-            programmaticRef.current = false; // 우리가 옮긴 것 → 버튼 띄우지 않음
-            return;
-          }
+        //
+        // idle 은 사용자 조작과 프로그램 이동을 구분하지 못해 플래그로 걸러야 했다. 대신 사용자
+        // 제스처에 가까운 이벤트를 직접 듣는다. dragend 는 프로그램 이동으로는 발화하지 않아 무조건 신뢰한다.
+        // zoom_changed 는 setBounds 로도 발화하므로 직전 프로그램 이동 직후인지만 확인한다.
+        kakao.maps.event.addListener(map, "dragend", () => setShowAreaButton(true));
+        kakao.maps.event.addListener(map, "zoom_changed", () => {
+          if (Date.now() - programmaticAtRef.current < PROGRAMMATIC_WINDOW_MS) return;
           setShowAreaButton(true);
         });
 
@@ -738,7 +745,7 @@ export function MapPanel({
 
     // 지역 모드(autoFit=false)에선 사용자가 맞춰둔 화면을 절대 건드리지 않는다.
     if (!autoFit) return;
-    programmaticRef.current = true; // 아래 카메라 이동은 우리가 하는 것 → 지역검색 버튼 띄우지 않음
+    programmaticAtRef.current = Date.now(); // 아래 카메라 이동은 우리가 하는 것 → 지역검색 버튼 띄우지 않음
     if (libraries.length > 0 && fitCount > 0) {
       // 내 주변 모드에선 기준점까지 포함해 "내 위치 + 주변 도서관"이 한눈에 들어오게 한다.
       // 검색 모드에선 결과에만 맞춘다(기준점을 넣으면 원거리 검색 시 전국이 보임).
@@ -812,7 +819,7 @@ export function MapPanel({
     if (!lib) return;
     const pos = new kakao.maps.LatLng(lib.lat, lib.lng);
     if (selectionChanged) {
-      programmaticRef.current = true; // 우리가 옮기는 것 → 지역검색 버튼 띄우지 않음
+      programmaticAtRef.current = Date.now(); // 우리가 옮기는 것 → 지역검색 버튼 띄우지 않음
       mapRef.current.panTo(pos);
     }
     const el = document.createElement("div");
@@ -861,7 +868,7 @@ export function MapPanel({
   const recenter = () => {
     onLocate();
     if (userPos && mapRef.current) {
-      programmaticRef.current = true;
+      programmaticAtRef.current = Date.now();
       mapRef.current.panTo(new window.kakao.maps.LatLng(userPos.lat, userPos.lng));
     }
   };
