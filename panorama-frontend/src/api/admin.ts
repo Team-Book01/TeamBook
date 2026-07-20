@@ -8,6 +8,7 @@
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { client } from './client'
+import { libraryKeys } from './library'
 import type { PageResponse } from '@/types/common'
 import type {
   DashboardResponse,
@@ -36,6 +37,7 @@ import type {
   InquirySearchRequest,
   InquiryAnswerCreateRequest,
   InquiryStatusUpdateRequest,
+  LibrarySyncResult,
 } from '@/types/admin'
 
 // ── queryKey 규칙: ['admin', ...] ────────────────────────────────────────────
@@ -62,6 +64,24 @@ export async function getAdminDashboard(): Promise<DashboardResponse> {
 
 export function useAdminDashboard() {
   return useQuery({ queryKey: adminKeys.dashboard(), queryFn: getAdminDashboard })
+}
+
+// ══ 도서관 데이터 동기화 ═════════════════════════════════════════════════════════
+// 정보나루 libSrch 를 전체 페이지 조회해 lib_code 기준 upsert(수동 실행). 처리에 시간이 걸린다.
+export async function syncLibraries(): Promise<LibrarySyncResult> {
+  // 전체 페이지 조회라 기본 10s 로는 부족 → 이 요청만 타임아웃을 넉넉히(5분) 늘린다.
+  const { data } = await client.post<LibrarySyncResult>('/admin/libraries/sync', null, { timeout: 300_000 })
+  return data
+}
+
+export function useSyncLibraries() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: syncLibraries,
+    // 동기화 직후 지도 페이지로 가면 useLibraries 의 staleTime(5분) 때문에 예전 목록을 본다.
+    // 방금 동기화한 사람에게는 "반영이 안 됐다"로 읽히므로 여기서 바로 무효화한다.
+    onSuccess: () => qc.invalidateQueries({ queryKey: libraryKeys.all }),
+  })
 }
 
 // ══ 공지 관리 ═══════════════════════════════════════════════════════════════════

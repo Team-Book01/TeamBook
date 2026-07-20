@@ -7,6 +7,7 @@ import java.util.List;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -84,6 +85,9 @@ public class SecurityConfig {
                         .authorizeHttpRequests(auth -> auth
                                 .requestMatchers(SWAGGER_WHITELIST).permitAll()
                                 .requestMatchers(AUTH_WHITELIST).permitAll()
+                                // 도서관 목록은 비로그인 열람이지만 "읽기만" 공개다.
+                                // 메서드를 안 가리면 나중에 같은 경로에 POST/DELETE 가 붙는 순간 함께 열린다.
+                                .requestMatchers(HttpMethod.GET, "/api/v1/libraries").permitAll()
                                 .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                                 .anyRequest().authenticated()
                         )
