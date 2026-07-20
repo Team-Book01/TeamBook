@@ -17,3 +17,6 @@ CLAUDE.md
 
 # 첨부파일
 uploads/
+
+# 로컬 테스트용 시드 데이터 (Flyway 대상 아님, 배포 산출물에 넣지 않는다)
+panorama-backend/src/main/resources/db/seed/

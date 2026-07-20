@@ -15,7 +15,7 @@ import jakarta.validation.constraints.Size;
 @Schema(description = "신고 처리(콘텐츠 조치) 요청. 원본에 조치를 취하고 같은 대상의 미처리 신고를 일괄 RESOLVED 로 바꾼다.")
 public record ReportProcessRequest(
 
-    @Schema(description = "원본 콘텐츠에 취할 조치. USER 대상이면 HIDDEN 은 SUSPENDED(제재)로 변환된다.", example = "HIDDEN")
+    @Schema(description = "원본 콘텐츠에 취할 조치. USER 대상이면 HIDDEN 은 SUSPENDED(제재)로 변환된다. 되돌리기(ACTIVE)는 콘텐츠 관리 전용이라 여기서는 거부된다.", allowableValues = {"HIDDEN", "DELETED"}, example = "HIDDEN")
     @NotNull(message = "콘텐츠 조치(action)는 필수입니다.")
     ContentAction action,
 

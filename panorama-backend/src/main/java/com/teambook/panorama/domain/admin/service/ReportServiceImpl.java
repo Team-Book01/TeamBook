@@ -81,6 +81,11 @@ public class ReportServiceImpl implements ReportService {
     if (key.status() == ReportStatus.RESOLVED || key.status() == ReportStatus.REJECTED) {
       throw new BusinessException(ErrorCode.ALREADY_PROCESSED);
     }
+    // 이 API 는 "조치를 취했다"를 기록한다. 되돌리기는 콘텐츠 관리 화면의 몫이고, 여기서 받으면
+    // USER 대상의 resolveContentStatus 가 ACTIVE 를 SUSPENDED 로 바꿔버려 정반대 결과가 된다.
+    if (request.action() == ContentAction.ACTIVE) {
+      throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+    }
 
     LocalDateTime now = LocalDateTime.now();
 
@@ -133,7 +138,7 @@ public class ReportServiceImpl implements ReportService {
         skipped++;
         continue;
       }
-      report.process(request.status(), request.handlerUserId(), now);
+      report.process(request.status(), request.handlerUserId(), now, request.reason());
       done++;
     }
     return new BulkResult(done, skipped);

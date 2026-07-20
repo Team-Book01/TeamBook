@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Search, EyeOff, Trash2, Eye, Flag, Clock, AlertCircle, Inbox, MoreHorizontal } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -7,7 +7,36 @@ import { getErrorMessage } from '@/api/client'
 import { useAdminContents, useAdminContent, useProcessContent, processAdminContent, adminKeys } from '@/api/admin'
 import { useQueryClient } from '@tanstack/react-query'
 import DetailDrawer from '@/components/admin/DetailDrawer'
-import type { CommunityContentSearchRequest, ContentType, ContentStatus } from '@/types/admin'
+import OriginLink from '@/components/admin/OriginLink'
+import AdminSelect from '@/components/admin/AdminSelect'
+import { sanitizePostHtml, stripHtml } from '@/pages/community/utils'
+import { POST_CATEGORY_LABEL } from '@/api/community'
+import type { CommunityContentSearchRequest, CommunityContentResponse, ContentType, ContentStatus, ContentAction } from '@/types/admin'
+import type { PostCategory } from '@/types/community'
+
+// 행 메뉴(상세보기/숨김/삭제 3줄)의 대략적인 높이. 위/아래 어느 쪽으로 펼칠지 판단용.
+const ROW_MENU_HEIGHT = 140
+
+/**
+ * 게시글 카테고리(말머리) 한글 라벨. 커뮤니티 화면과 같은 맵을 쓴다.
+ * 서버가 이 값을 string 으로 넘기므로, 모르는 값이 오면 원본을 그대로 보여준다.
+ */
+function catLabel(category: string): string {
+  return POST_CATEGORY_LABEL[category as PostCategory] ?? category
+}
+
+/**
+ * 목록 미리보기 텍스트. 게시글 본문은 에디터 HTML 이라 태그를 걷어낸다.
+ * (stripHtml 은 엔티티도 풀어주므로 &nbsp; 같은 게 그대로 노출되지 않는다)
+ *
+ * 서버가 넘기는 건 본문 앞부분뿐이라, 걷어내고 남는 글자가 없다고 해서 글이 없는 건 아니다
+ * (이미지가 여러 장이면 텍스트가 그 뒤로 밀린다). 단정하지 말고 이미지로 시작한다는 사실만 알린다.
+ */
+function summarize(row: CommunityContentResponse): string {
+  if (row.contentType !== 'POST') return row.contentSummary ?? ''
+  const text = stripHtml(row.contentSummary ?? '').slice(0, 100)
+  return text || '(이미지)'
+}
 
 const TABS: { type: ContentType; label: string }[] = [
   { type: 'POST', label: '게시글' },
@@ -31,14 +60,14 @@ function ContentDetailDrawer({ contentType, contentId, onClose }: { contentType:
   const me = useAuthStore(s => s.user)
   const { data, isLoading, isError, error, refetch } = useAdminContent(contentType, contentId)
   const processMut = useProcessContent()
-  const act = (action: 'HIDDEN' | 'DELETED') =>
+  const act = (action: ContentAction) =>
     me?.id != null && processMut.mutate({ contentType, contentId, body: { action, handlerUserId: me.id } }, { onSuccess: onClose })
 
   const header = data ? (
     <div className="flex items-center gap-2 flex-wrap">
       <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-admin-light text-admin">{TABS.find(t => t.type === data.contentType)?.label}</span>
       <StatusBadge status={data.status} />
-      {data.category && <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">{data.category}</span>}
+      {data.category && <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">{catLabel(data.category)}</span>}
     </div>
   ) : (
     <span className="text-sm font-bold text-foreground">콘텐츠 상세</span>
@@ -46,9 +75,15 @@ function ContentDetailDrawer({ contentType, contentId, onClose }: { contentType:
 
   const footer = data ? (
     <div className="p-4 space-y-2">
+      {/* 숨김 상태에서는 되돌리기를, 그 외에는 조치 버튼을 보여준다. 삭제는 되돌리지 않는다
+          — soft delete 라 기술적으론 가능하지만 작성자가 스스로 지운 글까지 복구하게 된다. */}
       <div className="flex gap-2">
-        <button onClick={() => act('HIDDEN')} disabled={processMut.isPending} className="flex-1 py-2 rounded-xl text-sm font-semibold border border-amber-500 text-amber-600 hover:bg-amber-50 disabled:opacity-50 transition-colors">숨김 처리</button>
-        <button onClick={() => act('DELETED')} disabled={processMut.isPending} className="flex-1 py-2 rounded-xl text-sm font-semibold border border-red-500 text-red-600 hover:bg-red-50 disabled:opacity-50 transition-colors">삭제</button>
+        {data.status === 'HIDDEN' ? (
+          <button onClick={() => act('ACTIVE')} disabled={processMut.isPending} className="flex-1 py-2 rounded-xl text-sm font-semibold border border-green-500 text-green-700 hover:bg-green-50 disabled:opacity-50 transition-colors">공개로 되돌리기</button>
+        ) : (
+          <button onClick={() => act('HIDDEN')} disabled={processMut.isPending || data.status === 'DELETED'} className="flex-1 py-2 rounded-xl text-sm font-semibold border border-amber-500 text-amber-600 hover:bg-amber-50 disabled:opacity-50 transition-colors">숨김 처리</button>
+        )}
+        <button onClick={() => act('DELETED')} disabled={processMut.isPending || data.status === 'DELETED'} className="flex-1 py-2 rounded-xl text-sm font-semibold border border-red-500 text-red-600 hover:bg-red-50 disabled:opacity-50 transition-colors">삭제</button>
       </div>
       {processMut.isError && <p className="text-[11px] text-red-600 text-center">{getErrorMessage(processMut.error, '처리에 실패했습니다. 다시 시도해 주세요.')}</p>}
       <div className="w-full py-2 rounded-xl text-xs font-medium border border-border text-muted-foreground flex items-center justify-center gap-1.5">
@@ -71,15 +106,34 @@ function ContentDetailDrawer({ contentType, contentId, onClose }: { contentType:
         <div className="p-6 space-y-4">
           {data.title && <h3 className="text-base font-bold leading-snug text-foreground">{data.title}</h3>}
           <div className="flex items-center gap-2.5 p-3 rounded-xl bg-gray-50">
-            <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold bg-admin">{data.authorNickname[0]}</div>
-            <div>
-              <div className="text-sm font-semibold text-foreground">{data.authorNickname}</div>
+            <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold bg-admin shrink-0">{data.authorNickname[0]}</div>
+            <div className="min-w-0">
+              <div className="text-sm font-semibold text-foreground truncate">{data.authorNickname}</div>
               <div className="text-xs text-muted-foreground">{fmt(data.createdAt)}</div>
+            </div>
+            {/* 게시글은 자기 자신, 댓글은 부모 글로 이동. 리뷰는 링크하지 않는다(OriginLink 주석 참고). */}
+            <div className="ml-auto">
+              <OriginLink
+                postId={data.contentType === 'POST' ? data.contentId : data.parentPostId}
+                status={data.status}
+              />
             </div>
           </div>
           <div>
             <div className="text-xs font-semibold mb-1.5 text-muted-foreground">내용</div>
-            <p className="text-[13px] leading-relaxed p-3 rounded-xl text-gray-700 bg-gray-50 whitespace-pre-wrap">{data.content}</p>
+            {/* 게시글 본문만 에디터가 만든 HTML 이다. 댓글·리뷰는 평문이라 그대로 둔다.
+                작성자가 쓴 HTML 이므로 커뮤니티 화면과 같은 sanitize 를 거쳐야 한다 —
+                관리자 세션에서 열리는 화면이라 여기서 스크립트가 돌면 피해가 더 크다. */}
+            {data.contentType === 'POST' ? (
+              <div
+                className="text-[13px] leading-relaxed p-3 rounded-xl text-gray-700 bg-gray-50 break-words
+                  [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg [&_img]:my-2
+                  [&_p]:my-1 [&_a]:text-admin [&_a]:underline"
+                dangerouslySetInnerHTML={{ __html: sanitizePostHtml(data.content) }}
+              />
+            ) : (
+              <p className="text-[13px] leading-relaxed p-3 rounded-xl text-gray-700 bg-gray-50 whitespace-pre-wrap">{data.content}</p>
+            )}
           </div>
           {data.reportCount > 0 && (
             <div className="p-3 rounded-xl border bg-red-50 border-red-200 flex items-center gap-2">
@@ -105,6 +159,22 @@ export default function AdminContentPage() {
   const [selected, setSelected] = useState<{ type: ContentType; id: number } | null>(null)
   const [checkedRows, setCheckedRows] = useState<Set<number>>(new Set())
   const [menuId, setMenuId] = useState<number | null>(null)
+  const [menuUp, setMenuUp] = useState(false)
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  // 행 메뉴는 스크롤 컨테이너(overflow-x-auto → 세로도 auto) 안에 absolute 로 뜬다.
+  // 아래로 열 자리가 없으면 컨테이너가 그만큼 늘어나 스크롤이 생기므로, 공간이
+  // 모자랄 때는 버튼 위로 펼친다.
+  const openMenu = (e: React.MouseEvent<HTMLButtonElement>, id: number) => {
+    if (menuId === id) {
+      setMenuId(null)
+      return
+    }
+    const btn = e.currentTarget.getBoundingClientRect()
+    const box = scrollRef.current?.getBoundingClientRect()
+    setMenuUp(!!box && box.bottom - btn.bottom < ROW_MENU_HEIGHT)
+    setMenuId(id)
+  }
   const [bulkPending, setBulkPending] = useState(false)
   const [bulkError, setBulkError] = useState<string | null>(null)
 
@@ -143,7 +213,7 @@ export default function AdminContentPage() {
   const toggleAll = () => setCheckedRows(allChecked ? new Set() : new Set(rows.map(r => r.contentId)))
   const toggleOne = (id: number) => setCheckedRows(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
 
-  const rowAction = (id: number, action: 'HIDDEN' | 'DELETED') => {
+  const rowAction = (id: number, action: ContentAction) => {
     setMenuId(null)
     if (me?.id == null) return
     processMut.mutate({ contentType: tab, contentId: id, body: { action, handlerUserId: me.id } })
@@ -188,10 +258,9 @@ export default function AdminContentPage() {
               placeholder="제목 / 내용 / 작성자 닉네임 검색"
               className="w-full pl-8 pr-3 py-2 text-sm rounded-xl border border-border bg-gray-50 text-foreground outline-none focus:border-admin" />
           </div>
-          <select value={fStatus} onChange={e => setFStatus(e.target.value as typeof fStatus)}
-            className="appearance-none pl-3 pr-7 py-2 text-sm rounded-xl border border-border bg-gray-50 text-foreground outline-none cursor-pointer focus:border-admin">
+          <AdminSelect value={fStatus} onChange={e => setFStatus(e.target.value as typeof fStatus)}>
             <option value="전체">상태 전체</option><option value="ACTIVE">공개</option><option value="HIDDEN">숨김</option><option value="DELETED">삭제</option>
-          </select>
+          </AdminSelect>
           <button onClick={apply} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-admin hover:bg-admin-hover transition-colors">
             <Search size={13} />검색
           </button>
@@ -204,7 +273,7 @@ export default function AdminContentPage() {
             <span className="text-xs text-muted-foreground">총 {data?.totalElements ?? 0}건</span>
             {isFetching && <span className="text-xs text-muted-foreground">· 갱신 중…</span>}
           </div>
-          <div className="overflow-x-auto">
+          <div ref={scrollRef} className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-gray-50">
@@ -237,8 +306,8 @@ export default function AdminContentPage() {
                       <td className="px-3 py-3 text-xs font-mono font-bold text-muted-foreground">#{row.contentId}</td>
                       <td className="px-3 py-3"><StatusBadge status={row.status} /></td>
                       <td className="px-3 py-3 max-w-[340px]">
-                        <div className="text-sm font-medium truncate text-foreground">{row.title ?? row.contentSummary}</div>
-                        {row.title && <div className="text-xs text-muted-foreground truncate">{row.contentSummary}</div>}
+                        <div className="text-sm font-medium truncate text-foreground">{row.title ?? summarize(row)}</div>
+                        {row.title && <div className="text-xs text-muted-foreground truncate">{summarize(row)}</div>}
                       </td>
                       <td className="px-3 py-3 text-xs font-medium text-gray-600 whitespace-nowrap">{row.authorNickname}</td>
                       <td className="px-3 py-3">
@@ -249,14 +318,20 @@ export default function AdminContentPage() {
                       <td className="px-3 py-3 text-xs whitespace-nowrap text-muted-foreground">{fmt(row.createdAt)}</td>
                       <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
                         <div className="relative">
-                          <button onClick={() => setMenuId(menuId === row.contentId ? null : row.contentId)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
+                          <button onClick={e => openMenu(e, row.contentId)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
                             <MoreHorizontal size={15} className="text-muted-foreground" />
                           </button>
                           {menuId === row.contentId && (
-                            <div className="absolute right-0 top-8 w-36 bg-white rounded-xl border border-border shadow-xl z-20 overflow-hidden">
+                            <div className={cn('absolute right-0 w-36 bg-white rounded-xl border border-border shadow-xl z-20 overflow-hidden', menuUp ? 'bottom-8' : 'top-8')}>
                               <button onClick={() => { setSelected({ type: row.contentType, id: row.contentId }); setMenuId(null) }} className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-foreground hover:bg-gray-50"><Eye size={13} />상세보기</button>
-                              <button onClick={() => rowAction(row.contentId, 'HIDDEN')} className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-amber-700 hover:bg-gray-50"><EyeOff size={13} />숨김 처리</button>
-                              <button onClick={() => rowAction(row.contentId, 'DELETED')} className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-red-600 hover:bg-gray-50"><Trash2 size={13} />삭제</button>
+                              {row.status === 'HIDDEN' ? (
+                                <button onClick={() => rowAction(row.contentId, 'ACTIVE')} className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-green-700 hover:bg-gray-50"><Eye size={13} />공개로 되돌리기</button>
+                              ) : row.status !== 'DELETED' && (
+                                <button onClick={() => rowAction(row.contentId, 'HIDDEN')} className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-amber-700 hover:bg-gray-50"><EyeOff size={13} />숨김 처리</button>
+                              )}
+                              {row.status !== 'DELETED' && (
+                                <button onClick={() => rowAction(row.contentId, 'DELETED')} className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-red-600 hover:bg-gray-50"><Trash2 size={13} />삭제</button>
+                              )}
                             </div>
                           )}
                         </div>

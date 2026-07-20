@@ -48,6 +48,7 @@ public enum ErrorCode {
 
   // community content (도메인 접두어 P)
   CONTENT_NOT_FOUND(HttpStatus.NOT_FOUND, "P001", "존재하지 않는 콘텐츠입니다."),
+  CONTENT_RESTORE_NOT_ALLOWED(HttpStatus.CONFLICT, "P002", "숨김 처리된 콘텐츠만 되돌릴 수 있습니다."),
   
   // book
   BOOK_NOT_FOUND(HttpStatus.NOT_FOUND, "B001", "존재하지 않는 책입니다."),

@@ -54,7 +54,7 @@ public class Report extends BaseTimeEntity {
   @Column(name = "content", length = 255)
   private String content;
 
-  /** 처리 상태 (PENDING, REVIEWING, RESOLVED, REJECTED) */
+  /** 처리 상태 (PENDING, RESOLVED, REJECTED) */
   @Enumerated(EnumType.STRING)
   @Column(name = "status", nullable = false, length = 20)
   private ReportStatus status;
@@ -66,6 +66,10 @@ public class Report extends BaseTimeEntity {
   /** 처리 시각 */
   @Column(name = "processed_at")
   private LocalDateTime processedAt;
+
+  /** 관리자 처리 사유 (reason_type 은 신고자가 고른 사유라 이름이 다르다 — V7 참고) */
+  @Column(name = "process_reason", length = 500)
+  private String processReason;
 
   @Builder
   private Report(Long reporterUserId, String targetType, Long targetId, String reasonType,
@@ -83,12 +87,14 @@ public class Report extends BaseTimeEntity {
   /**
    * 신고 상태 변경(처리). 이미 종결(RESOLVED/REJECTED)된 신고는 다시 처리할 수 없다.
    */
-  public void process(ReportStatus status, Long handlerUserId, LocalDateTime processedAt) {
+  public void process(ReportStatus status, Long handlerUserId, LocalDateTime processedAt,
+      String processReason) {
     if (this.status == ReportStatus.RESOLVED || this.status == ReportStatus.REJECTED) {
       throw new BusinessException(ErrorCode.ALREADY_PROCESSED);
     }
     this.status = status;
     this.handlerUserId = handlerUserId;
     this.processedAt = processedAt;
+    this.processReason = processReason;
   }
 }

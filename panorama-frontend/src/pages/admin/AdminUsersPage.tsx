@@ -5,6 +5,7 @@ import { useAuthStore } from '@/store/authStore'
 import { getErrorMessage } from '@/api/client'
 import { useAdminUsers, useAdminUser, useProcessUser } from '@/api/admin'
 import DetailDrawer from '@/components/admin/DetailDrawer'
+import AdminSelect from '@/components/admin/AdminSelect'
 import type { UserSearchRequest, UserStatus, UserRole, Provider, UserDetailResponse } from '@/types/admin'
 
 const STATUS_META: Record<UserStatus, { label: string; cls: string }> = {
@@ -166,7 +167,6 @@ export default function AdminUsersPage() {
     role: fRole === '전체' ? undefined : fRole,
     page: 1, size: 20,
   })
-  const selCls = 'appearance-none pl-3 pr-7 py-2 text-sm rounded-xl border border-border bg-gray-50 text-foreground outline-none cursor-pointer focus:border-admin'
 
   return (
     <div className="p-6">
@@ -179,12 +179,12 @@ export default function AdminUsersPage() {
               placeholder="닉네임으로 검색"
               className="w-full pl-8 pr-3 py-2 text-sm rounded-xl border border-border bg-gray-50 text-foreground outline-none focus:border-admin" />
           </div>
-          <select value={fStatus} onChange={e => setFStatus(e.target.value as typeof fStatus)} className={selCls}>
+          <AdminSelect value={fStatus} onChange={e => setFStatus(e.target.value as typeof fStatus)}>
             <option value="전체">상태 전체</option><option value="ACTIVE">정상</option><option value="SUSPENDED">이용제한</option><option value="DELETED">탈퇴</option>
-          </select>
-          <select value={fRole} onChange={e => setFRole(e.target.value as typeof fRole)} className={selCls}>
+          </AdminSelect>
+          <AdminSelect value={fRole} onChange={e => setFRole(e.target.value as typeof fRole)}>
             <option value="전체">권한 전체</option><option value="USER">USER</option><option value="ADMIN">ADMIN</option>
-          </select>
+          </AdminSelect>
           <button onClick={apply} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-admin hover:bg-admin-hover transition-colors">
             <Search size={13} />검색
           </button>

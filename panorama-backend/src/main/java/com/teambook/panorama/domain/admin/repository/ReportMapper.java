@@ -49,7 +49,7 @@ public interface ReportMapper {
       @Param("targetId") Long targetId,
       @Param("status") String status);
 
-  /** 같은 대상의 PENDING/REVIEWING 신고를 모두 RESOLVED 로 (유령 신고 방지) */
+  /** 같은 대상의 PENDING 신고를 모두 RESOLVED 로 (유령 신고 방지) */
   int resolveReportsByTarget(
       @Param("targetType") String targetType,
       @Param("targetId") Long targetId,

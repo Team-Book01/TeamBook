@@ -32,7 +32,7 @@ public record ReportResponse(
     String reasonType,          // 신고 사유 유형 (String)
 
     @Schema(description = "처리 상태", example = "PENDING")
-    ReportStatus status,        // PENDING / REVIEWING / RESOLVED / REJECTED
+    ReportStatus status,        // PENDING / RESOLVED / REJECTED
 
     @Schema(description = "신고자 닉네임 (마스킹됨)", example = "pa****")
     String reporterNickname,    // 신고자 닉네임 — 마스킹됨(예: pa****)

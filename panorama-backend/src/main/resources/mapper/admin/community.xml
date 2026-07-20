@@ -59,7 +59,10 @@
         <choose>
             <when test="contentType == 'POST'">
                 SELECT 'POST' AS content_type, p.post_id AS content_id, p.user_id AS author_user_id,
-                       au.nickname AS author_nickname, p.title, LEFT(p.content, 100) AS content_summary,
+                       <!-- 게시글 본문만 에디터 HTML 이다. 100자로 바로 자르면 앞부분이 통째로
+                            <img> 태그인 글은 미리보기가 태그 조각만 남는다. 태그를 걷어내고 엔티티까지
+                            푸는 건 프론트(stripHtml)가 하므로, 여기서는 잘라낸 뒤 남을 여유를 두고 넘긴다. -->
+                       au.nickname AS author_nickname, p.title, LEFT(p.content, 500) AS content_summary,
                        p.status, p.created_at,
                        (SELECT COUNT(*) FROM reports r WHERE r.target_type='POST' AND r.target_id=p.post_id) AS report_count
                 <include refid="fromPost"/>
@@ -202,7 +205,7 @@
             updated_at = #{processedAt}
         WHERE target_type = #{targetType}
           AND target_id = #{targetId}
-          AND status IN ('PENDING', 'REVIEWING')
+          AND status = 'PENDING'
     </update>
 
     <insert id="insertAdminActionLog">

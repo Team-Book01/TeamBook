@@ -38,13 +38,13 @@
                 AND r.reason_type = #{reasonType}
             </if>
             <!-- 상태: 특정 status를 콕 집으면 그것 우선, 아니면 전체보기 여부로 결정.
-                 기본(전체보기 아님)은 미처리(PENDING/REVIEWING)만 노출한다. -->
+                 기본(전체보기 아님)은 미처리(PENDING)만 노출한다. -->
             <choose>
                 <when test="status != null">
                     AND r.status = #{status}
                 </when>
                 <when test="includeAll == null or includeAll == false">
-                    AND r.status IN ('PENDING', 'REVIEWING')
+                    AND r.status = 'PENDING'
                 </when>
             </choose>
             <if test="reporterUserId != null">
@@ -151,15 +151,21 @@
             <arg column="created_at"      name="createdAt"      javaType="java.time.LocalDateTime"/>
             <arg column="status"          name="status"         javaType="java.lang.String"/>
             <arg column="deleted"         name="deleted"        javaType="java.lang.Boolean"/>
+            <arg column="link_post_id"    name="linkPostId"     javaType="java.lang.Long"/>
         </constructor>
     </resultMap>
 
     <select id="selectReportTarget" resultMap="reportTargetViewMap">
         <choose>
+            <!-- link_post_id 는 관리자 화면에서 원본으로 건너뛸 링크의 재료다.
+                 게시글은 자기 자신, 댓글은 부모 글로 간다.
+                 REVIEW/USER 는 NULL — 리뷰는 도서 상세로 보내도 그 리뷰로 스크롤되지 않아
+                 관리자가 눈으로 찾아야 하고, 사용자는 공개 프로필 화면이 없다. -->
             <when test="targetType == 'POST'">
                 SELECT 'POST' AS target_type, p.post_id AS target_id, p.content,
                        au.nickname AS author_nickname, p.created_at, p.status,
-                       (p.status = 'DELETED') AS deleted
+                       (p.status = 'DELETED') AS deleted,
+                       p.post_id AS link_post_id
                 FROM posts p
                 JOIN users au ON au.user_id = p.user_id
                 WHERE p.post_id = #{targetId}
@@ -167,7 +173,8 @@
             <when test="targetType == 'COMMENT'">
                 SELECT 'COMMENT' AS target_type, c.comment_id AS target_id, c.content,
                        au.nickname AS author_nickname, c.created_at, c.status,
-                       (c.status = 'DELETED') AS deleted
+                       (c.status = 'DELETED') AS deleted,
+                       c.post_id AS link_post_id
                 FROM post_comments c
                 JOIN users au ON au.user_id = c.user_id
                 WHERE c.comment_id = #{targetId}
@@ -175,7 +182,8 @@
             <when test="targetType == 'REVIEW'">
                 SELECT 'REVIEW' AS target_type, br.review_id AS target_id, br.content,
                        au.nickname AS author_nickname, br.created_at, br.status,
-                       (br.status = 'DELETED') AS deleted
+                       (br.status = 'DELETED') AS deleted,
+                       NULL AS link_post_id
                 FROM book_reviews br
                 JOIN users au ON au.user_id = br.user_id
                 WHERE br.review_id = #{targetId}
@@ -183,14 +191,16 @@
             <when test="targetType == 'USER'">
                 SELECT 'USER' AS target_type, u.user_id AS target_id, NULL AS content,
                        u.nickname AS author_nickname, u.created_at, u.status,
-                       (u.status = 'DELETED') AS deleted
+                       (u.status = 'DELETED') AS deleted,
+                       NULL AS link_post_id
                 FROM users u
                 WHERE u.user_id = #{targetId}
             </when>
             <otherwise>
                 SELECT NULL AS target_type, NULL AS target_id, NULL AS content,
                        NULL AS author_nickname, NULL AS created_at, NULL AS status,
-                       FALSE AS deleted
+                       FALSE AS deleted,
+                       NULL AS link_post_id
                 FROM DUAL WHERE 1 = 0
             </otherwise>
         </choose>
@@ -272,7 +282,7 @@
             updated_at = #{processedAt}
         WHERE target_type = #{targetType}
           AND target_id = #{targetId}
-          AND status IN ('PENDING', 'REVIEWING')
+          AND status = 'PENDING'
     </update>
 
     <!-- 관리자 조치 로그 (id/created_at 은 DB DEFAULT) -->
