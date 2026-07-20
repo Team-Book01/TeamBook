@@ -88,7 +88,7 @@ public class BookSearchService {
   //책 단건 상세 조회
   public BookSearchItem findBookByIsbn(String isbn, Long userId){
     //네이버 단건 조회 -> 없는 isbn 예외 처리
-    var items = naverBookClient.search(isbn, 1, 1, "sim").items();
+    List<NaverBookItem> items = naverBookClient.search(isbn, 1, 1, "sim").items();
     if (items.isEmpty()) {
       throw new BusinessException(ErrorCode.BOOK_NOT_FOUND);
     }
