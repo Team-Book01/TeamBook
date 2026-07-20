@@ -6,7 +6,7 @@ import java.util.Map;
 /**
  * 정보나루(data4library) 원본 데이터를 동기화 시점에 우리 기준으로 맞춘다.
  *
- * <p>값이 없거나 형식이 다른 일반 정규화는 {@link LibrarySyncService} 의 emptyToNull/toBigDecimal 이
+ * <p>값이 없거나 형식이 다른 일반 정규화는 {@link LibrarySyncWriter} 의 emptyToNull/toBigDecimal 이
  * 담당하고, 여기서는 아래 두 가지만 다룬다.
  *
  * <ol>

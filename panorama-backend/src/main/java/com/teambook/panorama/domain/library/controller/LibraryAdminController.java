@@ -23,7 +23,10 @@ public class LibraryAdminController {
   /**
    * 도서관 데이터 동기화(수동 실행).
    * 정보나루 libSrch 를 페이지 끝까지 조회해 lib_code 기준 upsert 한다.
-   * (@Scheduled 자동 실행은 추후)
+   *
+   * <p>자동 실행도 함께 돈다 — {@code LibrarySyncScheduler} 가 매월 1일 04:00(Asia/Seoul)에
+   * 같은 {@code sync()} 를 호출한다. 그래서 이 API 는 "유일한 실행 경로"가 아니고,
+   * 둘이 겹치는 경우는 {@code sync()} 의 락이 막아 진행 중이면 409 로 거절된다.
    */
   @Operation(summary = "도서관 데이터 동기화",
       description = "정보나루(data4library) libSrch 를 전체 페이지 조회하여 lib_code 기준으로 upsert 한다. 처리/신규/수정/건너뜀 건수와 완료 시각을 반환한다.")
