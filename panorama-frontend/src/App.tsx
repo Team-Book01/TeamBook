@@ -11,6 +11,7 @@ import HomePage from '@/pages/home/HomePage'
 import BookSearchPage from '@/pages/book/BookSearchPage'
 import BookDetailPage from '@/pages/book/BookDetailPage'
 import CommunityPage from '@/pages/community/CommunityPage'
+import CommunityMyListPage from '@/pages/community/CommunityMyListPage'
 import CommunityDetailPage from '@/pages/community/CommunityDetailPage'
 import CommunityWritePage from '@/pages/community/CommunityWritePage'
 import LibraryMapPage from '@/pages/library/LibraryMapPage'
@@ -68,6 +69,8 @@ export default function App() {
         <Route element={<Layout />}>
           <Route path="/mypage" element={<MyPage />} />
           <Route path="/community" element={<CommunityPage />} />
+          <Route path="/community/my-posts" element={<CommunityMyListPage mode="posts" />} />
+          <Route path="/community/my-scraps" element={<CommunityMyListPage mode="scraps" />} />
           <Route path="/community/write" element={<CommunityWritePage />} />
           <Route path="/community/:id" element={<CommunityDetailPage />} />
           <Route path="/community/:id/edit" element={<CommunityWritePage />} />

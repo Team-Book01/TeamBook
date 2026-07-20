@@ -96,6 +96,9 @@ export const communityKeys = {
   comments: (postId: number) => [...communityKeys.all, 'comments', postId] as const,
   myScraps: (size: number, viewerId: ViewerId) =>
     [...communityKeys.all, 'myScraps', { size }, viewerId] as const,
+  myPosts: (size: number, viewerId: ViewerId) =>
+    [...communityKeys.all, 'myPosts', { size }, viewerId] as const,
+  myStats: (viewerId: ViewerId) => [...communityKeys.all, 'myStats', viewerId] as const,
 }
 
 /** 비로그인 상태도 하나의 캐시 스코프로 다룬다(서버는 liked·scrapped 를 false 로 준다). */
@@ -251,6 +254,26 @@ export async function createReport(body: ReportRequest): Promise<void> {
   await client.post('/reports', body)
 }
 
+/** 내 활동 카운트 (GET /members/me/stats 응답) */
+export type MyPageStats = {
+  postCount: number
+  scrapCount: number
+}
+
+/** GET /api/v1/members/me/stats — 내 작성글·스크랩 개수 (토큰 주인 기준, 파라미터 없음) */
+export async function getMyStats(): Promise<MyPageStats> {
+  const { data } = await client.get<MyPageStats>('/members/me/stats')
+  return data
+}
+
+/** GET /api/v1/members/me/posts — 내 작성글 목록 */
+export async function getMyPosts(page = 0, size = POST_PAGE_SIZE): Promise<SliceResponse<PostSummary>> {
+  const { data } = await client.get<SliceResponse<PostSummary>>('/members/me/posts', {
+    params: { page, size },
+  })
+  return data
+}
+
 /** GET /api/v1/members/me/scraps — 내 스크랩 목록 (마이페이지) */
 export async function getMyScraps(page = 0, size = POST_PAGE_SIZE): Promise<SliceResponse<PostSummary>> {
   const { data } = await client.get<SliceResponse<PostSummary>>('/members/me/scraps', {
@@ -328,6 +351,34 @@ export function useMyScraps(size = POST_PAGE_SIZE) {
   })
 }
 
+/** 내 작성글 목록 (무한 스크롤) */
+export function useMyPosts(size = POST_PAGE_SIZE) {
+  const viewerId = useViewerId()
+  const authReady = useAuthReady()
+  return useInfiniteQuery({
+    queryKey: communityKeys.myPosts(size, viewerId),
+    queryFn: ({ pageParam }) => getMyPosts(pageParam, size),
+    initialPageParam: 0,
+    getNextPageParam: nextSliceParam,
+    // 인증 필요 엔드포인트 — 복원 전에 쏘면 불필요한 401
+    enabled: authReady,
+  })
+}
+
+/**
+ * 내 활동 카운트 (프로필 카드).
+ * 비로그인이면 아예 호출하지 않는다 — JWT 필수라 401만 나기 때문.
+ */
+export function useMyStats() {
+  const viewerId = useViewerId()
+  const authReady = useAuthReady()
+  return useQuery({
+    queryKey: communityKeys.myStats(viewerId),
+    queryFn: getMyStats,
+    enabled: authReady && viewerId !== 'guest',
+  })
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 //  Mutation 훅 (변경)
 // ═══════════════════════════════════════════════════════════════════════════
@@ -340,6 +391,7 @@ export function useCreatePost() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: communityKeys.lists() })
       queryClient.invalidateQueries({ queryKey: [...communityKeys.all, 'popular'] })
+      queryClient.invalidateQueries({ queryKey: [...communityKeys.all, 'myStats'] })
     },
   })
 }
@@ -367,6 +419,7 @@ export function useDeletePost() {
       queryClient.removeQueries({ queryKey: communityKeys.details(postId) })
       queryClient.invalidateQueries({ queryKey: communityKeys.lists() })
       queryClient.invalidateQueries({ queryKey: [...communityKeys.all, 'popular'] })
+      queryClient.invalidateQueries({ queryKey: [...communityKeys.all, 'myStats'] })
     },
   })
 }
@@ -403,6 +456,7 @@ export function useScrapPostMutation(postId: number) {
         old ? { ...old, scrapped: res.scrapped } : old,
       )
       queryClient.invalidateQueries({ queryKey: [...communityKeys.all, 'myScraps'] })
+      queryClient.invalidateQueries({ queryKey: [...communityKeys.all, 'myStats'] })
     },
   })
 }

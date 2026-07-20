@@ -48,7 +48,17 @@ function Avatar({ initial, color, size = 28 }: { initial: string; color: string;
 
 // ─── Post Card ────────────────────────────────────────────────────────────────
 
-function PostCard({ post, onOpen }: { post: PostSummary; onOpen: () => void }) {
+// 내 글/스크랩 목록 페이지(CommunityMyListPage)에서도 동일 카드를 재사용한다.
+// showCounts=false 면 조회/좋아요/댓글 수를 숨긴다 (내 글·스크랩 목록).
+export function PostCard({
+  post,
+  onOpen,
+  showCounts = true,
+}: {
+  post: PostSummary
+  onOpen: () => void
+  showCounts?: boolean
+}) {
   return (
     <article
       onClick={onOpen}
@@ -90,20 +100,22 @@ function PostCard({ post, onOpen }: { post: PostSummary; onOpen: () => void }) {
           <span className="text-[#ddd] text-xs">·</span>
           <span className="text-xs text-[#bbb]">{formatRelativeTime(post.createdAt)}</span>
 
-          <div className="ml-auto flex items-center gap-4">
-            <span className="flex items-center gap-1 text-xs text-[#ccc]">
-              <Eye size={13} strokeWidth={1.8} />
-              <span>{post.viewCount.toLocaleString()}</span>
-            </span>
-            <span className="flex items-center gap-1 text-xs text-[#bbb]">
-              <Heart size={13} strokeWidth={1.8} />
-              <span>{post.likeCount.toLocaleString()}</span>
-            </span>
-            <span className="flex items-center gap-1 text-xs" style={{ color: '#2E7D6B' }}>
-              <MessageCircle size={13} strokeWidth={1.8} />
-              <span>{post.commentCount.toLocaleString()}</span>
-            </span>
-          </div>
+          {showCounts && (
+            <div className="ml-auto flex items-center gap-4">
+              <span className="flex items-center gap-1 text-xs text-[#ccc]">
+                <Eye size={13} strokeWidth={1.8} />
+                <span>{post.viewCount.toLocaleString()}</span>
+              </span>
+              <span className="flex items-center gap-1 text-xs text-[#bbb]">
+                <Heart size={13} strokeWidth={1.8} />
+                <span>{post.likeCount.toLocaleString()}</span>
+              </span>
+              <span className="flex items-center gap-1 text-xs" style={{ color: '#2E7D6B' }}>
+                <MessageCircle size={13} strokeWidth={1.8} />
+                <span>{post.commentCount.toLocaleString()}</span>
+              </span>
+            </div>
+          )}
         </div>
       </div>
     </article>
