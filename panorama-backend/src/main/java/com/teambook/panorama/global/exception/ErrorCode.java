@@ -13,6 +13,7 @@ public enum ErrorCode {
   
   HTTP_MESSAGE_NOT_READABLE(HttpStatus.BAD_REQUEST, "C002", "잘못된 요청 형식입니다."),
   MISSING_HEADER(HttpStatus.BAD_REQUEST, "C003", "헤더가 존재하지 않습니다."),
+  DATA_INTEGRITY_VIOLATION(HttpStatus.CONFLICT, "C004", "이미 사용 중인 값이거나 요청을 처리할 수 없습니다."),
 
   // user (도메인 접두어 U + 3자리 일련번호)
   USER_NOT_FOUND(HttpStatus.NOT_FOUND, "U001", "존재하지 않는 회원입니다."),
