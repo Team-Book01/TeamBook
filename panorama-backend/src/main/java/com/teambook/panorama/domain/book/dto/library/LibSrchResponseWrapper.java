@@ -1,14 +1,10 @@
 package com.teambook.panorama.domain.book.dto.library;
 
-import java.util.List;
-
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
-import lombok.Builder;
-
-@Builder
 @JsonIgnoreProperties(ignoreUnknown=true)
-public record LibraryListResponse(
-  Integer total,
-  List<LibraryResponseItem> libs) {
+public record LibSrchResponseWrapper(
+  LibSrchResponse response
+) {
+  
 }
