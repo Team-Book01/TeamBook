@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.teambook.panorama.domain.auth.dto.LoginHistoryDto;
@@ -26,7 +27,7 @@ public class LoginHistoryServiceImpl implements LoginHistoryService {
         loginHistoryRepository.save(LoginHistory.success(userId, provider));
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void recordFailLocal(Long userIdOrNull, String attemptedLoginId, Provider provider) {
         loginHistoryRepository.save(
                 LoginHistory.failLocal(userIdOrNull, truncate20(attemptedLoginId), provider)
