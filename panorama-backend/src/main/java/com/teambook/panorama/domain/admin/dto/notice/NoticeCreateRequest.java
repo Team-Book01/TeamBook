@@ -4,6 +4,8 @@ import com.teambook.panorama.domain.admin.entity.Notice;
 import com.teambook.panorama.domain.admin.entity.type.NoticeCategory;
 import com.teambook.panorama.domain.admin.entity.type.NoticeStatus;
 
+import java.util.List;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -42,7 +44,12 @@ public record NoticeCreateRequest(
     Long viewCount,
 
     @Schema(description = "공지 상태", example = "ACTIVE")
-    NoticeStatus status
+    NoticeStatus status,
+
+    // 에디터가 본문 저장 전에 업로드해 둔 이미지들. 이 요청으로 소유자가 정해진다.
+    // 넘기지 않으면 notice_id 가 null 로 남아 고아 이미지가 된다.
+    @Schema(description = "본문에 삽입된 이미지 키 목록 (업로드 응답의 imageKey)")
+    List<String> imageKeys
 ) {
 
   public Notice toEntity() {
