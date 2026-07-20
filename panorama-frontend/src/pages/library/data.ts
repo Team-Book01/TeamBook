@@ -31,14 +31,15 @@ export const RADIUS_KM = 3
 // 위치를 허용하지 않았을 때 쓰는 기본 기준점(서울시청).
 export const SEOUL_CITY_HALL: LatLng = { lat: 37.5665, lng: 126.978 }
 
-// 검색 모드는 반경을 벗어나 전국(1600곳)을 대상으로 한다.
-// "도서관" 같은 흔한 말은 대부분이 매칭되므로, 가까운 순으로 이만큼만 지도·목록에 올린다.
+// 검색·지도영역 모드는 반경을 벗어나 전국(1600곳)을 대상으로 한다. "도서관" 같은 흔한 말이나
+// 축소된 지도는 대부분을 매칭시키므로 이만큼만 목록·지도에 올린다.
+// 클러스터러가 마커는 감당하지만 사이드바 카드는 가상화가 없어 수백 장을 넘기면 느려진다.
 // (상한에 걸리면 화면에 "N곳 중 가까운 M곳"으로 표시해 잘렸음을 숨기지 않는다)
-export const SEARCH_RESULT_LIMIT = 100
-
-// "이 지역에서 검색" 모드 상한. 클러스터러가 마커는 감당하지만 사이드바 카드는 가상화가 없어
-// 수백 장을 넘기면 느려진다. 상한에 걸리면 검색 모드와 동일하게 잘렸음을 표시한다.
-export const AREA_RESULT_LIMIT = 200
+//
+// 검색과 지도영역에 각각 100/200 을 뒀었으나 근거가 같아 하나로 합쳤다.
+// 지역(시/도) 필터만 걸었을 때는 대상이 이미 한 시/도로 한정돼 있어 상한을 두지 않는다
+// — 자르면 "경기" 를 골랐는데 경기 일부만 나오게 된다.
+export const RESULT_LIMIT = 200
 
 // ─── 지역(시/도) ──────────────────────────────────────────────────────────────
 // 주소 첫 토큰이 전부 시/도라 파싱이 신뢰 가능하다.
@@ -53,6 +54,9 @@ export const SIDO_LIST = [
   '경기', '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주',
 ] as const
 
+// 특별자치도 전환 전후 명칭을 모두 담는다. 키에 없는 이름은 '기타'로 떨어지는데
+// SIDO_LIST 에 '기타'가 없어서 그 도서관은 지역 필터로 아예 도달할 수 없다.
+// (백엔드 LibraryDataSanitizer.SIDO_BBOX 와 같은 목록을 유지할 것)
 const SIDO_ALIAS: Record<string, string> = {
   서울특별시: '서울',
   부산광역시: '부산',
@@ -64,13 +68,16 @@ const SIDO_ALIAS: Record<string, string> = {
   세종특별자치시: '세종',
   경기도: '경기',
   강원특별자치도: '강원',
+  강원도: '강원',
   충청북도: '충북',
   충청남도: '충남',
   전북특별자치도: '전북',
+  전라북도: '전북',
   전라남도: '전남',
   경상북도: '경북',
   경상남도: '경남',
   제주특별자치도: '제주',
+  제주도: '제주',
 }
 
 export function parseSido(address: string): string {
@@ -109,6 +116,14 @@ export function boundsCenter(b: Bounds): LatLng {
   return { lat: (b.sw.lat + b.ne.lat) / 2, lng: (b.sw.lng + b.ne.lng) / 2 }
 }
 
+// 도서관 묶음의 무게중심. 지역 필터를 걸었을 때 "그 지역의 한가운데"를 정렬 기준으로 쓰기 위한 것.
+// (시/도 중심 좌표표를 따로 두지 않고 실제 데이터에서 구한다 — 표가 데이터와 어긋날 일이 없다)
+export function centroidOf(points: LatLng[]): LatLng | null {
+  if (points.length === 0) return null
+  const sum = points.reduce((acc, p) => ({ lat: acc.lat + p.lat, lng: acc.lng + p.lng }), { lat: 0, lng: 0 })
+  return { lat: sum.lat / points.length, lng: sum.lng / points.length }
+}
+
 // 좌표가 지도 영역 안에 있는지.
 export function inBounds(lat: number, lng: number, b: Bounds): boolean {
   return lat >= b.sw.lat && lat <= b.ne.lat && lng >= b.sw.lng && lng <= b.ne.lng
@@ -125,13 +140,29 @@ export function haversineKm(a: LatLng, b: LatLng): number {
   return 2 * R * Math.asin(Math.sqrt(h))
 }
 
+const WEEKDAY_NAMES = ['일', '월', '화', '수', '목', '금', '토']
+
+// 휴관일 문자열이 "오늘"을 가리키는지.
+//
+// 카드에는 휴관일과 영업 배지가 나란히 붙는다. 휴관일을 안 보면 "매주 월요일 휴관" 이라고
+// 적힌 카드에 월요일 낮에 "영업중" 배지가 달려 카드 안에서 모순이 생긴다.
+//
+// "1,3주 월요일" 처럼 특정 주차만 쉬는 표기는 오늘이 그 주차인지까지 따지지 않으면 과하게
+// 닫힘 처리된다. 주차 한정어가 보이면 판단을 포기하고 열림으로 둔다(파싱 실패 시 열림 방침과 동일).
+function isClosedToday(closedDays: string | null, today: number): boolean {
+  if (!closedDays) return false
+  if (/\d\s*주|째\s*주|주\s*째/.test(closedDays)) return false
+  return closedDays.includes(`${WEEKDAY_NAMES[today]}요일`)
+}
+
 // 운영시간 문자열에서 "HH:MM~HH:MM"(또는 -)을 찾아 현재 영업중인지 추정.
 // 형식이 제각각이라 파싱 실패 시엔 열림(true)으로 둔다(지도 표시가 목적이라 보수적으로).
-function guessOpen(operatingHours: string | null): boolean {
+function guessOpen(operatingHours: string | null, closedDays: string | null): boolean {
+  const now = new Date()
+  if (isClosedToday(closedDays, now.getDay())) return false
   if (!operatingHours) return true
   const m = operatingHours.match(/(\d{1,2}):(\d{2})\s*[~\-]\s*(\d{1,2}):(\d{2})/)
   if (!m) return true
-  const now = new Date()
   const cur = now.getHours() * 60 + now.getMinutes()
   const start = Number(m[1]) * 60 + Number(m[2])
   const end = Number(m[3]) * 60 + Number(m[4])
@@ -154,7 +185,7 @@ export function toLibrary(dto: LibraryResponse, basePos: LatLng): Library {
     closedDay: dto.closedDays ?? '휴관일 정보 없음',
     homepageUrl: dto.homepageUrl,
     type: dto.name.includes('국립') ? '국립' : '공공',
-    isOpen: guessOpen(dto.operatingHours),
+    isOpen: guessOpen(dto.operatingHours, dto.closedDays),
     lat,
     lng,
     distance: `${km.toFixed(1)}km`,

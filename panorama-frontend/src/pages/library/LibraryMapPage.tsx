@@ -6,11 +6,11 @@ import {
   toLibrary,
   inBounds,
   boundsCenter,
+  centroidOf,
   haversineKm,
   matchRank,
   RADIUS_KM,
-  SEARCH_RESULT_LIMIT,
-  AREA_RESULT_LIMIT,
+  RESULT_LIMIT,
   SEOUL_CITY_HALL,
   type LatLng,
   type Bounds,
@@ -173,15 +173,24 @@ export default function LibraryMapPage() {
 
     // 탐색·지역 모드는 대상이 넓어 수백~수천이 될 수 있다 → 상한을 둔다.
     if (mode === "explore" || mode === "area") {
-      const cap = mode === "explore" ? SEARCH_RESULT_LIMIT : AREA_RESULT_LIMIT;
+      // 지역 필터만 걸었으면 대상이 이미 한 시/도로 한정돼 있다 → 자르지 않는다.
+      // (자르면 "경기"를 골랐는데 경기 일부만 나온다)
+      const cap = hasRegion && !needle ? Infinity : RESULT_LIMIT;
 
-      // 지도 모드의 정렬 기준은 "지금 보고 있는 화면의 중심"이다. 기준점(내 위치/서울시청)이 아니다.
+      // 상한을 자를 때의 정렬 기준을 "지금 보고 있는 대상의 한가운데"로 둔다.
+      // 기준점(내 위치/서울시청)이 아니다.
       //
       // 기준점으로 자르면: 지도를 전국이 보이게 축소하고 검색해도 상한(200곳)이
       //   서울시청에서 가까운 순으로 채워져 서울만 나온다. 화면은 전국인데 마커는 서울뿐.
-      // 화면 중심으로 자르면 보고 있는 영역을 고르게 채운다.
+      // 같은 편향이 지역 필터에도 걸린다 — "경기"를 고르면 서울에 가까운 북서부만 남고
+      //   평택·여주가 사라진다. 그래서 지역 모드는 그 지역 도서관들의 무게중심을 기준으로 쓴다.
       // (카드에 적히는 '1.2km' 거리 자체는 그대로 기준점 대비 값이다. 그건 "나에게서 얼마나 먼가"라 의미가 다르다)
-      const center = mode === "area" ? boundsCenter(areaBounds as Bounds) : null;
+      const center =
+        mode === "area"
+          ? boundsCenter(areaBounds as Bounds)
+          : hasRegion
+            ? centroidOf(matched)
+            : null;
       const rank = center
         ? new Map(matched.map((lib) => [lib.id, haversineKm(center, lib)]))
         : null;
@@ -249,12 +258,11 @@ export default function LibraryMapPage() {
       : mode === "area"
         ? "이 지도의 도서관"
         : "내 주변 도서관";
-  // 지도 모드의 "가까운"은 화면 중심 기준이라 문구를 달리한다(기준점 기준이 아니다).
+  // "가까운"이 무엇으로부터 가까운지는 모드마다 다르다(기준점이 아닌 경우가 있다) → 문구를 맞춘다.
+  const nearLabel = mode === "area" ? "화면 중심에서 가까운" : hasRegion ? "지역 중심에서 가까운" : "가까운";
   const countNote =
     matchedCount > limit
-      ? mode === "area"
-        ? `${matchedCount.toLocaleString()}곳 중 화면 중심에서 가까운 ${limit}곳만 표시`
-        : `${matchedCount.toLocaleString()}곳 중 가까운 ${limit}곳만 표시`
+      ? `${matchedCount.toLocaleString()}곳 중 ${nearLabel} ${limit}곳만 표시`
       : undefined;
 
   return (

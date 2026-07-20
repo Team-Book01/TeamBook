@@ -26,6 +26,13 @@ final class LibraryDataSanitizer {
   /** 전남·광주 통합으로 신설된 시/도 명칭. 원본이 이 이름과 구 명칭을 혼용한다. */
   private static final String UNIFIED_SIDO = "전남광주통합특별시";
 
+  // 특별자치도 전환으로 이름이 바뀐 세 곳. 원본이 신·구 명칭을 혼용할 수 있어 양쪽 다 키로 등록한다.
+  // (표에 없는 이름은 sidoOf 가 null 을 돌려주고, 그러면 좌표 검증이 통째로 통과 처리된다.
+  //  즉 키 하나가 빠지면 그 시/도만 검증이 조용히 꺼진다 — 빠뜨리면 알아채기 어려운 종류의 구멍이다)
+  private static final double[] BBOX_GANGWON = {36.95, 38.65, 127.00, 129.42};
+  private static final double[] BBOX_JEONBUK = {35.25, 36.35, 126.25, 128.00};
+  private static final double[] BBOX_JEJU = {33.05, 33.65, 126.05, 127.00};
+
   /**
    * 시/도별 대략적인 경계 상자 {minLat, maxLat, minLng, maxLng}.
    *
@@ -46,14 +53,17 @@ final class LibraryDataSanitizer {
       Map.entry("울산광역시", new double[] {35.40, 35.82, 128.92, 129.50}),
       Map.entry("세종특별자치시", new double[] {36.38, 36.75, 127.05, 127.45}),
       Map.entry("경기도", new double[] {36.80, 38.35, 126.28, 127.90}),
-      Map.entry("강원특별자치도", new double[] {36.95, 38.65, 127.00, 129.42}),
+      Map.entry("강원특별자치도", BBOX_GANGWON),
+      Map.entry("강원도", BBOX_GANGWON),
       Map.entry("충청북도", new double[] {35.95, 37.30, 127.20, 128.70}),
       Map.entry("충청남도", new double[] {35.95, 37.10, 125.90, 127.70}),
-      Map.entry("전북특별자치도", new double[] {35.25, 36.35, 126.25, 128.00}),
+      Map.entry("전북특별자치도", BBOX_JEONBUK),
+      Map.entry("전라북도", BBOX_JEONBUK),
       Map.entry("전라남도", new double[] {33.85, 35.55, 125.00, 127.95}),
       Map.entry("경상북도", new double[] {35.50, 37.60, 127.75, 131.95}),
       Map.entry("경상남도", new double[] {34.50, 35.95, 127.50, 129.35}),
-      Map.entry("제주특별자치도", new double[] {33.05, 33.65, 126.05, 127.00}));
+      Map.entry("제주특별자치도", BBOX_JEJU),
+      Map.entry("제주도", BBOX_JEJU));
 
   /** 대한민국 전체 대략 범위. 0,0 이나 위경도가 뒤바뀐 값 같은 극단적 오류를 먼저 거른다. */
   private static final double KR_MIN_LAT = 33.0;

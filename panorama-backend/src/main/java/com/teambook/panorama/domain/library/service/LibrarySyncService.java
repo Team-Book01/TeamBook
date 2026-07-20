@@ -201,7 +201,11 @@ public class LibrarySyncService {
       pageNo++;
     }
 
+    // 삭제를 먼저 DB 에 내보낸다. Hibernate 는 한 flush 안에서 INSERT 를 DELETE 보다 먼저 실행하므로,
+    // 원본에 같은 lib_code 가 중복으로 오고 (앞=좌표 불량 → 삭제 대상, 뒤=정상 → 신규) 인 경우
+    // flush 를 나누지 않으면 아직 안 지워진 행과 UNIQUE(lib_code) 로 충돌해 동기화 전체가 롤백된다.
     libraryRepository.deleteAll(toDelete); // 데이터 오류로 더는 저장하지 않는 행 제거
+    libraryRepository.flush();
     libraryRepository.saveAll(toInsert); // update 는 더티체킹으로 flush
 
     LibrarySyncResult result = new LibrarySyncResult(inserted + updated, inserted, updated, skipped,
