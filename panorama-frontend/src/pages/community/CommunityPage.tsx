@@ -3,14 +3,20 @@ import { useNavigate } from 'react-router-dom'
 import { Search, PenLine, Eye, Heart, MessageCircle } from 'lucide-react'
 
 import type { PostCategory, PostSummary } from '@/types/community'
-import { usePosts, usePopularPosts, POST_CATEGORY_LABEL, POST_CATEGORIES } from '@/api/community'
+import {
+  usePosts,
+  usePopularPosts,
+  POST_CATEGORY_LABEL,
+  POST_CATEGORIES,
+  POST_PAGE_SIZE,
+} from '@/api/community'
 import { getErrorMessage } from '@/api/client'
 import CategoryBadge from './components/CategoryBadge'
 import CommunityLayout from './components/CommunityLayout'
 import { formatRelativeTime, stripHtml } from './utils'
 
 // ─── Tabs ─────────────────────────────────────────────────────────────────────
-// 전체/인기 = 서버 목록 API, 카테고리 탭 = 서버 필터 파라미터가 아직 없어 클라이언트 필터(임시)
+// 전체/카테고리 = GET /posts (category 파라미터로 서버 필터), 인기 = GET /posts/popular
 type MainTab = '전체' | '인기' | PostCategory
 const MAIN_TABS: MainTab[] = ['전체', '인기', ...POST_CATEGORIES]
 
@@ -113,9 +119,12 @@ export default function CommunityPage() {
   const [feedSearchOpen, setFeedSearchOpen] = useState(false)
 
   const isPopularTab = activeTab === '인기'
+  // 카테고리 탭이면 서버 필터용 enum, 전체/인기 탭이면 undefined(=필터 없음)
+  const categoryParam = activeTab === '전체' || activeTab === '인기' ? undefined : activeTab
 
   // 전체/카테고리 탭 = GET /posts, 인기 탭 = GET /posts/popular
-  const allQuery = usePosts()
+  // categoryParam 이 바뀌면 쿼리 키가 바뀌어 탭별로 커서·hasNextPage 가 독립적으로 관리된다.
+  const allQuery = usePosts(POST_PAGE_SIZE, categoryParam)
   const popularQuery = usePopularPosts()
   const query = isPopularTab ? popularQuery : allQuery
   const {
@@ -152,21 +161,19 @@ export default function CommunityPage() {
     )
     observer.observe(el)
     return () => observer.disconnect()
-  }, [hasNextPage])
+    // activeTab 도 의존성에 포함: 탭이 바뀌면 목록이 통째로 갈리므로 observer 를 다시 만들어
+    // sentinel 이 계속 화면에 머무는(=교차 이벤트가 새로 안 뜨는) 상태에서도 재발화하게 한다.
+  }, [hasNextPage, activeTab])
 
   const posts = useMemo(() => {
+    // 카테고리 필터는 서버(category 파라미터)가 처리하므로 여기선 검색어만 거른다.
     const loaded = query.data?.pages.flatMap((p) => p.content) ?? []
-    // 카테고리 탭: 서버 필터 파라미터가 없어 현재까지 불러온 페이지만 클라이언트 필터(임시)
-    const byCategory =
-      activeTab === '전체' || activeTab === '인기'
-        ? loaded
-        : loaded.filter((p) => p.category === activeTab)
-    if (!searchQuery.trim()) return byCategory
+    if (!searchQuery.trim()) return loaded
     const q = searchQuery.trim()
-    return byCategory.filter(
+    return loaded.filter(
       (p) => p.title.includes(q) || p.contentPreview.includes(q) || (p.bookTitle ?? '').includes(q),
     )
-  }, [query.data, activeTab, searchQuery])
+  }, [query.data, searchQuery])
 
   return (
     <CommunityLayout>

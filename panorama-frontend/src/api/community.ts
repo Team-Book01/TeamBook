@@ -86,7 +86,9 @@ export function toApiImageUrl(imageUrl: string): string {
 export const communityKeys = {
   all: ['community'] as const,
   lists: () => [...communityKeys.all, 'list'] as const,
-  list: (size: number) => [...communityKeys.lists(), { size }] as const,
+  // category 를 키에 포함해야 탭마다 캐시·페이지 커서가 분리된다 (없으면 전체 탭 커서를 공유)
+  list: (size: number, category?: PostCategory) =>
+    [...communityKeys.lists(), { size, category: category ?? null }] as const,
   popular: (size: number) => [...communityKeys.all, 'popular', { size }] as const,
   details: (postId: number) => [...communityKeys.all, 'detail', postId] as const,
   detail: (postId: number, viewerId: ViewerId) =>
@@ -122,10 +124,17 @@ function useAuthReady(): boolean {
 //  API 함수 (얇게)
 // ═══════════════════════════════════════════════════════════════════════════
 
-/** GET /api/v1/posts — 전체 게시글 목록 (Slice, page 는 0부터) */
-export async function getPosts(page = 0, size = POST_PAGE_SIZE): Promise<SliceResponse<PostSummary>> {
+/**
+ * GET /api/v1/posts — 게시글 목록 (Slice, page 는 0부터)
+ * category 를 넘기면 서버가 해당 카테고리만 필터해서 페이징한다(미지정 시 전체).
+ */
+export async function getPosts(
+  page = 0,
+  size = POST_PAGE_SIZE,
+  category?: PostCategory,
+): Promise<SliceResponse<PostSummary>> {
   const { data } = await client.get<SliceResponse<PostSummary>>('/posts', {
-    params: { page, size },
+    params: { page, size, ...(category ? { category } : {}) },
   })
   return data
 }
@@ -263,11 +272,11 @@ function nextSliceParam<T>(lastPage: SliceResponse<T>, allPages: SliceResponse<T
   return lastPage.hasNext ? allPages.length : undefined
 }
 
-/** 전체 게시글 목록 (무한 스크롤) */
-export function usePosts(size = POST_PAGE_SIZE) {
+/** 게시글 목록 (무한 스크롤). category 미지정 = 전체 탭 */
+export function usePosts(size = POST_PAGE_SIZE, category?: PostCategory) {
   return useInfiniteQuery({
-    queryKey: communityKeys.list(size),
-    queryFn: ({ pageParam }) => getPosts(pageParam, size),
+    queryKey: communityKeys.list(size, category),
+    queryFn: ({ pageParam }) => getPosts(pageParam, size, category),
     initialPageParam: 0,
     getNextPageParam: nextSliceParam,
   })
