@@ -2,6 +2,7 @@ package com.teambook.panorama.domain.post.service;
 
 import java.util.Optional;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +27,7 @@ public class PostLikeServiceImpl implements PostLikeService {
   public PostLikeResponseDto like(Long postId, Long userId) {
     Post post = checkAndGetPost(postId);
 
+    // 1차 방어: 대부분의 중복을 여기서 걸러 409로 답한다.
     if (postLikeRepository.existsByPostAndUserId(post, userId)) {
       throw new BusinessException(ErrorCode.ALREADY_LIKED_POST);
     }
@@ -34,7 +36,15 @@ public class PostLikeServiceImpl implements PostLikeService {
         .userId(userId)
         .build();
 
-    postLikeRepository.save(postLike);
+    // 2차 방어(TOCTOU): exists 통과와 save 사이에 동시 요청이 끼어들면
+    // UK_POST_LIKES_POST_USER 위반이 최후 심판이 된다. flush를 당겨(saveAndFlush)
+    // 이 catch 블록 안에서 터지게 하고, 500이 아닌 409(P003)로 번역한다.
+    // (save만 쓰면 flush가 트랜잭션 끝으로 밀려 catch 밖에서 터진다)
+    try {
+      postLikeRepository.saveAndFlush(postLike);
+    } catch (DataIntegrityViolationException e) {
+      throw new BusinessException(ErrorCode.ALREADY_LIKED_POST);
+    }
 
     long likeCount = postLikeRepository.countByPost(post);
 

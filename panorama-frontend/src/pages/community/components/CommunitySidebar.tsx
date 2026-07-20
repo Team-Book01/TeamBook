@@ -56,7 +56,7 @@ export default function CommunitySidebar() {
       <div className="bg-white border border-[#EAEAEA] rounded-2xl p-5">
         <div className="flex items-center gap-2 mb-4">
           <Flame size={16} color="#E07B00" />
-          <h3 className="text-sm font-bold text-[#1A1A1A]">지금 핫한 글</h3>
+          <h3 className="text-sm font-bold text-[#1A1A1A]">인기글</h3>
         </div>
         {isLoading ? (
           <p className="text-xs text-[#ccc] py-2">불러오는 중…</p>

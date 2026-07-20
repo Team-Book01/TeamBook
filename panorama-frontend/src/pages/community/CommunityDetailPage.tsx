@@ -209,6 +209,7 @@ function PostActions({ post }: { post: PostDetail }) {
     <div className="mt-12 pt-8 border-t border-black/[0.07] flex items-center justify-end gap-2.5">
       <button
         onClick={toggleLike}
+        disabled={likeMutation.isPending}
         className="flex items-center gap-2 px-5 py-2.5 rounded-full cursor-pointer transition-all"
         style={{
           border: `1.5px solid ${liked ? '#2E7D6B' : 'rgba(0,0,0,0.12)'}`,
@@ -223,6 +224,7 @@ function PostActions({ post }: { post: PostDetail }) {
 
       <button
         onClick={toggleScrap}
+        disabled={scrapMutation.isPending}
         className="flex items-center gap-2 px-5 py-2.5 rounded-full cursor-pointer transition-all"
         style={{
           border: `1.5px solid ${scrapped ? '#1E4A38' : 'rgba(0,0,0,0.12)'}`,

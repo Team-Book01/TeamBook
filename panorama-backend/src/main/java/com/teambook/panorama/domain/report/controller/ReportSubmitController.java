@@ -26,9 +26,11 @@ public class ReportSubmitController {
   @PostMapping
   public ResponseEntity<Void> submit(@AuthenticationPrincipal Long userId,
       @Valid @RequestBody ReportSubmitRequestDto request) {
+    // dto는 enum 수신(허용 외 값은 역직렬화 400) — 저장 파이프라인은 문자열이라 .name()으로 넘긴다.
+    // @NotNull 검증이 선행되므로 이 지점에서 null 아님이 보장된다.
     Long reportId = reportService.createReport(new ReportCreateRequest(
-        userId, request.targetType(), request.targetId(),
-        request.reasonType(), request.content()));
+        userId, request.targetType().name(), request.targetId(),
+        request.reasonType().name(), request.content()));
     URI location = ServletUriComponentsBuilder.fromCurrentRequest()
         .path("/{id}").buildAndExpand(reportId).toUri();
     return ResponseEntity.created(location).build();

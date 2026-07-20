@@ -258,7 +258,7 @@ export default function CommunityPage() {
           <span className="font-bold" style={{ color: '#2E7D6B' }}>
             {posts.length}
           </span>
-          개{isPopularTab && <span className="ml-1.5 text-[#ccc]">· 좋아요 3개 이상</span>}
+          개{isPopularTab && <span className="ml-1.5 text-[#ccc]"></span>}
         </p>
       </div>
 
