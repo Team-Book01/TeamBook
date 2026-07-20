@@ -54,7 +54,8 @@ public interface ReportMapper {
       @Param("targetType") String targetType,
       @Param("targetId") Long targetId,
       @Param("handlerUserId") Long handlerUserId,
-      @Param("processedAt") LocalDateTime processedAt);
+      @Param("processedAt") LocalDateTime processedAt,
+      @Param("processReason") String processReason);
 
   /** 관리자 조치 로그 1건 기록 */
   int insertAdminActionLog(

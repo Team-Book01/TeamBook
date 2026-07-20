@@ -101,7 +101,7 @@ public class ReportServiceImpl implements ReportService {
 
     // ② 같은 대상의 미처리 신고를 모두 RESOLVED (유령 신고 방지) — 현재 신고도 여기서 종결됨
     reportMapper.resolveReportsByTarget(key.targetType(), key.targetId(),
-        request.handlerUserId(), now);
+        request.handlerUserId(), now, request.reason());
 
     // ③ 관리자 조치 로그 (대상 기준 1건)
     reportMapper.insertAdminActionLog(request.handlerUserId(), key.targetType(),
