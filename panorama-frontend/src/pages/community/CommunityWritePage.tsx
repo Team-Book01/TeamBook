@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import type Editor from '@toast-ui/editor'
-import { BookPlus, ChevronRight, X } from 'lucide-react'
+import { ChevronRight, X } from 'lucide-react'
 
 import type { AttachedBook, PostCategory, PostDetail } from '@/types/community'
 import {
@@ -171,20 +171,12 @@ function WriteForm({ post }: { post?: PostDetail }) {
         </div>
       )}
 
-      {/* 책 첨부 + 카테고리 + 제목 — 앞 두 요소는 min-w-[100px] 로 현재 크기를 하한 삼고, 라벨이 길어지면 내용만큼 늘어난다 */}
+      {/* 카테고리 + 제목 — 카테고리는 min-w-[140px] 로 하한을 두고, 라벨이 길어지면 내용만큼 늘어난다 */}
       <div className="flex gap-3">
-        {!attachedBook && (
-          <button
-            onClick={() => setBookModalOpen(true)}
-            className="inline-flex items-center justify-center gap-2 min-w-[100px] text-sm font-semibold text-[#2E7D6B] px-4 py-2.5 rounded-xl border border-[#D5EAE4] bg-white hover:bg-[#EFF6F2] transition-colors cursor-pointer flex-shrink-0 whitespace-nowrap"
-          >
-            <BookPlus size={15} /> 책 첨부
-          </button>
-        )}
         <select
           value={category}
           onChange={(e) => setCategory(e.target.value as PostCategory)}
-          className="min-w-[100px] text-sm font-semibold text-[#333] bg-white border border-[#E0E0E0] rounded-xl px-3 py-2.5 cursor-pointer focus:outline-none focus:border-[#2E7D6B] transition-colors flex-shrink-0"
+          className="min-w-[140px] text-sm font-semibold text-[#333] bg-white border border-[#E0E0E0] rounded-xl px-3 py-2.5 cursor-pointer focus:outline-none focus:border-[#2E7D6B] transition-colors flex-shrink-0"
         >
           {POST_CATEGORIES.map((c) => (
             <option key={c} value={c}>

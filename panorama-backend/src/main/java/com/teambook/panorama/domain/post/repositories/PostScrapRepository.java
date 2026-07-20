@@ -18,4 +18,7 @@ public interface PostScrapRepository extends JpaRepository<PostScrap, Long> {
 
   @EntityGraph(attributePaths = { "post", "post.user", "post.book" })
   Slice<PostScrap> findByUserIdAndPost_StatusOrderByCreatedAtDesc(Long userId, PostStatus status, Pageable pageable);
+
+  // 마이페이지 카운트 박스 — 위 목록(findMyScraps)과 동일 기준(원글 ACTIVE): 박스 숫자와 목록 건수가 일치해야 한다.
+  long countByUserIdAndPost_Status(Long userId, PostStatus status);
 }

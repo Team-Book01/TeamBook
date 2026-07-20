@@ -16,19 +16,25 @@ public interface PostRepository extends JpaRepository<Post, Long> {
   @EntityGraph(attributePaths = { "book", "user" })
   Slice<Post> findByStatusOrderByCreatedAtDesc(PostStatus status, Pageable pageable);
 
+  @EntityGraph(attributePaths = { "book", "user" })
+  Slice<Post> findByUser_IdAndStatusOrderByCreatedAtDesc(Long userId, PostStatus status, Pageable pageable);
+
+  long countByUser_IdAndStatus(Long userId, PostStatus status);
+
   @Query("SELECT new com.teambook.panorama.domain.post.dto.PostSummaryResponseDto(" +
-    "p.postId, b.bookId, u.nickname, p.category, p.title, p.content, " +
+    "p.postId, b.bookId, u.nickname, p.category, p.title, SUBSTRING(p.content, 1, 101), " +
     "p.viewCount, p.createdAt, b.title, b.author, " +
-    "(SELECT COUNT(pl) FROM PostLike pl WHERE pl.post = p), " +
+    "COUNT(pl), " +
     "(SELECT COUNT(c) FROM PostComment c WHERE c.post = p AND c.status = com.teambook.panorama.domain.post.enums.CommentStatus.ACTIVE)) " +
-    "FROM Post p JOIN p.user u LEFT JOIN p.book b " +
+    "FROM Post p JOIN p.user u LEFT JOIN p.book b LEFT JOIN PostLike pl ON pl.post = p " +
       "WHERE p.status = :status " +
-      "AND (SELECT COUNT(pl) FROM PostLike pl WHERE pl.post = p) >= :n " +
+      "GROUP BY p.postId, u.id, b.bookId " +
+      "HAVING COUNT(pl) >= :n " +
       "ORDER BY p.createdAt DESC")
   Slice<PostSummaryResponseDto> findPopular(@Param("status") PostStatus status, @Param("n") long n, Pageable pageable);
 
   @Query("SELECT new com.teambook.panorama.domain.post.dto.PostSummaryResponseDto(" +
-    "p.postId, b.bookId, u.nickname, p.category, p.title, p.content, " +
+    "p.postId, b.bookId, u.nickname, p.category, p.title, SUBSTRING(p.content, 1, 101), " +
     "p.viewCount, p.createdAt, b.title, b.author, " +
     "(SELECT COUNT(pl) FROM PostLike pl WHERE pl.post = p), " +
     "(SELECT COUNT(c) FROM PostComment c WHERE c.post = p AND c.status = com.teambook.panorama.domain.post.enums.CommentStatus.ACTIVE)) " +

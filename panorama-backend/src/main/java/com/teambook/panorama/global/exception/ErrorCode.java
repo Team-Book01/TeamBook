@@ -67,6 +67,8 @@ public enum ErrorCode {
 
   // ocr (도메인 접두어 OCR + 3자리 일련번호)
   ISBN_NOT_FOUND(HttpStatus.NOT_FOUND, "OCR001", "이미지에서 ISBN을 찾을 수 없습니다."),
+  // 상류(외부 API) 실패는 우리 서버 오류(S001 500)가 아니라 502 — L001(LIBRARY_SYNC_FAILED)의 BAD_GATEWAY 관례 재사용
+  OCR_UPSTREAM_ERROR(HttpStatus.BAD_GATEWAY, "OCR002", "이미지 인식 처리에 실패했습니다. 잠시 후 다시 시도해주세요."),
 
   // notice (도메인 접두어 N)
   NOTICE_NOT_FOUND(HttpStatus.NOT_FOUND, "N001", "존재하지 않는 공지입니다."),

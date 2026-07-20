@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.teambook.panorama.domain.book.entity.Book;
 import com.teambook.panorama.domain.book.repository.BookRepository;
+import com.teambook.panorama.domain.post.dto.MyPageStatsResponseDto;
 import com.teambook.panorama.domain.post.dto.PostDetailResponseDto;
 import com.teambook.panorama.domain.post.dto.PostRequestDto;
 import com.teambook.panorama.domain.post.dto.PostResponseDto;
@@ -125,6 +126,23 @@ public class PostServiceImpl implements PostService {
   @Transactional(readOnly = true)
   public Slice<PostSummaryResponseDto> findPopularPosts(Pageable pageable) {
     return postRepository.findPopular(PostStatus.ACTIVE, POPULAR_LIKE_THRESHOLD, pageable);
+  }
+
+  // 내 작성글 목록 (마이페이지) — 스크랩 목록(findMyScraps)과 동일 구조:
+  // 엔티티 Slice 조회 후 from()으로 변환, ACTIVE만 노출(삭제글 제외)
+  @Transactional(readOnly = true)
+  public Slice<PostSummaryResponseDto> findMyPosts(Long userId, Pageable pageable) {
+    Slice<Post> posts = postRepository.findByUser_IdAndStatusOrderByCreatedAtDesc(userId, PostStatus.ACTIVE, pageable);
+    return posts.map(PostSummaryResponseDto::from);
+  }
+
+  // 마이페이지 상단 박스 — 목록 API(Slice)는 전체 개수를 주지 않으므로 카운트는 별도 조회.
+  // 집계 기준은 각 목록과 동일(작성글 ACTIVE / 스크랩은 원글 ACTIVE) — 박스 숫자와 목록 건수가 일치해야 한다.
+  @Transactional(readOnly = true)
+  public MyPageStatsResponseDto findMyStats(Long userId) {
+    long postCount = postRepository.countByUser_IdAndStatus(userId, PostStatus.ACTIVE);
+    long scrapCount = postScrapRepository.countByUserIdAndPost_Status(userId, PostStatus.ACTIVE);
+    return new MyPageStatsResponseDto(postCount, scrapCount);
   }
 
   private Post checkAndGetPost(Long postId) {
