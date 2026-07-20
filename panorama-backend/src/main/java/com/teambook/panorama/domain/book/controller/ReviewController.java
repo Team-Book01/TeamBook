@@ -19,6 +19,8 @@ import com.teambook.panorama.domain.book.dto.review.ReviewResponse;
 import com.teambook.panorama.domain.book.service.ReviewService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -31,8 +33,8 @@ public class ReviewController {
   @Operation(summary = "도서 리뷰 목록 불러오기")
   @GetMapping("/{isbn}")
   public ResponseEntity<ReviewResponse> getBookReviews(@PathVariable("isbn") String isbn, @AuthenticationPrincipal Long userId,
-  @RequestParam(value = "page", defaultValue = "1") Integer page,
-  @RequestParam(value = "size", defaultValue = "10") Integer size) 
+  @RequestParam(value = "page", defaultValue = "1") @Min(1) Integer page,
+  @RequestParam(value = "size", defaultValue = "10") @Min(1) @Max(30) Integer size) 
   {
     ReviewResponse response = reviewService.findByIsbn(isbn, userId, size, page);
     return ResponseEntity.ok(response);

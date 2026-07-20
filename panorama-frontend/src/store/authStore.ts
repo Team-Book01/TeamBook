@@ -8,9 +8,11 @@ import type { User } from '@/types'
  * access 토큰은 메모리(이 스토어)에만 둔다. (localStorage 미사용 — XSS 노출 방지)
  * 새로고침하면 토큰이 사라지므로, 앱 시작 시 refresh 쿠키로 재발급(reissue)해 세션을 복원한다.
  * → useAuthBootstrap + api/client 의 401 자동 재발급 참고.
- * persist 미들웨어로 localStorage('auth-storage')에 저장한다.
- * → 새로고침 / URL 직접 접근 / 링크 공유로 들어와도 토큰이 유지되어,
- *   client.ts 요청 인터셉터가 Authorization 헤더를 정상적으로 붙일 수 있다.
+ *
+ * persist 미들웨어는 쓰되 partialize 로 user 만 localStorage('auth-storage')에 저장한다.
+ * → 새로고침 직후 헤더/프로필이 로그아웃 상태로 깜빡이는 것을 막는 용도일 뿐이며,
+ *   token 은 저장하지 않으므로 이것만으로 인증된 요청을 보낼 수는 없다.
+ *   (user 는 복원됐지만 token 은 아직 없는 구간이 존재 → useAuthQuerySync 주석 참고)
  *
  * 실제 로그인/토큰 발급은 auth 도메인 담당자가 login 페이지 구현 시
  * setUser/login/logout 을 백엔드 API와 연결한다.
@@ -54,8 +56,7 @@ export const useAuthStore = create<AuthState>()(
     {
       name: "auth-storage",
       partialize: (state) => ({
-        user: state.user,
-        token: state.token,
+        user: state.user
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {
