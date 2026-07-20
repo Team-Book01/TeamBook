@@ -6,7 +6,7 @@ import { getErrorMessage } from '@/api/client'
 import { useAdminUsers, useAdminUser, useProcessUser } from '@/api/admin'
 import DetailDrawer from '@/components/admin/DetailDrawer'
 import AdminSelect from '@/components/admin/AdminSelect'
-import type { UserSearchRequest, UserStatus, UserRole, Provider, UserDetailResponse } from '@/types/admin'
+import type { UserSearchRequest, UserStatus, UserRole, Provider, UserDetailResponse, AdminActionLogResponse } from '@/types/admin'
 
 const STATUS_META: Record<UserStatus, { label: string; cls: string }> = {
   ACTIVE: { label: '정상', cls: 'bg-green-50 text-green-700 ring-green-200' },
@@ -17,7 +17,19 @@ const PROVIDER_LABEL: Record<Provider, string> = { LOCAL: '이메일', GOOGLE: '
 const PROVIDER_BADGE: Record<Provider, string> = {
   LOCAL: 'bg-gray-100 text-gray-600', GOOGLE: 'bg-blue-50 text-blue-700', NAVER: 'bg-green-50 text-green-700', KAKAO: 'bg-yellow-50 text-yellow-700',
 }
+// 같은 로그에 두 종류의 action_type 이 쌓인다. 사용자 관리는 UserAction(SUSPEND/ACTIVATE/DELETE),
+// 신고 처리는 유저 대상일 때 ContentAction(HIDDEN/DELETED) 이름으로 남긴다. 둘 다 라벨을 붙인다.
+const ACTION_LABEL: Record<string, string> = {
+  SUSPEND: '이용제한', ACTIVATE: '제한해제', DELETE: '강제탈퇴',
+  HIDDEN: '이용제한 (신고 처리)', DELETED: '강제탈퇴 (신고 처리)',
+}
+const ACTION_BADGE: Record<string, string> = {
+  SUSPEND: 'bg-amber-50 text-amber-700', ACTIVATE: 'bg-green-50 text-green-700', DELETE: 'bg-red-50 text-red-600',
+  HIDDEN: 'bg-amber-50 text-amber-700', DELETED: 'bg-red-50 text-red-600',
+}
 const fmt = (iso?: string | null) => (iso ? iso.slice(0, 10) : '-')
+// 조치 이력은 같은 날 여러 번 일어날 수 있어 시각까지 보여준다.
+const fmtDateTime = (iso?: string | null) => (iso ? iso.replace('T', ' ').slice(0, 16) : '-')
 const initialOf = (nick: string) => nick?.trim()?.[0] ?? '·'
 
 function StatusBadge({ status }: { status: UserStatus }) {
@@ -66,11 +78,12 @@ function UserDetailDrawer({ userId, onClose }: { userId: number; onClose: () => 
   const run = (action: 'SUSPEND' | 'ACTIVATE' | 'DELETE') =>
     me?.id != null && processMut.mutate({ userId, body: { action, reason: reason || undefined, handlerUserId: me.id } }, { onSuccess: () => setReason('') })
 
-  const header = data ? (
+  const u = data?.user
+  const header = u ? (
     <div className="flex items-center gap-2 flex-wrap min-w-0">
-      <span className={cn('text-[15px] font-bold truncate', data.status === 'DELETED' ? 'text-gray-400' : 'text-foreground')}>{data.nickname}</span>
-      <StatusBadge status={data.status} />
-      <RoleBadge role={data.role} />
+      <span className={cn('text-[15px] font-bold truncate', u.status === 'DELETED' ? 'text-gray-400' : 'text-foreground')}>{u.nickname}</span>
+      <StatusBadge status={u.status} />
+      <RoleBadge role={u.role} />
     </div>
   ) : (
     <span className="text-sm font-bold text-foreground">회원 상세</span>
@@ -80,23 +93,23 @@ function UserDetailDrawer({ userId, onClose }: { userId: number; onClose: () => 
     <DetailDrawer onClose={onClose} header={header} width={440}>
       {isLoading ? (
         <div className="p-10 text-center text-sm text-muted-foreground">불러오는 중…</div>
-      ) : isError || !data ? (
+      ) : isError || !data || !u ? (
         <div className="p-8 text-center">
           <AlertCircle size={20} className="mx-auto mb-2 text-red-400" />
           <p className="text-sm text-red-600 mb-3">{getErrorMessage(error, '회원 상세를 불러오지 못했습니다.')}</p>
           <button onClick={() => refetch()} className="px-3 py-1.5 text-xs font-semibold border border-border rounded-lg hover:bg-gray-50">다시 시도</button>
         </div>
       ) : (
-        <UserDetailBody u={data} reason={reason} setReason={setReason} pending={processMut.isPending} onRun={run} onGuard={() => setGuard(true)}
+        <UserDetailBody u={u} logs={data.actionLogs} reason={reason} setReason={setReason} pending={processMut.isPending} onRun={run} onGuard={() => setGuard(true)}
           errorMsg={processMut.isError ? getErrorMessage(processMut.error, '처리에 실패했습니다. 다시 시도해 주세요.') : null} />
       )}
-      {guard && data && <AdminGuardModal nickname={data.nickname} onConfirm={() => { setGuard(false); run('DELETE') }} onClose={() => setGuard(false)} />}
+      {guard && u && <AdminGuardModal nickname={u.nickname} onConfirm={() => { setGuard(false); run('DELETE') }} onClose={() => setGuard(false)} />}
     </DetailDrawer>
   )
 }
 
-function UserDetailBody({ u, reason, setReason, pending, onRun, onGuard, errorMsg }: {
-  u: UserDetailResponse; reason: string; setReason: (v: string) => void; pending: boolean
+function UserDetailBody({ u, logs, reason, setReason, pending, onRun, onGuard, errorMsg }: {
+  u: UserDetailResponse; logs: AdminActionLogResponse[]; reason: string; setReason: (v: string) => void; pending: boolean
   onRun: (a: 'SUSPEND' | 'ACTIVATE' | 'DELETE') => void; onGuard: () => void; errorMsg?: string | null
 }) {
   const onDelete = () => (u.role === 'ADMIN' ? onGuard() : onRun('DELETE'))
@@ -144,6 +157,34 @@ function UserDetailBody({ u, reason, setReason, pending, onRun, onGuard, errorMs
           <RotateCcw size={13} /> 탈퇴한 계정 · 조치 불가 (열람만 가능)
         </div>
       )}
+
+      {/* 조치 이력 — 정지·해제가 반복될 수 있어 마지막 사유만으로는 판단이 어렵다.
+          "세 번째 정지"와 "첫 정지"는 다른 상황이라 전체를 보여준다. */}
+      <div>
+        <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">조치 이력</p>
+        {logs.length === 0 ? (
+          <p className="text-[12px] text-muted-foreground bg-gray-50 border border-border rounded-xl px-3.5 py-3">
+            아직 조치 이력이 없습니다.
+          </p>
+        ) : (
+          <ul className="rounded-xl border border-border overflow-hidden">
+            {logs.map((log, i) => (
+              <li key={i} className="px-3.5 py-3 border-b border-gray-100 last:border-0 bg-white">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className={cn('inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold', ACTION_BADGE[log.actionType] ?? 'bg-gray-100 text-gray-500')}>
+                    {ACTION_LABEL[log.actionType] ?? log.actionType}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">{fmtDateTime(log.createdAt)}</span>
+                  <span className="text-[10px] text-muted-foreground">· {log.handlerNickname ?? '탈퇴한 관리자'}</span>
+                </div>
+                <p className="text-[12px] text-gray-700 leading-relaxed mt-1.5 whitespace-pre-wrap">
+                  {log.reason || <span className="text-muted-foreground">(사유 없음)</span>}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   )
 }

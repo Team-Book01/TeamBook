@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.teambook.panorama.domain.admin.dto.user.UserDetailResponse;
+import com.teambook.panorama.domain.admin.dto.user.UserDetailView;
 import com.teambook.panorama.domain.admin.dto.user.UserProcessRequest;
 import com.teambook.panorama.domain.admin.dto.user.UserResponse;
 import com.teambook.panorama.domain.admin.dto.user.UserSearchRequest;
@@ -32,9 +33,10 @@ public class UserManagerServiceImpl implements UserManagerService {
   }
 
   @Override
-  public UserDetailResponse getUserDetail(Long userId) {
-    return userMapper.selectUserDetail(userId)
+  public UserDetailView getUserDetail(Long userId) {
+    UserDetailResponse user = userMapper.selectUserDetail(userId)
         .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+    return new UserDetailView(user, userMapper.selectUserActionLogs(userId));
   }
 
   @Override
