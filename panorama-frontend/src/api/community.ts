@@ -13,6 +13,7 @@ import {
   useQueryClient,
 } from '@tanstack/react-query'
 import { client } from './client'
+import { useAuthStore } from '@/store/authStore'
 import type {
   PostCategory,
   PostComment,
@@ -72,14 +73,49 @@ export function toApiImageUrl(imageUrl: string): string {
 }
 
 // ── queryKey 규칙: ['community', ...] ────────────────────────────────────────
+/**
+ * 응답이 "요청 사용자"에 따라 달라지는 쿼리(detail 의 liked·scrapped, myScraps)는
+ * 키 끝에 viewerId 를 붙여 계정별로 캐시를 분리한다.
+ *
+ * 안 붙이면 A 로그아웃 → B 로그인 시(같은 탭, gcTime 5분 이내) B 가 A 의 캐시를 그대로
+ * 받아 좋아요/스크랩 버튼이 눌린 상태로 보인다. staleTime 60초 동안은 재요청도 안 하므로
+ * 화면상으로는 계속 A 의 상태다.
+ *
+ * 사용자 무관 쿼리(list·popular·comments)는 계정별로 나눌 이유가 없어 그대로 둔다.
+ */
 export const communityKeys = {
   all: ['community'] as const,
   lists: () => [...communityKeys.all, 'list'] as const,
   list: (size: number) => [...communityKeys.lists(), { size }] as const,
   popular: (size: number) => [...communityKeys.all, 'popular', { size }] as const,
-  detail: (postId: number) => [...communityKeys.all, 'detail', postId] as const,
+  details: (postId: number) => [...communityKeys.all, 'detail', postId] as const,
+  detail: (postId: number, viewerId: ViewerId) =>
+    [...communityKeys.details(postId), viewerId] as const,
   comments: (postId: number) => [...communityKeys.all, 'comments', postId] as const,
-  myScraps: (size: number) => [...communityKeys.all, 'myScraps', { size }] as const,
+  myScraps: (size: number, viewerId: ViewerId) =>
+    [...communityKeys.all, 'myScraps', { size }, viewerId] as const,
+}
+
+/** 비로그인 상태도 하나의 캐시 스코프로 다룬다(서버는 liked·scrapped 를 false 로 준다). */
+type ViewerId = number | 'guest'
+
+/**
+ * 현재 로그인 사용자 id (쿼리 키 스코프용).
+ * 스토어 구독이라 로그인/로그아웃 시 키가 바뀌고 → 훅이 새 키로 재조회한다.
+ */
+function useViewerId(): ViewerId {
+  return useAuthStore((s) => s.user?.id ?? 'guest')
+}
+
+/**
+ * 세션 복원(reissue) 완료 여부. viewerId 스코프 쿼리는 이게 true 가 될 때까지 기다려야 한다.
+ *
+ * 새로고침 직후엔 user 가 null 이라 viewerId 가 'guest' → 복원되면 실제 id 로 키가 바뀐다.
+ * 기다리지 않으면 두 키로 각각 조회하게 되는데, GET /posts/{id} 는 조회수를 +1 하므로
+ * 새로고침 한 번에 조회수가 2 오른다.
+ */
+function useAuthReady(): boolean {
+  return useAuthStore((s) => s.authReady)
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -249,10 +285,12 @@ export function usePopularPosts(size = POST_PAGE_SIZE) {
 
 /** 게시글 상세 */
 export function usePost(postId: number) {
+  const viewerId = useViewerId()
+  const authReady = useAuthReady()
   return useQuery({
-    queryKey: communityKeys.detail(postId),
+    queryKey: communityKeys.detail(postId, viewerId),
     queryFn: () => getPost(postId),
-    enabled: Number.isFinite(postId) && postId > 0,
+    enabled: authReady && Number.isFinite(postId) && postId > 0,
   })
 }
 
@@ -269,11 +307,15 @@ export function usePostComments(postId: number, size = POST_PAGE_SIZE) {
 
 /** 내 스크랩 목록 (무한 스크롤, 마이페이지) */
 export function useMyScraps(size = POST_PAGE_SIZE) {
+  const viewerId = useViewerId()
+  const authReady = useAuthReady()
   return useInfiniteQuery({
-    queryKey: communityKeys.myScraps(size),
+    queryKey: communityKeys.myScraps(size, viewerId),
     queryFn: ({ pageParam }) => getMyScraps(pageParam, size),
     initialPageParam: 0,
     getNextPageParam: nextSliceParam,
+    // 인증 필요 엔드포인트 — 복원 전에 쏘면 불필요한 401
+    enabled: authReady,
   })
 }
 
@@ -299,7 +341,8 @@ export function useUpdatePost(postId: number) {
   return useMutation({
     mutationFn: (body: PostRequest) => updatePost(postId, body),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: communityKeys.detail(postId) })
+      // 본문 수정은 계정과 무관 → 해당 글의 모든 viewer 캐시를 무효화(prefix 매칭)
+      queryClient.invalidateQueries({ queryKey: communityKeys.details(postId) })
       queryClient.invalidateQueries({ queryKey: communityKeys.lists() })
       queryClient.invalidateQueries({ queryKey: [...communityKeys.all, 'popular'] })
     },
@@ -312,7 +355,7 @@ export function useDeletePost() {
   return useMutation({
     mutationFn: (postId: number) => deletePost(postId),
     onSuccess: (_data, postId) => {
-      queryClient.removeQueries({ queryKey: communityKeys.detail(postId) })
+      queryClient.removeQueries({ queryKey: communityKeys.details(postId) })
       queryClient.invalidateQueries({ queryKey: communityKeys.lists() })
       queryClient.invalidateQueries({ queryKey: [...communityKeys.all, 'popular'] })
     },
@@ -327,10 +370,12 @@ export function useDeletePost() {
  */
 export function useLikePostMutation(postId: number) {
   const queryClient = useQueryClient()
+  const viewerId = useViewerId()
   return useMutation({
     mutationFn: (like: boolean) => (like ? likePost(postId) : unlikePost(postId)),
     onSuccess: (res) => {
-      queryClient.setQueryData<PostDetail>(communityKeys.detail(postId), (old) =>
+      // liked 는 내 상태 → 내 스코프 캐시만 갱신한다
+      queryClient.setQueryData<PostDetail>(communityKeys.detail(postId, viewerId), (old) =>
         old ? { ...old, liked: res.liked, likeCount: res.likeCount } : old,
       )
       queryClient.invalidateQueries({ queryKey: [...communityKeys.all, 'popular'] })
@@ -341,10 +386,11 @@ export function useLikePostMutation(postId: number) {
 /** 스크랩 토글 (scrap=true 면 등록, false 면 취소). 응답값으로 상세 캐시 갱신, 409(P004) 재동기화는 화면에서 처리. */
 export function useScrapPostMutation(postId: number) {
   const queryClient = useQueryClient()
+  const viewerId = useViewerId()
   return useMutation({
     mutationFn: (scrap: boolean) => (scrap ? scrapPost(postId) : unscrapPost(postId)),
     onSuccess: (res) => {
-      queryClient.setQueryData<PostDetail>(communityKeys.detail(postId), (old) =>
+      queryClient.setQueryData<PostDetail>(communityKeys.detail(postId, viewerId), (old) =>
         old ? { ...old, scrapped: res.scrapped } : old,
       )
       queryClient.invalidateQueries({ queryKey: [...communityKeys.all, 'myScraps'] })
