@@ -2,6 +2,7 @@ package com.teambook.panorama.global.exception;
 
 import java.util.List;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -68,6 +69,14 @@ public class GlobalExceptionHandler {
     log.warn("Business exception: {}", errorCode.getCode());
     ErrorResponse body = ErrorResponse.of(errorCode, e.getMessage());
     return new ResponseEntity<>(body, errorCode.getStatus());
+  }
+
+  // 409 - DB 무결성 제약 위반. 사전검사(existsBy...)를 통과한 뒤 커밋 시점에 UNIQUE 등이 충돌하는
+  //       동시성 상황(동시 가입·닉네임 변경 등)을 500 대신 409로 변환한다.
+  @ExceptionHandler(DataIntegrityViolationException.class)
+  public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException e) {
+    log.warn("Data integrity violation: {}", e.getMostSpecificCause().getMessage());
+    return build(ErrorCode.DATA_INTEGRITY_VIOLATION, List.of());
   }
 
   // 500 - 예상하지 못한 모든 예외.
