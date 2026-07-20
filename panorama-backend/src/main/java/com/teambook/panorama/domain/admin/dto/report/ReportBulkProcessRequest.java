@@ -7,6 +7,7 @@ import com.teambook.panorama.domain.admin.entity.type.ReportStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 /**
  * 신고 일괄 처리(상태 변경) 요청. 목록에서 체크박스로 여러 건을 선택해 한 번에 처리한다.
@@ -22,6 +23,10 @@ public record ReportBulkProcessRequest(
     @Schema(description = "변경할 처리 상태", example = "RESOLVED")
     @NotNull(message = "처리 상태는 필수입니다.")
     ReportStatus status,
+
+    @Schema(description = "관리자 처리 사유 (선택)", example = "신고 내용 확인 결과 위반 없음")
+    @Size(max = 500, message = "처리 사유는 500자를 넘을 수 없습니다.")
+    String reason,
 
     @Schema(description = "처리 담당 관리자 ID", example = "3")
     @NotNull(message = "처리 담당자 ID는 필수입니다.")

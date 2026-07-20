@@ -13,10 +13,12 @@ export type Provider = 'LOCAL' | 'GOOGLE' | 'NAVER' | 'KAKAO'
 
 export type ContentType = 'POST' | 'COMMENT' | 'REVIEW'
 export type ContentStatus = 'ACTIVE' | 'HIDDEN' | 'DELETED'
+/** 관리자가 콘텐츠에 취하는 조치. ACTIVE 는 숨김 해제(되돌리기)로 HIDDEN 상태에서만 허용된다. */
+export type ContentAction = 'ACTIVE' | 'HIDDEN' | 'DELETED'
 
 export type ReportTargetType = 'POST' | 'COMMENT' | 'REVIEW' | 'USER'
 export type ReportReason = 'ABUSE' | 'SPAM' | 'MISINFO' | 'OBSCENE' | 'ETC'
-export type ReportStatus = 'PENDING' | 'REVIEWING' | 'RESOLVED' | 'REJECTED'
+export type ReportStatus = 'PENDING' | 'RESOLVED' | 'REJECTED'
 
 export type InquiryStatus = 'PENDING' | 'ANSWERED' | 'CLOSED' | 'DELETED'
 
@@ -147,7 +149,7 @@ export interface CommunityContentSearchRequest {
 }
 
 export interface CommunityProcessRequest {
-  action: 'HIDDEN' | 'DELETED'
+  action: ContentAction
   reason?: string
   handlerUserId: number
 }
@@ -190,6 +192,8 @@ export interface ReportTargetView {
   createdAt: string
   status: string
   deleted: boolean
+  /** 원본으로 이동할 링크의 재료. POST=자기 자신, COMMENT=부모 글, REVIEW·USER=null */
+  linkPostId: number | null
 }
 
 export interface RelatedReport {
@@ -227,6 +231,7 @@ export interface ReportProcessRequest {
 export interface ReportBulkProcessRequest {
   reportIds: number[]
   status: ReportStatus
+  reason?: string
   handlerUserId: number
 }
 

@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Search, X, Flag, Trash2, Eye, ShieldAlert, Save, User, AlertCircle, Inbox } from 'lucide-react'
+import { Search, X, Flag, Save, User, AlertCircle, Inbox } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/authStore'
 import { getErrorMessage } from '@/api/client'
 import { useAdminReports, useAdminReport, useProcessReport, useBulkProcessReports } from '@/api/admin'
+import { sanitizePostHtml } from '@/pages/community/utils'
+import OriginLink from '@/components/admin/OriginLink'
+import AdminSelect from '@/components/admin/AdminSelect'
 import type {
   ReportSearchRequest,
   ReportResponse,
@@ -20,7 +23,6 @@ const REASON_BADGE: Record<ReportReason, string> = {
 }
 const STATUS_META: Record<ReportStatus, { label: string; bg: string; text: string; dot: string }> = {
   PENDING: { label: '대기', bg: 'bg-red-50', text: 'text-red-600', dot: 'bg-red-500' },
-  REVIEWING: { label: '검토중', bg: 'bg-amber-50', text: 'text-amber-600', dot: 'bg-amber-500' },
   RESOLVED: { label: '완료', bg: 'bg-green-50', text: 'text-green-700', dot: 'bg-green-500' },
   REJECTED: { label: '반려', bg: 'bg-gray-100', text: 'text-gray-500', dot: 'bg-gray-400' },
 }
@@ -30,8 +32,22 @@ const TARGET_BADGE: Record<ReportTargetType, string> = {
 }
 const fmt = (iso?: string | null) => (iso ? iso.replace('T', ' ').slice(0, 16) : '-')
 
+// 상세 패널의 처리 방식. 앞의 둘은 콘텐츠에 실제 조치를 하고(신고는 자동 RESOLVED),
+// 뒤의 둘은 콘텐츠를 건드리지 않고 신고 상태만 바꾼다. 배타적이라 라디오로 받는다.
+type Decision = 'HIDDEN' | 'DELETED' | 'RESOLVED' | 'REJECTED'
+const DECISIONS: { value: Decision; label: string; userLabel?: string; desc: string; tone: string }[] = [
+  { value: 'HIDDEN', label: '콘텐츠 숨김', userLabel: '제재(정지)', desc: '원본을 숨기고 신고를 완료 처리합니다.', tone: 'text-amber-700' },
+  { value: 'DELETED', label: '콘텐츠 삭제', userLabel: '강제탈퇴', desc: '원본을 삭제하고 신고를 완료 처리합니다.', tone: 'text-red-600' },
+  { value: 'RESOLVED', label: '조치 없이 완료', desc: '콘텐츠는 그대로 두고 신고만 종결합니다.', tone: 'text-green-700' },
+  { value: 'REJECTED', label: '반려', desc: '위반이 아니라고 판단해 신고를 반려합니다.', tone: 'text-gray-500' },
+]
+
+// 서버가 프론트가 모르는 상태를 내려도(구버전 API, 마이그레이션 전 데이터, enum 추가)
+// 목록 전체가 죽지 않도록 원래 값을 그대로 보여주는 회색 배지로 떨어뜨린다.
+const UNKNOWN_STATUS = { bg: 'bg-gray-100', text: 'text-gray-500', dot: 'bg-gray-400' }
+
 function StatusBadge({ s }: { s: ReportStatus }) {
-  const c = STATUS_META[s]
+  const c = STATUS_META[s] ?? { ...UNKNOWN_STATUS, label: s ?? '알 수 없음' }
   return (
     <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium', c.bg, c.text)}>
       <span className={cn('w-1.5 h-1.5 rounded-full', c.dot)} />{c.label}
@@ -45,19 +61,49 @@ function DetailPanel({ reportId, onClose }: { reportId: number; onClose: () => v
   const { data, isLoading, isError, error, refetch } = useAdminReport(reportId)
   const processMut = useProcessReport()
   const bulkMut = useBulkProcessReports()
-  const [status, setStatus] = useState<ReportStatus | ''>('')
+  const [decision, setDecision] = useState<Decision | ''>('')
   const [note, setNote] = useState('')
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [skipped, setSkipped] = useState(false)
+  const [missingDecision, setMissingDecision] = useState(false)
 
   const core = data?.report
   const target = data?.target
   const related = data?.relatedReports ?? []
+  const closed = core?.status === 'RESOLVED' || core?.status === 'REJECTED'
+  const pending = processMut.isPending || bulkMut.isPending
 
-  const doContentAction = (action: 'HIDDEN' | 'DELETED') =>
-    me?.id != null && processMut.mutate({ reportId, body: { action, reason: note || undefined, handlerUserId: me.id } }, { onSuccess: onClose })
+  const pick = (d: Decision) => {
+    setDecision(d)
+    setConfirmDelete(false)
+    setSkipped(false)
+    setMissingDecision(false)
+  }
 
-  const saveStatus = () => {
-    if (!status || me?.id == null) return
-    bulkMut.mutate({ reportIds: [reportId], status, handlerUserId: me.id }, { onSuccess: onClose })
+  // 저장은 이 한 곳에서만 커밋한다. 라디오 선택은 아무것도 보내지 않는다.
+  // 콘텐츠 조치(HIDDEN/DELETED)는 백엔드가 상태를 RESOLVED 로 확정하므로 상태 선택과 배타적이다.
+  const save = () => {
+    if (pending || me?.id == null) return
+    // 버튼을 disabled 로 막지 않고 여기서 걸러낸다. disabled 면 클릭 이벤트가 안 나가
+    // "왜 안 되는지"를 누른 순간에 알려줄 방법이 없다.
+    if (!decision) {
+      setMissingDecision(true)
+      return
+    }
+    if (decision === 'DELETED' && !confirmDelete) {
+      setConfirmDelete(true)
+      return
+    }
+    const reason = note.trim() || undefined
+    if (decision === 'HIDDEN' || decision === 'DELETED') {
+      processMut.mutate({ reportId, body: { action: decision, reason, handlerUserId: me.id } }, { onSuccess: onClose })
+    } else {
+      bulkMut.mutate(
+        { reportIds: [reportId], status: decision, reason, handlerUserId: me.id },
+        // done 0 = 이미 종결돼 건너뛴 것. 성공처럼 닫으면 안 바뀐 걸 바뀐 줄 안다.
+        { onSuccess: r => (r.done > 0 ? onClose() : setSkipped(true)) },
+      )
+    }
   }
 
   return (
@@ -95,10 +141,26 @@ function DetailPanel({ reportId, onClose }: { reportId: number; onClose: () => v
                   <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest">원본 콘텐츠</span>
                   {target?.deleted && <span className="text-[10px] text-red-500 font-semibold">삭제됨</span>}
                 </div>
-                <p className="text-xs text-gray-600 leading-relaxed line-clamp-4">{target?.content ?? (target ? '(내용 없음 · 유저 대상)' : '원본을 찾을 수 없습니다.')}</p>
+                {/* 게시글 본문만 에디터 HTML 이다(댓글·리뷰는 평문, 유저 대상은 본문 자체가 없다).
+                    신고당한 글 = 악의적일 가능성이 가장 높은 콘텐츠를 관리자 세션에서 여는 자리라
+                    커뮤니티 화면과 같은 sanitize 를 반드시 거친다. */}
+                {core.targetType === 'POST' && target?.content ? (
+                  <div
+                    className="text-xs text-gray-600 leading-relaxed max-h-56 overflow-y-auto break-words
+                      [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg [&_img]:my-2 [&_p]:my-1"
+                    dangerouslySetInnerHTML={{ __html: sanitizePostHtml(target.content) }}
+                  />
+                ) : (
+                  <p className="text-xs text-gray-600 leading-relaxed line-clamp-4">
+                    {target?.content ?? (target ? '(내용 없음 · 유저 대상)' : '원본을 찾을 수 없습니다.')}
+                  </p>
+                )}
                 {target && (
-                  <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-3 text-[10px] text-muted-foreground">
-                    <span>작성자: {target.authorNickname}</span><span>·</span><span>{fmt(target.createdAt)}</span>
+                  <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 text-[10px] text-muted-foreground min-w-0">
+                      <span className="truncate">작성자: {target.authorNickname}</span><span>·</span><span className="shrink-0">{fmt(target.createdAt)}</span>
+                    </div>
+                    <OriginLink postId={target.linkPostId} status={target.status} />
                   </div>
                 )}
               </div>
@@ -155,44 +217,67 @@ function DetailPanel({ reportId, onClose }: { reportId: number; onClose: () => v
                 </div>
               )}
 
-              {/* 처리 */}
+              {/* 처리 — 선택만으로는 아무것도 반영되지 않고, 아래 저장 버튼에서 한 번에 커밋된다. */}
               <div className="px-6 mb-8">
                 <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-3">처리</div>
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-[11px] text-muted-foreground mb-1.5 block font-medium">처리 사유</label>
-                    <textarea value={note} onChange={e => setNote(e.target.value)} placeholder="처리 사유를 입력하세요..." rows={2}
-                      className="w-full text-xs border border-border rounded-xl px-3 py-2.5 bg-white text-gray-700 resize-none outline-none focus:border-admin" />
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <button onClick={() => doContentAction('HIDDEN')} disabled={processMut.isPending}
-                      className="flex items-center justify-center gap-1.5 px-2 py-2 rounded-xl border border-amber-300 bg-amber-50 text-amber-700 text-[11px] font-semibold hover:bg-amber-100 disabled:opacity-50">
-                      <Eye size={12} /> {core.targetType === 'USER' ? '제재(정지)' : '콘텐츠 숨김'}
-                    </button>
-                    <button onClick={() => doContentAction('DELETED')} disabled={processMut.isPending}
-                      className="flex items-center justify-center gap-1.5 px-2 py-2 rounded-xl border border-red-200 bg-red-50 text-red-600 text-[11px] font-semibold hover:bg-red-100 disabled:opacity-50">
-                      <Trash2 size={12} /> {core.targetType === 'USER' ? '강제탈퇴' : '콘텐츠 삭제'}
-                    </button>
-                    <div className="relative">
-                      <ShieldAlert size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-                      <select value={status} onChange={e => setStatus(e.target.value as ReportStatus)}
-                        className="w-full h-full appearance-none text-[11px] border border-border rounded-xl pl-6 pr-2 py-2 bg-white text-gray-700 outline-none focus:border-admin cursor-pointer">
-                        <option value="">상태변경</option>
-                        <option value="PENDING">대기</option>
-                        <option value="REVIEWING">검토중</option>
-                        <option value="RESOLVED">완료</option>
-                        <option value="REJECTED">반려</option>
-                      </select>
+                {closed ? (
+                  <p className="text-xs text-muted-foreground bg-gray-50 border border-gray-100 rounded-xl px-3.5 py-3">
+                    이미 종결된 신고입니다. 추가 처리할 수 없습니다.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] text-muted-foreground block font-medium">처리 방식</label>
+                      {DECISIONS.map(d => (
+                        <label key={d.value}
+                          className={cn('flex items-start gap-2.5 px-3 py-2.5 rounded-xl border cursor-pointer transition-colors',
+                            decision === d.value ? 'border-admin bg-admin-light' : 'border-border hover:bg-gray-50')}>
+                          <input type="radio" name={`decision-${reportId}`} value={d.value} checked={decision === d.value}
+                            onChange={() => pick(d.value)} className="accent-admin w-3 h-3 mt-[3px] shrink-0" />
+                          <span className="min-w-0">
+                            <span className={cn('block text-[11px] font-semibold', d.tone)}>
+                              {core.targetType === 'USER' && d.userLabel ? d.userLabel : d.label}
+                            </span>
+                            <span className="block text-[10px] text-muted-foreground mt-0.5 leading-relaxed">{d.desc}</span>
+                          </span>
+                        </label>
+                      ))}
                     </div>
+
+                    <div>
+                      <label className="text-[11px] text-muted-foreground mb-1.5 block font-medium">처리 사유</label>
+                      <textarea value={note} onChange={e => setNote(e.target.value)} placeholder="처리 사유를 입력하세요..." rows={2} maxLength={500}
+                        className="w-full text-xs border border-border rounded-xl px-3 py-2.5 bg-white text-gray-700 resize-none outline-none focus:border-admin" />
+                    </div>
+
+                    {confirmDelete && (
+                      <p className="flex items-start gap-1.5 text-[11px] text-red-600 bg-red-50 border border-red-100 rounded-xl px-3 py-2.5">
+                        <AlertCircle size={13} className="shrink-0 mt-px" />
+                        <span>{core.targetType === 'USER' ? '해당 사용자를 강제탈퇴시킵니다.' : '원본 콘텐츠를 삭제합니다.'} 되돌릴 수 없습니다. 다시 누르면 실행됩니다.</span>
+                      </p>
+                    )}
+
+                    {/* 선택 없이 저장을 눌렀을 때만 뜬다. 버튼 아래에 두면 패널 맨 끝이라
+                        화면 밖으로 밀리므로 위에 붙인다. */}
+                    {missingDecision && (
+                      <p className="flex items-center justify-center gap-1.5 text-[11px] font-semibold text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+                        <AlertCircle size={13} className="shrink-0" />
+                        처리 방식을 먼저 선택하세요.
+                      </p>
+                    )}
+
+                    <button onClick={save} disabled={pending}
+                      className={cn('w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-white text-xs font-semibold transition-colors disabled:opacity-50',
+                        confirmDelete ? 'bg-red-600 hover:bg-red-700' : 'bg-admin hover:bg-admin-hover')}>
+                      <Save size={13} /> {pending ? '처리 중…' : confirmDelete ? '삭제 확인' : '상태 변경 저장'}
+                    </button>
+
+                    {skipped && <p className="text-[11px] text-amber-600 text-center">이미 종결된 신고라 변경되지 않았습니다.</p>}
+                    {(processMut.isError || bulkMut.isError) && (
+                      <p className="text-[11px] text-red-600 text-center">{getErrorMessage(processMut.error ?? bulkMut.error, '처리에 실패했습니다. 다시 시도해 주세요.')}</p>
+                    )}
                   </div>
-                  <button onClick={saveStatus} disabled={!status || bulkMut.isPending}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-white text-xs font-semibold bg-admin hover:bg-admin-hover transition-colors disabled:opacity-50">
-                    <Save size={13} /> 상태 변경 저장
-                  </button>
-                  {(processMut.isError || bulkMut.isError) && (
-                    <p className="text-[11px] text-red-600 text-center">{getErrorMessage(processMut.error ?? bulkMut.error, '처리에 실패했습니다. 다시 시도해 주세요.')}</p>
-                  )}
-                </div>
+                )}
               </div>
             </>
           )}
@@ -209,9 +294,11 @@ export default function AdminReportsPage() {
   const [searchInput, setSearchInput] = useState('')
   const [fType, setFType] = useState<'전체' | ReportTargetType>('전체')
   const [fReason, setFReason] = useState<'전체' | ReportReason>('전체')
-  const [fStatus, setFStatus] = useState<'전체' | ReportStatus>('전체')
-  const [includeAll, setIncludeAll] = useState(false)
-  const [params, setParams] = useState<ReportSearchRequest>({ page: 1, size: 20 })
+  // 신고 관리는 처리할 일의 목록이라 미처리(대기)로 시작한다. 목록의 기본 조회 조건과 맞춘다.
+  const [fStatus, setFStatus] = useState<'전체' | ReportStatus>('PENDING')
+  // 서버도 status 미지정이면 PENDING 만 주지만, 셀렉트에 보이는 값과 실제 조회 조건이
+  // 같은 자리에서 읽히도록 명시한다.
+  const [params, setParams] = useState<ReportSearchRequest>({ status: 'PENDING', page: 1, size: 20 })
   const [checked, setChecked] = useState<Set<number>>(new Set())
   const [selected, setSelected] = useState<number | null>(null)
   const [searchParams] = useSearchParams()
@@ -230,6 +317,9 @@ export default function AdminReportsPage() {
   const totalPages = data?.totalPages ?? 1
   const page = params.page ?? 1
 
+  // 상태 축은 이 셀렉트 하나가 전담한다. 서버의 includeAll 은 status 미지정일 때만 의미가 있어,
+  // '전체'를 골랐을 때만 true 로 실어 보낸다. (둘을 따로 노출하면 "상태 전체인데 대기만 보임" 같은
+  // 라벨과 결과가 어긋나는 조합이 생긴다)
   const applyFilters = () => {
     setChecked(new Set())
     setParams({
@@ -237,7 +327,7 @@ export default function AdminReportsPage() {
       targetType: fType === '전체' ? undefined : fType,
       reasonType: fReason === '전체' ? undefined : fReason,
       status: fStatus === '전체' ? undefined : fStatus,
-      includeAll,
+      includeAll: fStatus === '전체',
       page: 1,
       size: 20,
     })
@@ -252,35 +342,29 @@ export default function AdminReportsPage() {
     bulkMut.mutate({ reportIds: [...checked], status, handlerUserId: me.id }, { onSuccess: () => setChecked(new Set()) })
   }
 
-  const selCls = 'appearance-none pl-3 pr-7 py-2 text-xs border border-border rounded-xl bg-white text-gray-600 outline-none cursor-pointer focus:border-admin'
-
   return (
-    <div className="p-7">
+    <div className="p-6">
       <div className="space-y-5">
         {/* Filter bar */}
-        <div className="bg-white rounded-2xl shadow-sm border border-border p-4">
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <div className="relative flex-1 min-w-[200px]">
-              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-300" />
-              <input value={searchInput} onChange={e => setSearchInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && applyFilters()}
-                placeholder="신고 내용, 신고자 닉네임 검색..."
-                className="w-full pl-8 pr-3 py-2 text-xs border border-border rounded-xl bg-gray-50 outline-none focus:border-admin text-gray-700" />
-            </div>
-            <select value={fType} onChange={e => setFType(e.target.value as typeof fType)} className={selCls}>
-              <option value="전체">대상 전체</option><option value="POST">게시글</option><option value="COMMENT">댓글</option><option value="REVIEW">리뷰</option><option value="USER">유저</option>
-            </select>
-            <select value={fReason} onChange={e => setFReason(e.target.value as typeof fReason)} className={selCls}>
-              <option value="전체">사유 전체</option><option value="ABUSE">욕설·비방</option><option value="SPAM">스팸</option><option value="MISINFO">허위정보</option><option value="OBSCENE">음란성</option><option value="ETC">기타</option>
-            </select>
-            <select value={fStatus} onChange={e => setFStatus(e.target.value as typeof fStatus)} className={selCls}>
-              <option value="전체">상태 전체</option><option value="PENDING">대기</option><option value="REVIEWING">검토중</option><option value="RESOLVED">완료</option><option value="REJECTED">반려</option>
-            </select>
-            <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
-              <input type="checkbox" checked={includeAll} onChange={e => setIncludeAll(e.target.checked)} className="accent-admin" />
-              완료 포함
-            </label>
-            <button onClick={applyFilters} className="px-5 py-2 rounded-xl text-xs font-semibold text-white bg-admin hover:bg-admin-hover transition-colors shrink-0">검색</button>
+        <div className="bg-white rounded-2xl border border-border px-5 py-4 shadow-sm flex items-center gap-3 flex-wrap">
+          <div className="relative flex-1 min-w-52">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <input value={searchInput} onChange={e => setSearchInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && applyFilters()}
+              placeholder="신고 내용, 신고자 닉네임 검색"
+              className="w-full pl-8 pr-3 py-2 text-sm rounded-xl border border-border bg-gray-50 text-foreground outline-none focus:border-admin" />
           </div>
+          <AdminSelect value={fType} onChange={e => setFType(e.target.value as typeof fType)}>
+            <option value="전체">대상 전체</option><option value="POST">게시글</option><option value="COMMENT">댓글</option><option value="REVIEW">리뷰</option><option value="USER">유저</option>
+          </AdminSelect>
+          <AdminSelect value={fReason} onChange={e => setFReason(e.target.value as typeof fReason)}>
+            <option value="전체">사유 전체</option><option value="ABUSE">욕설·비방</option><option value="SPAM">스팸</option><option value="MISINFO">허위정보</option><option value="OBSCENE">음란성</option><option value="ETC">기타</option>
+          </AdminSelect>
+          <AdminSelect value={fStatus} onChange={e => setFStatus(e.target.value as typeof fStatus)}>
+            <option value="PENDING">대기</option><option value="RESOLVED">완료</option><option value="REJECTED">반려</option><option value="전체">상태 전체</option>
+          </AdminSelect>
+          <button onClick={applyFilters} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-admin hover:bg-admin-hover transition-colors">
+            <Search size={13} />검색
+          </button>
         </div>
 
         {/* Table */}
@@ -344,7 +428,6 @@ export default function AdminReportsPage() {
             <div className="px-6 py-4 border-t border-gray-50 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 {checked.size > 0 && <span className="text-[11px] text-muted-foreground mr-1">{checked.size}건 선택</span>}
-                <button onClick={() => bulk('REVIEWING')} disabled={checked.size === 0 || bulkMut.isPending} className="px-3 py-1.5 text-[11px] font-semibold border border-amber-300 text-amber-700 rounded-lg hover:bg-amber-50 disabled:opacity-40">검토 시작</button>
                 <button onClick={() => bulk('RESOLVED')} disabled={checked.size === 0 || bulkMut.isPending} className="px-3 py-1.5 text-[11px] font-semibold border border-green-300 text-green-700 rounded-lg hover:bg-green-50 disabled:opacity-40">처리 완료</button>
                 <button onClick={() => bulk('REJECTED')} disabled={checked.size === 0 || bulkMut.isPending} className="px-3 py-1.5 text-[11px] font-semibold border border-border text-gray-500 rounded-lg hover:bg-gray-50 disabled:opacity-40">반려</button>
                 {bulkMut.isError && <span className="text-[11px] text-red-600 ml-1">{getErrorMessage(bulkMut.error, '일괄 처리에 실패했습니다.')}</span>}

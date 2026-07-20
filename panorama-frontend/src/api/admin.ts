@@ -273,14 +273,22 @@ export function useProcessReport() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ reportId, body }: { reportId: number; body: ReportProcessRequest }) => processAdminReport(reportId, body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: [...adminKeys.all, 'reports'] }),
+    onSuccess: (_r, { reportId }) => {
+      qc.invalidateQueries({ queryKey: [...adminKeys.all, 'reports'] })
+      // 목록 키는 'reports', 상세 키는 'report' 라 위 무효화에 안 걸린다. 상세를 열어둔 채
+      // 처리하는 흐름이 생겼으므로 상세도 명시적으로 무효화한다.
+      qc.invalidateQueries({ queryKey: adminKeys.report(reportId) })
+    },
   })
 }
 export function useBulkProcessReports() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (body: ReportBulkProcessRequest) => bulkProcessReports(body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: [...adminKeys.all, 'reports'] }),
+    onSuccess: (_r, { reportIds }) => {
+      qc.invalidateQueries({ queryKey: [...adminKeys.all, 'reports'] })
+      reportIds.forEach(id => qc.invalidateQueries({ queryKey: adminKeys.report(id) }))
+    },
   })
 }
 

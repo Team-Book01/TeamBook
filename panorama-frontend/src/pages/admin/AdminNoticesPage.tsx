@@ -7,9 +7,11 @@ import { useAdminNotices, useAdminNotice, useCreateNotice, useUpdateNotice } fro
 import type { NoticeSearchRequest, NoticeCategory, NoticeStatus } from '@/types/admin'
 import NoticeDrawer, { type NoticeForm } from './notices/NoticeDrawer'
 import { NOTICE_CATEGORY_BADGE, NOTICE_CATEGORY_OPTIONS, NOTICE_STATUS_META, formatDate } from './notices/noticeMeta'
+import AdminSelect from '@/components/admin/AdminSelect'
 
-const selectCls =
-  'px-3 py-2 rounded-lg border-[1.5px] border-border text-[13px] text-foreground bg-white outline-none cursor-pointer focus:border-admin'
+// 검색 입력 스타일. 셀렉트는 공용 AdminSelect 가 자체 스타일을 갖는다.
+const searchInputCls =
+  'w-full pl-8 pr-3 py-2 rounded-xl border border-border text-sm text-foreground bg-gray-50 outline-none focus:border-admin'
 
 type DrawerState = { noticeId: number | null; mode: 'view' | 'edit' | 'create' }
 
@@ -59,35 +61,35 @@ export default function AdminNoticesPage() {
   }
 
   return (
-    <div className="p-7">
+    <div className="p-6">
       {/* Filter bar */}
-      <div className="bg-white rounded-xl px-5 py-4 shadow-sm border border-border mb-5 flex gap-2.5 items-center flex-wrap">
-        <div className="relative flex-1 basis-[200px] min-w-[180px]">
-          <Search size={16} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+      <div className="bg-white rounded-2xl px-5 py-4 shadow-sm border border-border mb-5 flex gap-3 items-center flex-wrap">
+        <div className="relative flex-1 min-w-52">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input
-            className={cn(selectCls, 'w-full pl-9')}
-            placeholder="제목, 내용 검색..."
+            className={searchInputCls}
+            placeholder="제목, 내용 검색"
             value={searchInput}
             onChange={e => setSearchInput(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && applyFilters()}
           />
         </div>
-        <select className={selectCls} value={filterCat} onChange={e => setFilterCat(e.target.value as typeof filterCat)}>
+        <AdminSelect value={filterCat} onChange={e => setFilterCat(e.target.value as typeof filterCat)}>
           <option value="전체">전체</option>
           {NOTICE_CATEGORY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </select>
-        <select className={selectCls} value={filterStatus} onChange={e => setFilterStatus(e.target.value as typeof filterStatus)}>
+        </AdminSelect>
+        <AdminSelect value={filterStatus} onChange={e => setFilterStatus(e.target.value as typeof filterStatus)}>
           <option value="전체">전체</option>
           <option value="ACTIVE">게시중</option>
           <option value="DELETED">삭제</option>
-        </select>
-        <button onClick={applyFilters} className="px-5 py-2 bg-admin text-white rounded-lg font-semibold text-[13px] shrink-0 hover:bg-admin-hover transition-colors">
-          검색
+        </AdminSelect>
+        <button onClick={applyFilters} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-admin hover:bg-admin-hover transition-colors">
+          <Search size={13} />검색
         </button>
       </div>
 
       {/* Table card */}
-      <div className="bg-white rounded-xl shadow-sm border border-border">
+      <div className="bg-white rounded-2xl shadow-sm border border-border">
         {/* Header row */}
         <div className="px-5 py-4 border-b border-[#f3f4f6] flex items-center justify-between">
           <span className="flex items-baseline gap-1.5 flex-wrap">

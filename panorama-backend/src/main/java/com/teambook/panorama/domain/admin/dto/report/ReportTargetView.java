@@ -31,6 +31,15 @@ public record ReportTargetView(
     String status,           // 원본 상태 (ACTIVE/DELETED/HIDDEN, USER 는 ACTIVE/SUSPENDED/DELETED)
 
     @Schema(description = "표시용: 원본이 삭제(DELETED) 상태인가", example = "false")
-    Boolean deleted          // 표시용: 원본이 삭제(DELETED) 상태인가 (MyBatis 생성자 매핑 위해 wrapper)
+    Boolean deleted,         // 표시용: 원본이 삭제(DELETED) 상태인가 (MyBatis 생성자 매핑 위해 wrapper)
+
+    // 관리자가 원본 화면으로 건너뛸 링크의 재료. URL 형태는 프론트 라우트에 달린 문제라
+    // 여기서 조립하지 않고 식별자만 넘긴다.
+    //
+    // REVIEW/USER 는 null 이다. 리뷰는 도서 상세에 링크해도 그 리뷰로 스크롤되지 않아
+    // 관리자가 결국 눈으로 찾아야 하고(원본 전문은 이 화면에 이미 다 보인다),
+    // 사용자는 공개 프로필 화면 자체가 없다.
+    @Schema(description = "원본이 속한 게시글 ID. POST 는 자기 자신, COMMENT 는 부모 글. 그 외 null", example = "42")
+    Long linkPostId
 ) {
 }

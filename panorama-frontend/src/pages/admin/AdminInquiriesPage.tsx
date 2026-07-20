@@ -6,6 +6,7 @@ import { useAuthStore } from '@/store/authStore'
 import { getErrorMessage } from '@/api/client'
 import { useAdminInquiries, useAdminInquiry, useAnswerInquiry, useUpdateInquiryStatus } from '@/api/admin'
 import DetailDrawer from '@/components/admin/DetailDrawer'
+import AdminSelect from '@/components/admin/AdminSelect'
 import type { InquirySearchRequest, InquiryStatus } from '@/types/admin'
 
 const STATUS_META: Record<InquiryStatus, { label: string; bg: string; text: string }> = {
@@ -175,10 +176,9 @@ export default function AdminInquiriesPage() {
               placeholder="제목 / 내용 검색"
               className="w-full pl-8 pr-3 py-2 text-sm rounded-xl border border-border bg-gray-50 text-foreground outline-none focus:border-admin" />
           </div>
-          <select value={fStatus} onChange={e => setFStatus(e.target.value as typeof fStatus)}
-            className="appearance-none pl-3 pr-7 py-2 text-sm rounded-xl border border-border bg-gray-50 text-foreground outline-none cursor-pointer focus:border-admin">
+          <AdminSelect value={fStatus} onChange={e => setFStatus(e.target.value as typeof fStatus)}>
             <option value="전체">상태 전체</option><option value="PENDING">답변 대기</option><option value="ANSWERED">답변 완료</option><option value="CLOSED">종료</option><option value="DELETED">삭제됨</option>
-          </select>
+          </AdminSelect>
           <button onClick={apply} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-admin hover:bg-admin-hover transition-colors">
             <Search size={13} />검색
           </button>

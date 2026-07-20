@@ -3,6 +3,7 @@ import { X, Pin } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { NoticeCategory, NoticeDetailResponse } from '@/types/admin'
 import { NOTICE_CATEGORY_BADGE, NOTICE_CATEGORY_OPTIONS, NOTICE_STATUS_META, formatDate } from './noticeMeta'
+import AdminSelect from '@/components/admin/AdminSelect'
 
 export interface NoticeForm {
   category: NoticeCategory
@@ -155,17 +156,21 @@ function EditForm({ form, setForm }: { form: NoticeForm; setForm: (f: NoticeForm
 
   return (
     <div className="flex flex-col gap-[18px]">
-      <div>
+      {/* 셀렉트 래퍼가 shrink-0 이라 폭이 좁아지지 않도록 이 칸을 기준으로 늘린다. */}
+      <div className="[&>div]:w-full">
         <label className={labelCls}>분류</label>
-        <select
-          className={cn(fieldCls, 'cursor-pointer')}
+        {/* 필터 바가 아니라 입력 폼이라 기본 스타일 대신 이 폼의 fieldCls 를 쓴다.
+            화살표만 공용 컴포넌트에서 가져온다. */}
+        <AdminSelect
+          baseClassName={cn(fieldCls, 'appearance-none pr-8 cursor-pointer')}
+          className="block"
           value={form.category}
           onChange={e => setForm({ ...form, category: e.target.value as NoticeCategory })}
         >
           {NOTICE_CATEGORY_OPTIONS.map(o => (
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
-        </select>
+        </AdminSelect>
       </div>
       <div>
         <label className={labelCls}>제목</label>

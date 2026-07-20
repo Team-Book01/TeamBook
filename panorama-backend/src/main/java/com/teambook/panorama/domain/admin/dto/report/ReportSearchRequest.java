@@ -21,12 +21,12 @@ public record ReportSearchRequest (
     @Schema(description = "신고 사유 유형", allowableValues = {"ABUSE", "SPAM", "MISINFO", "OBSCENE", "ETC"}, example = "ABUSE")
     String reasonType,
 
-    // 처리 상태 (PENDING, REVIEWING, RESOLVED, REJECTED) — 특정 상태로 콕 집어 필터. 지정 시 includeAll보다 우선.
+    // 처리 상태 (PENDING, RESOLVED, REJECTED) — 특정 상태로 콕 집어 필터. 지정 시 includeAll보다 우선.
     @Schema(description = "처리 상태로 콕 집어 필터. 지정하면 includeAll 보다 우선한다.", example = "PENDING")
     ReportStatus status,
 
-    // 전체 보기. false(기본)면 미처리(PENDING/REVIEWING)만, true면 완료 건까지 모두. (status 미지정일 때만 적용)
-    @Schema(description = "전체 보기 여부. false(기본)면 미처리(PENDING/REVIEWING)만, true 면 완료 건까지 모두. status 미지정일 때만 적용된다.",
+    // 전체 보기. false(기본)면 미처리(PENDING)만, true면 완료 건까지 모두. (status 미지정일 때만 적용)
+    @Schema(description = "전체 보기 여부. false(기본)면 미처리(PENDING)만, true 면 완료 건까지 모두. status 미지정일 때만 적용된다.",
         defaultValue = "false", example = "false")
     Boolean includeAll,
 
