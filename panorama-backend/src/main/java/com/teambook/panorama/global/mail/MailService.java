@@ -1,10 +1,13 @@
 package com.teambook.panorama.global.mail;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.MailSendException;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -46,11 +49,38 @@ public class MailService {
     }
 
     private void send(String toEmail, String subject, String guide, String link) {
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom(from);
-        message.setTo(toEmail);
-        message.setSubject(subject);
-        message.setText(guide + "\n\n" + link + "\n\n본인이 요청하지 않았다면 이 메일을 무시하세요.");
-        mailSender.send(message);
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            // 두 번째 인자 false = 첨부 없음(단순 메시지), UTF-8로 한글 인코딩
+            MimeMessageHelper helper = new MimeMessageHelper(message, false, "UTF-8");
+            helper.setFrom(from);
+            helper.setTo(toEmail);
+            helper.setSubject(subject);
+            helper.setText(buildHtml(guide, link), true);   // true = HTML 본문 → <a> 링크 클릭 가능
+            mailSender.send(message);
+        } catch (MessagingException e) {
+            // 기존 SimpleMailMessage와 동일하게 unchecked 예외로 전파
+            throw new MailSendException("메일 발송에 실패했습니다.", e);
+        }
+    }
+
+    /** 클릭 가능한 버튼 + 링크 원문(버튼이 안 눌릴 때 대비)을 담은 HTML 본문. */
+    private String buildHtml(String guide, String link) {
+        return """
+            <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#333;">
+              <p style="font-size:15px;line-height:1.6;">%s</p>
+              <p style="margin:24px 0;">
+                <a href="%s"
+                   style="display:inline-block;padding:12px 24px;background:#2563eb;color:#fff;
+                          text-decoration:none;border-radius:6px;font-weight:bold;">
+                  인증 페이지로 이동
+                </a>
+              </p>
+              <p style="font-size:13px;color:#666;">버튼이 눌리지 않으면 아래 주소를 복사해 브라우저에 붙여넣으세요.</p>
+              <p style="font-size:13px;"><a href="%s">%s</a></p>
+              <hr style="border:none;border-top:1px solid #eee;margin:24px 0;">
+              <p style="font-size:12px;color:#999;">본인이 요청하지 않았다면 이 메일을 무시하세요.</p>
+            </div>
+            """.formatted(guide, link, link, link);
     }
 }
