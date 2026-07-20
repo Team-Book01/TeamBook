@@ -1,6 +1,7 @@
 import { Route, Routes } from 'react-router-dom'
 
 import { useAuthBootstrap } from '@/hooks/useAuthBootstrap'
+import { useAuthQuerySync } from '@/hooks/useAuthQuerySync'
 import Layout from '@/components/layout/Layout'
 import AdminLayout from '@/components/layout/AdminLayout'
 import RequireAuth from '@/components/auth/RequireAuth'
@@ -43,6 +44,8 @@ import AdminNoticesPage from '@/pages/admin/AdminNoticesPage'
 export default function App() {
   // 앱 시작 시 refresh 쿠키로 로그인 세션 복원 (새로고침해도 유지)
   useAuthBootstrap()
+  // 세션 복원/로그인/로그아웃으로 사용자가 바뀌면 사용자별 쿼리(북마크 하트 등)를 다시 받는다
+  useAuthQuerySync()
 
   return (
     <Routes>

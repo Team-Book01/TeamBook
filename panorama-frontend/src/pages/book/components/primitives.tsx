@@ -53,25 +53,45 @@ export function PurchaseBtn({ price }: { price: string }) {
 export function StarRating({ value, onChange, readOnly = false, size = 24 }: { value: number; onChange?: (v: number) => void; readOnly?: boolean; size?: number }) {
   const [hovered, setHovered] = useState(0);
   const display = readOnly ? value : (hovered || value);
+
   return (
     <div className="flex gap-1">
-      {[1, 2, 3, 4, 5].map((n) => (
-        <button
-          key={n}
-          disabled={readOnly}
-          onClick={() => onChange?.(n === value ? 0 : n)}
-          onMouseEnter={() => !readOnly && setHovered(n)}
-          onMouseLeave={() => !readOnly && setHovered(0)}
-          className={readOnly ? "cursor-default" : "cursor-pointer transition-transform hover:scale-110"}
-        >
-          <Star
-            size={size}
-            className="transition-colors"
-            fill={n <= display ? "#F5B301" : "#E5E5E5"}
-            stroke={n <= display ? "#F5B301" : "#E5E5E5"}
-          />
-        </button>
-      ))}
+      {[1, 2, 3, 4, 5].map((n) => {
+        // 별 하나당 채움 비율 (0 / 0.5 / 1)
+        const ratio = Math.min(Math.max(display - (n - 1), 0), 1);
+        return (
+          <div key={n} className="relative" style={{ width: size, height: size }}>
+            {/* 빈 별 → 그 위에 채운 별을 비율만큼 잘라서 겹침 */}
+            <Star size={size} fill="#E5E5E5" stroke="#E5E5E5" className="absolute inset-0" />
+            {ratio > 0 && (
+              <span className="absolute inset-0 overflow-hidden" style={{ width: `${ratio * 100}%` }}>
+                <Star size={size} fill="#F5B301" stroke="#F5B301" className="transition-colors" />
+              </span>
+            )}
+            {!readOnly && (
+              // 좌/우 절반을 각각 n-0.5, n 으로 처리
+              <>
+                <button
+                  type="button"
+                  aria-label={`${n - 0.5}점`}
+                  className="absolute inset-y-0 left-0 w-1/2 cursor-pointer"
+                  onClick={() => onChange?.(value === n - 0.5 ? 0 : n - 0.5)}
+                  onMouseEnter={() => setHovered(n - 0.5)}
+                  onMouseLeave={() => setHovered(0)}
+                />
+                <button
+                  type="button"
+                  aria-label={`${n}점`}
+                  className="absolute inset-y-0 right-0 w-1/2 cursor-pointer"
+                  onClick={() => onChange?.(value === n ? 0 : n)}
+                  onMouseEnter={() => setHovered(n)}
+                  onMouseLeave={() => setHovered(0)}
+                />
+              </>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

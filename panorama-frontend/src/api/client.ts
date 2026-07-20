@@ -28,17 +28,68 @@ export const client = axios.create({
   withCredentials: true,
 })
 
+// 동시에 여러 요청이 401 을 맞아도 재발급은 한 번만 수행한다. (중복 reissue 방지)
+let refreshing: Promise<string> | null = null
+
+/** refresh 쿠키로 새 access 토큰을 받는다. 동시 호출은 하나로 합친다. */
+function refreshAccessToken(): Promise<string> {
+  refreshing =
+    refreshing ??
+    client
+      .post<{ accessToken: string }>('/auth/reissue', null, { skipAuthRedirect: true })
+      .then((r) => r.data.accessToken)
+      .finally(() => {
+        refreshing = null
+      })
+  return refreshing
+}
+
+/**
+ * JWT 의 exp 를 보고 이미 만료됐는지 판단한다. (형식이 이상하면 만료로 간주하지 않음)
+ *
+ * 서버 시계와의 오차를 감안해 5초 여유를 둔다.
+ */
+function isTokenExpired(token: string): boolean {
+  try {
+    const payload = token.split('.')[1]
+    if (!payload) return false
+    const json = JSON.parse(
+      atob(payload.replace(/-/g, '+').replace(/_/g, '/')),
+    ) as { exp?: number }
+    if (typeof json.exp !== 'number') return false
+    return json.exp * 1000 <= Date.now() + 5_000
+  } catch {
+    return false
+  }
+}
+
 // ── 요청 인터셉터: 인증 토큰 주입 ────────────────────────────────────────────
-client.interceptors.request.use((config) => {
-  const token = useAuthStore.getState().token
+//
+// ⚠️ 만료된 access 토큰을 그대로 보내면 안 된다.
+//    /books/**, /reviews/** GET 처럼 permitAll 인 엔드포인트는 토큰이 만료돼도
+//    401 이 아니라 "비로그인(200)" 으로 처리된다. 그러면 isBookmarked 가 항상 false 로
+//    내려와 북마크 하트가 조용히 풀린 것처럼 보이고, 401 이 아니라서 아래 응답
+//    인터셉터의 자동 재발급도 동작하지 않는다.
+//    → 보내기 전에 만료를 확인하고, 만료됐으면 먼저 재발급받아 새 토큰으로 보낸다.
+client.interceptors.request.use(async (config) => {
+  let token = useAuthStore.getState().token
+
+  if (token && isTokenExpired(token) && !config.skipAuthRedirect) {
+    try {
+      token = await refreshAccessToken()
+      useAuthStore.getState().setToken(token)
+    } catch {
+      // 재발급 실패(refresh 없음/만료) → 비로그인으로 진행. 보호된 요청은 401 로 처리된다.
+      useAuthStore.getState().logout()
+      token = null
+    }
+  }
+
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
   return config
 })
-
-// 동시에 여러 요청이 401 을 맞아도 재발급은 한 번만 수행한다. (중복 reissue 방지)
-let refreshing: Promise<string> | null = null
 
 /** 로그인 화면으로 유도. 이미 인증 화면이면 리다이렉트 루프를 막기 위해 넘어간다. */
 function redirectToLogin() {
@@ -61,20 +112,12 @@ client.interceptors.response.use(
     if (status === 401 && config && !config._retry && !config.skipAuthRedirect) {
       config._retry = true
       try {
-        refreshing =
-          refreshing ??
-          client
-            .post<{ accessToken: string }>('/auth/reissue', null, { skipAuthRedirect: true })
-            .then((r) => r.data.accessToken)
-        const newToken = await refreshing
-        refreshing = null
-
+        const newToken = await refreshAccessToken()
         useAuthStore.getState().setToken(newToken)
         config.headers.Authorization = `Bearer ${newToken}`
         return client(config) // 원 요청 재시도
       } catch {
         // 재발급 실패(refresh 없음/만료) → 로그아웃 + 로그인 유도
-        refreshing = null
         useAuthStore.getState().logout()
         redirectToLogin()
         return Promise.reject(error)

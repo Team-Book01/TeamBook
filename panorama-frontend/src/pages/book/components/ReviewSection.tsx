@@ -97,7 +97,7 @@ export function ReviewSection({
   const startEdit = (reviewId: number, rating: number, content: string) => {
     if (!ensureLoggedIn()) return;
     setEditingId(reviewId);
-    setEditRating(Math.round(rating));
+    setEditRating(rating);
     setEditContent(content ?? "");
   };
 
@@ -134,7 +134,7 @@ export function ReviewSection({
             <p className="text-5xl font-black text-[#1E4A38]">
               {avgRating > 0 ? avgRating.toFixed(1) : "–"}
             </p>
-            <StarRating value={Math.round(avgRating)} readOnly size={16} />
+            <StarRating value={Math.round(avgRating * 2) / 2} readOnly size={16} />
             <p className="text-[12px] text-[#aaa] mt-0.5">{reviewCount.toLocaleString()}명 참여</p>
           </div>
           {/* 세로 막대 분포: 0.5 단위 10개 막대, x축 1~5 (왓챠피디아 스타일) */}
@@ -249,7 +249,7 @@ export function ReviewSection({
                         내 리뷰
                       </span>
                     )}
-                    <StarRating value={Math.round(r.rating)} readOnly size={11} />
+                    <StarRating value={r.rating} readOnly size={11} />
                     <span className="text-[11px] text-[#aaa]">{formatDate(r.createdAt)}</span>
                     {r.isMine && editingId !== r.reviewId && (
                       <div className="flex items-center gap-0.5 ml-auto flex-shrink-0">

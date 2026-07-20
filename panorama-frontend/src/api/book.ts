@@ -45,38 +45,23 @@ export function hasIsbn(isbn?: string | null): boolean {
 /** isbn 이 없는 도서에 공통으로 노출하는 안내 문구 */
 export const NO_ISBN_MESSAGE = '상세 정보를 제공하지 않는 도서입니다'
 
-// ── 상수: 서울시 구 지역코드 ─────────────────────────────────────────────────
-// 소장 도서관 조회(getLibraries)의 region 파라미터에 사용.
-export const SEOUL_DISTRICTS = [
-  { name: '종로구', code: '11010' },
-  { name: '중구', code: '11020' },
-  { name: '용산구', code: '11030' },
-  { name: '성동구', code: '11040' },
-  { name: '광진구', code: '11050' },
-  { name: '동대문구', code: '11060' },
-  { name: '중랑구', code: '11070' },
-  { name: '성북구', code: '11080' },
-  { name: '강북구', code: '11090' },
-  { name: '도봉구', code: '11100' },
-  { name: '노원구', code: '11110' },
-  { name: '은평구', code: '11120' },
-  { name: '서대문구', code: '11130' },
-  { name: '마포구', code: '11140' },
-  { name: '양천구', code: '11150' },
-  { name: '강서구', code: '11160' },
-  { name: '구로구', code: '11170' },
-  { name: '금천구', code: '11180' },
-  { name: '영등포구', code: '11190' },
-  { name: '동작구', code: '11200' },
-  { name: '관악구', code: '11210' },
-  { name: '서초구', code: '11220' },
-  { name: '강남구', code: '11230' },
-  { name: '송파구', code: '11240' },
-  { name: '강동구', code: '11250' },
-] as const
+// ── 지역 코드 ───────────────────────────────────────────────────────────────
+// 소장 도서관 조회는 지역을 시도(regionCode) + 시군구(dtlRegion) 두 단계로 받는다.
+// 코드 테이블은 regionCodes.ts 로 분리했다. (기존 SEOUL_DISTRICTS 는 두 단계가
+// 섞여 있어 5자리 구 코드를 regionCode 로 보내고 있었으므로 제거)
+export {
+  REGIONS,
+  DEFAULT_REGION_CODE,
+  findRegion,
+  getDistricts,
+} from './regionCodes'
+export type { RegionCode, DistrictCode } from './regionCodes'
 
 /** 검색/무한스크롤 기본 페이지 크기 */
 export const BOOK_SEARCH_DISPLAY = 10
+
+/** 소장 도서관 목록 페이지당 건수 (백엔드 pageSize 기본값과 동일) */
+export const LIBRARY_PAGE_SIZE = 10
 
 // ── queryKey 규칙 ────────────────────────────────────────────────────────────
 // ['books', <구분>, ...식별자] 형태로 통일. (자세한 규칙은 src/api/README.md 참고)
@@ -194,13 +179,26 @@ export async function getMyReviewCount(): Promise<number> {
   return data
 }
 
-/** GET /api/v1/library/{isbn}?regionCode= — 소장 도서관 + 대출 가능 여부 */
+/**
+ * GET /api/v1/library/{isbn}?regionCode=&dtlRegion=&pageNo=&pageSize= — 소장 도서관 + 대출 가능 여부
+ *
+ * - dtlRegion 은 선택값이라 비어 있으면 아예 쿼리에서 뺀다.
+ *   (빈 문자열로 보내면 원본 API 가 dtl_region= 를 유효한 값으로 오해할 수 있다)
+ * - pageNo/pageSize 는 백엔드에도 기본값(1/10)이 있지만, 현재 페이지 상태를 명시적으로
+ *   전달하기 위해 항상 함께 보낸다.
+ */
 export async function getLibraries(
   isbn: string,
   params: LibraryParams,
 ): Promise<LibraryListResponse> {
+  const { regionCode, dtlRegion, pageNo, pageSize = LIBRARY_PAGE_SIZE } = params
   const { data } = await client.get<LibraryListResponse>(`/library/${isbn}`, {
-    params,
+    params: {
+      regionCode,
+      ...(dtlRegion ? { dtlRegion } : {}),
+      pageNo,
+      pageSize,
+    },
   })
   return data
 }
@@ -302,8 +300,10 @@ export function useBookReviews(isbn: string, page = 1, size = 10) {
 }
 
 /**
- * 소장 도서관 목록 (regionCode 필수).
- * `enabled` 로 조회 시점을 호출부가 제어한다(지역 선택 후 "찾기" 를 눌렀을 때만 요청).
+ * 소장 도서관 목록 (regionCode 필수, 서버 페이징).
+ * - `enabled` 로 조회 시점을 호출부가 제어한다(지역 선택 후 "찾기" 를 눌렀을 때만 요청).
+ * - 페이지 이동 시 queryKey 의 pageNo 가 바뀌어 새로 조회한다. placeholderData 로
+ *   이전 페이지를 유지해, 페이지 전환 중 목록이 빈 화면으로 깜빡이지 않게 한다.
  */
 export function useBookLibraries(
   isbn: string,
@@ -315,6 +315,7 @@ export function useBookLibraries(
     queryFn: () => getLibraries(isbn, params),
     enabled:
       (options?.enabled ?? true) && hasIsbn(isbn) && params.regionCode.length > 0,
+    placeholderData: (prev) => prev,
   })
 }
 
