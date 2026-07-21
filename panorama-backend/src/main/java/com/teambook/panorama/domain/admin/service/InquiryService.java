@@ -27,6 +27,15 @@ public interface InquiryService {
   // 문의 - 상세 (이미지 + 답변 포함)
   InquiryDetailResponse getInquiryDetail(Long inquiryId);
 
+  // ── 사용자용(본인 문의만) — 문의게시판 화면 ──
+  // 관리자 목록/상세 로직을 재사용하되 항상 userId 로 소유자를 강제한다(남의 문의 열람 차단).
+
+  // 내 문의 - 목록(+검색). 검색 조건의 userId 는 무시하고 로그인 사용자로 강제한다.
+  PageResponse<InquiryResponse> getMyInquiries(Long userId, InquirySearchRequest request);
+
+  // 내 문의 - 상세. 소유자가 아니면 403(ACCESS_DENIED).
+  InquiryDetailResponse getMyInquiryDetail(Long userId, Long inquiryId);
+
   // 문의 - 처리(답변 등록) → 생성된 답변 id, 문의는 ANSWERED 로
   Long answerInquiry(Long inquiryId, InquiryAnswerCreateRequest request);
 

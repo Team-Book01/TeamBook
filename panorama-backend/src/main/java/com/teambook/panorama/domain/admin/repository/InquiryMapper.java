@@ -20,4 +20,10 @@ public interface InquiryMapper {
 
   /** 위 검색 조건과 동일한 조건의 전체 건수 */
   long countInquiry(InquirySearchRequest request);
+
+  /** 사용자(문의게시판)용 목록(+검색). 삭제된 문의는 제외한다. */
+  List<InquiryResponse> selectMyInquiries(InquirySearchRequest request);
+
+  /** 위 사용자용 검색 조건과 동일한 조건의 전체 건수(삭제 제외) */
+  long countMyInquiry(InquirySearchRequest request);
 }

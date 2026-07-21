@@ -55,31 +55,45 @@
         </constructor>
     </resultMap>
 
-    <!-- 목록/카운트 공유 검색조건 -->
+    <!-- 목록/카운트 공유 검색조건 (관리자·사용자 공통) -->
+    <sql id="inquiryConditions">
+        <if test="searchString != null and searchString != ''">
+            AND (
+                q.title LIKE CONCAT('%', #{searchString}, '%')
+                OR q.content LIKE CONCAT('%', #{searchString}, '%')
+            )
+        </if>
+        <if test="category != null and category != ''">
+            AND q.category = #{category}
+        </if>
+        <if test="status != null">
+            AND q.status = #{status}
+        </if>
+        <if test="userId != null">
+            AND q.user_id = #{userId}
+        </if>
+        <if test="startAt != null">
+            AND q.created_at &gt;= #{startAt}
+        </if>
+        <if test="endAt != null">
+            AND q.created_at &lt;= #{endAt}
+        </if>
+    </sql>
+
+    <!-- 관리자용: 삭제(DELETED) 포함 전체 -->
     <sql id="inquirySearchWhere">
         FROM inquiries q
         <where>
-            <if test="searchString != null and searchString != ''">
-                AND (
-                    q.title LIKE CONCAT('%', #{searchString}, '%')
-                    OR q.content LIKE CONCAT('%', #{searchString}, '%')
-                )
-            </if>
-            <if test="category != null and category != ''">
-                AND q.category = #{category}
-            </if>
-            <if test="status != null">
-                AND q.status = #{status}
-            </if>
-            <if test="userId != null">
-                AND q.user_id = #{userId}
-            </if>
-            <if test="startAt != null">
-                AND q.created_at &gt;= #{startAt}
-            </if>
-            <if test="endAt != null">
-                AND q.created_at &lt;= #{endAt}
-            </if>
+            <include refid="inquiryConditions"/>
+        </where>
+    </sql>
+
+    <!-- 사용자(문의게시판)용: 삭제된 문의는 노출하지 않는다 -->
+    <sql id="myInquirySearchWhere">
+        FROM inquiries q
+        <where>
+            <include refid="inquiryConditions"/>
+            AND q.status &lt;&gt; 'DELETED'
         </where>
     </sql>
 
@@ -99,6 +113,25 @@
             resultType="long">
         SELECT COUNT(*)
         <include refid="inquirySearchWhere"/>
+    </select>
+
+    <!-- 사용자용 목록/카운트 (DELETED 제외) -->
+    <select id="selectMyInquiries"
+            parameterType="com.teambook.panorama.domain.admin.dto.inquiry.InquirySearchRequest"
+            resultMap="inquiryResponseMap">
+        <bind name="offset" value="(page - 1) * size"/>
+        SELECT q.inquiry_id, q.user_id, q.category, q.title, q.content, q.status,
+               q.created_at, q.updated_at
+        <include refid="myInquirySearchWhere"/>
+        ORDER BY q.created_at DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countMyInquiry"
+            parameterType="com.teambook.panorama.domain.admin.dto.inquiry.InquirySearchRequest"
+            resultType="long">
+        SELECT COUNT(*)
+        <include refid="myInquirySearchWhere"/>
     </select>
 
 </mapper>
