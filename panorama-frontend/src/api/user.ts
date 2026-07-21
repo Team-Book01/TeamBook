@@ -58,8 +58,13 @@ export async function changePassword(currentPassword: string, newPassword: strin
 }
 
 /** 회원 탈퇴 (DELETE /users/me). */
-export async function withdraw(): Promise<void> {
-  await client.delete('/users/me')
+export interface WithdrawRequest {
+  password?: string     // LOCAL 전용
+  confirmText?: string  // 소셜 전용
+}
+
+export async function withdraw(body: WithdrawRequest): Promise<void> {
+  await client.delete('/users/me', { data: body })
 }
 
 /**
