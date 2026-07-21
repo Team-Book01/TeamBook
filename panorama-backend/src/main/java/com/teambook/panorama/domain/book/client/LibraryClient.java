@@ -1,5 +1,8 @@
 package com.teambook.panorama.domain.book.client;
 
+import com.teambook.panorama.domain.auth.controller.EmailVerificationController;
+
+import java.time.LocalDate;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -10,6 +13,7 @@ import org.springframework.web.client.RestClientException;
 import com.teambook.panorama.domain.book.dto.library.BookAvResponseWrapper;
 
 import com.teambook.panorama.domain.book.dto.library.LibSrchResponseWrapper;
+import com.teambook.panorama.domain.book.dto.popularBook.PopularBookResponseWrapper;
 import com.teambook.panorama.global.exception.BusinessException;
 import com.teambook.panorama.global.exception.ErrorCode;
 
@@ -19,6 +23,8 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class LibraryClient {
   
+  private final EmailVerificationController emailVerificationController;
+
   @Value("${library-bigdata.auth-key}")
   private String authKey;
 
@@ -55,6 +61,19 @@ public class LibraryClient {
     .body(BookAvResponseWrapper.class);
     } catch (RestClientException e) {
       return null;
+    }
+
+  }
+
+  //인기 대출 도서
+  public PopularBookResponseWrapper getPopularBooks(LocalDate startDate) {
+    try {
+      return libraryRestClient.get()
+      .uri("/loanItemSrch?authKey={a}&startDt={s}&pageNo=1&pageSize=10&format=json", this.authKey, startDate.toString())
+      .retrieve()
+      .body(PopularBookResponseWrapper.class);
+    } catch (RestClientException e) {
+      throw new BusinessException(ErrorCode.LIBRARY_API_ERROR);
     }
 
   }
