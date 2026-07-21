@@ -3,13 +3,16 @@ package com.teambook.panorama.domain.book.service;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.teambook.panorama.domain.book.client.NaverBookClient;
 import com.teambook.panorama.domain.book.dto.bookmark.BookmarkRequest;
 import com.teambook.panorama.domain.book.dto.bookmark.BookmarkResponse;
 import com.teambook.panorama.domain.book.dto.bookmark.MyBookmarkItem;
 import com.teambook.panorama.domain.book.dto.bookmark.MyBookmarkResponse;
+import com.teambook.panorama.domain.book.dto.naver.NaverBookItem;
 import com.teambook.panorama.domain.book.entity.Book;
 import com.teambook.panorama.domain.book.entity.Bookmark;
 import com.teambook.panorama.domain.book.repository.BookRepository;
@@ -29,10 +32,8 @@ public class BookmarkService {
   @Transactional
   public BookmarkResponse toggleBookmark(BookmarkRequest request, Long userId) {
     
-    
     //책DB확인, 없으면 생성
-    Book book = bookRepository.findByIsbn(request.isbn())
-    .orElseGet(() -> bookRepository.save(createBook(request)));
+    Book book = findOrCreateBook(request);
 
     //북마크 확인 -> 삭제 또는 생성
     boolean isBookmarked;
@@ -90,6 +91,17 @@ public class BookmarkService {
     .title(request.title())
     .build();
     
+  }
+  //동시성 표준 패턴이래~
+  private Book findOrCreateBook(BookmarkRequest request) {
+    return bookRepository.findByIsbn(request.isbn()).orElseGet(() -> {
+      try {
+        return bookRepository.save(createBook(request));
+      } catch (DataIntegrityViolationException e) {
+        //동시에 생성되면 다시 조회
+        return bookRepository.findByIsbn(request.isbn()).orElseThrow(() -> e);
+      }
+    });
   }
 
 
