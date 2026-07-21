@@ -38,6 +38,8 @@ public class PopularBookService {
       .isbn(doc.isbn())
       .publisher(doc.publisher())
       .title(doc.title())
+      .ranking(doc.ranking())
+      .loanCount(doc.loanCount())
       .build();
     }).toList();
     return BookSearchResponse.builder()

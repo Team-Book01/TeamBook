@@ -34,7 +34,7 @@ public ResponseEntity<BookSearchResponse> getBooks(
   }
 
   @Operation(summary = "인기 대출 도서 목록")
-  @GetMapping("/polularBooks")
+  @GetMapping("/popularBooks")
   public ResponseEntity<BookSearchResponse> getPopularBooks() {
     return ResponseEntity.ok(popularBookService.findPopularBooks());
   }

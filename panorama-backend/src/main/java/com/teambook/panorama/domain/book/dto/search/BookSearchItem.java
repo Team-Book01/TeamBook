@@ -20,6 +20,8 @@ public record BookSearchItem(
   BigDecimal avgRating,
   Integer reviewCount,
   Integer bookmarkCount,
+  String ranking,
+  String loanCount,
   Boolean isBookmarked
 ) {
 

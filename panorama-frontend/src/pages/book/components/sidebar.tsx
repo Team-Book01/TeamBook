@@ -1,8 +1,7 @@
 import { useState } from "react";
-import { Heart, TrendingUp } from "lucide-react";
+import { TrendingUp } from "lucide-react";
 
-import type { Book } from "../data";
-import { ALL_BOOKS, MORE_BOOKS, POPULAR } from "../data";
+import { usePopularBooks } from "@/api/book";
 import { MemberCard } from "@/components/common/MemberCard";
 
 // ── ProfileCard ───────────────────────────────────────────────────────────────
@@ -54,8 +53,12 @@ export function ProfileCard({
 
 // ── PopularBooksCard ──────────────────────────────────────────────────────────
 
-export function PopularBooksCard({ onSelect }: { onSelect: (b: Book) => void }) {
+export function PopularBooksCard({ onSelect }: { onSelect: (isbn: string) => void }) {
   const [hovered, setHovered] = useState<number | null>(null);
+  const { data, isLoading } = usePopularBooks();
+  // 백엔드가 랭킹순으로 내려주므로 그대로 상위 10건만 노출한다.
+  const books = (data ?? []).slice(0, 10);
+
   return (
     <div className="bg-white border border-[#EAEAEA] rounded-2xl overflow-hidden">
       <div className="flex items-center gap-2 px-5 py-4 border-b border-[#EAEAEA]">
@@ -63,31 +66,32 @@ export function PopularBooksCard({ onSelect }: { onSelect: (b: Book) => void }) 
         <span className="text-sm font-bold text-[#1A1A1A]">인기 도서</span>
       </div>
       <div className="px-4 py-3 flex flex-col gap-1">
-        {POPULAR.map((book) => {
-          const isTop3 = book.rank <= 3;
-          return (
-            <div
-              key={book.rank}
-              className="flex items-center gap-3 px-2 py-2 rounded-xl cursor-pointer hover:bg-[#F9F9F9] transition-colors"
-              onMouseEnter={() => setHovered(book.rank)}
-              onMouseLeave={() => setHovered(null)}
-              onClick={() => {
-                const found = [...ALL_BOOKS, ...MORE_BOOKS].find(b => b.title === book.title);
-                if (found) onSelect(found);
-              }}
-            >
-              <span className="text-sm font-black w-5 text-center flex-shrink-0" style={{ color: isTop3 ? "#F5B301" : "#aaa" }}>{book.rank}</span>
-              <div className="flex-1 min-w-0">
-                <p className={`text-[13px] font-semibold truncate transition-colors ${hovered === book.rank ? "text-[#2E7D6B]" : "text-[#1A1A1A]"}`}>{book.title}</p>
-                <p className="text-[11px] text-[#aaa]">{book.author}</p>
+        {isLoading ? (
+          <p className="text-[12px] text-[#aaa] px-2 py-3 text-center">불러오는 중…</p>
+        ) : books.length === 0 ? (
+          <p className="text-[12px] text-[#aaa] px-2 py-3 text-center">인기 도서가 없습니다.</p>
+        ) : (
+          books.map((book, idx) => {
+            const rank = idx + 1;
+            const isTop3 = rank <= 3;
+            return (
+              <div
+                key={`${book.isbn}-${idx}`}
+                className="flex items-center gap-3 px-2 py-2 rounded-xl cursor-pointer hover:bg-[#F9F9F9] transition-colors"
+                onMouseEnter={() => setHovered(rank)}
+                onMouseLeave={() => setHovered(null)}
+                onClick={() => book.isbn && onSelect(book.isbn.trim())}
+              >
+                <span className="text-sm font-black w-5 text-center flex-shrink-0" style={{ color: isTop3 ? "#F5B301" : "#aaa" }}>{rank}</span>
+                <div className="flex-1 min-w-0">
+                  <p className={`text-[13px] font-semibold truncate transition-colors ${hovered === rank ? "text-[#2E7D6B]" : "text-[#1A1A1A]"}`}>{book.title}</p>
+                  <p className="text-[11px] text-[#aaa] truncate">{book.author}</p>
+                </div>
+                <span className="text-[11px] text-[#888] tabular-nums flex-shrink-0">대출 {Number(book.loanCount ?? 0).toLocaleString()}</span>
               </div>
-              <span className="flex items-center gap-0.5 flex-shrink-0">
-                <Heart size={11} className="fill-rose-500 stroke-rose-500" />
-                <span className="text-[11px] text-[#aaa] tabular-nums">{book.likes.toLocaleString()}</span>
-              </span>
-            </div>
-          );
-        })}
+            );
+          })
+        )}
       </div>
     </div>
   );

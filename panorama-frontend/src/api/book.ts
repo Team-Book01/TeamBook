@@ -91,6 +91,7 @@ export const LIBRARY_PAGE_SIZE = 10
 export const bookKeys = {
   all: ['books'] as const,
   search: (params: BookSearchParams) => [...bookKeys.all, 'search', params] as const,
+  popular: () => [...bookKeys.all, 'popular'] as const,
   detail: (isbn: string) => [...bookKeys.all, 'detail', isbn] as const,
   reviews: (isbn: string, page: number, size: number) =>
     [...bookKeys.all, 'reviews', isbn, { page, size }] as const,
@@ -138,6 +139,15 @@ export async function extractIsbnFromImage(image: Blob | File): Promise<string |
 export async function getBook(isbn: string): Promise<BookDetail> {
   const { data } = await client.get<BookDetail>(`/books/${isbn}`)
   return data
+}
+
+/**
+ * GET /api/v1/books/popularBooks — 인기 대출 도서 (도서관정보나루 기준, 랭킹순 최대 10건).
+ * 응답은 검색과 같은 BookSearchResponse 이며, items 에 ranking/loanCount 가 채워져 온다.
+ */
+export async function getPopularBooks(): Promise<BookItem[]> {
+  const { data } = await client.get<BookSearchResponse>('/books/popularBooks')
+  return data.items
 }
 
 /** POST /api/v1/bookmark/toggle — 북마크 토글 (로그인 필요) */
@@ -334,6 +344,16 @@ export function useBook(isbn: string) {
     enabled: hasIsbn(isbn) && authReady,
     initialData: cached?.data,
     initialDataUpdatedAt: cached?.updatedAt,
+  })
+}
+
+/** 인기 대출 도서 (홈 캐러셀 · 도서검색 사이드바 공용). 공개 API 라 로그인 불필요. */
+export function usePopularBooks() {
+  return useQuery({
+    queryKey: bookKeys.popular(),
+    queryFn: getPopularBooks,
+    // 인기 대출 집계는 자주 바뀌지 않으므로 오래 신선하게 둔다.
+    staleTime: 60 * 60_000,
   })
 }
 

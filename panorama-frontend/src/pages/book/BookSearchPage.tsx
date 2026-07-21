@@ -300,7 +300,7 @@ export default function BookSearchPage() {
             activeView={view}
             onSelect={selectView}
           />
-          <PopularBooksCard onSelect={(b) => navigate(`/books/${b.id}`)} />
+          <PopularBooksCard onSelect={(isbn) => navigate(`/books/${isbn}`)} />
         </aside>
       </div>
 

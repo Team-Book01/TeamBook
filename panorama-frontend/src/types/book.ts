@@ -46,6 +46,9 @@ export interface BookItem {
   reviewCount: number
   bookmarkCount: number
   isBookmarked: boolean
+  /** 인기 대출 도서 응답 전용(일반 검색엔 없음): 랭킹 / 대출 횟수(숫자 문자열) */
+  ranking?: string
+  loanCount?: string
 }
 
 /** GET /api/v1/books/search 응답 (백엔드 BookSearchResponse) */
