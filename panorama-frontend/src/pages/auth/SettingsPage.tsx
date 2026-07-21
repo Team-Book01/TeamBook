@@ -28,8 +28,10 @@ import { isValidNickname, isValidPassword, isValidEmail, NICKNAME_MAX_LENGTH } f
  * - 닉네임: 입력 0.5초 후 /users/exists 로 1차 중복확인 → 저장 시 PATCH /users/me 에서 2차 검증
  * - 비밀번호 수정: 현재/새 비밀번호로 PATCH /users/me/password (로컬 계정만)
  * - 이메일 인증: 이메일 입력 → POST /users/me/email 로 인증 링크 메일 발송(링크 방식). 완료는 /verify-email
- * - 계정 삭제: 비밀번호 입력 후 DELETE /users/me
+ * - 계정 삭제: 로컬은 비밀번호, 소셜은 확인 문구('탈퇴합니다') 입력 후 DELETE /users/me
  */
+
+const WITHDRAW_CONFIRM_TEXT = '탈퇴합니다' // 백엔드 검증 문구와 정확히 일치해야 함(A015)
 
 type NickStatus = 'idle' | 'checking' | 'available' | 'taken' | 'invalid'
 
@@ -40,6 +42,12 @@ export default function SettingsPage() {
   const storeLogout = useAuthStore((s) => s.logout)
 
   const currentNickname = user?.nickname ?? ''
+
+  // 계정 타입: 로컬(비밀번호 있음) vs 소셜(비밀번호 없음) — UI/전송값 분기의 기준
+  const isLocalAccount = user?.provider === 'LOCAL'
+  // 닉네임 옆 읽기전용 필드: 로컬 계정은 아이디(login_id), 소셜 계정은 provider(영문 대문자)
+  const accountFieldLabel = isLocalAccount ? '아이디' : '소셜'
+  const accountFieldValue = isLocalAccount ? (user?.loginId ?? '') : (user?.provider ?? '')
 
   // ── 닉네임 ─────────────────────────────────────────────
   const [nickname, setNickname] = useState(currentNickname)
@@ -107,7 +115,7 @@ export default function SettingsPage() {
     }
   }
 
-  // ── 비밀번호 변경 (emailVerified 인 경우만 노출) ─────────
+  // ── 비밀번호 변경 (로컬 계정만 노출) ────────────────────
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -140,7 +148,7 @@ export default function SettingsPage() {
   const [emailInput, setEmailInput] = useState('')
   const [sendingMail, setSendingMail] = useState(false)
   const [mailSent, setMailSent] = useState(false)
-  const alreadyVerified = Boolean(user?.emailVerified)
+  const alreadyVerified = Boolean(user?.email)
 
   const emailFormatValid = isValidEmail(emailInput.trim())
 
@@ -159,17 +167,28 @@ export default function SettingsPage() {
   }
 
   // ── 계정 삭제 ─────────────────────────────────────────
+  // 로컬: 비밀번호 재확인 / 소셜: 확인 문구('탈퇴합니다') 재확인.
   const [deleteOpen, setDeleteOpen] = useState(false)
-  const [deletePassword, setDeletePassword] = useState('')
+  const [deleteValue, setDeleteValue] = useState('') // 로컬=비밀번호, 소셜=확인 문구
   const [deleting, setDeleting] = useState(false)
 
+  // 소셜은 문구가 정확히 일치해야, 로컬은 비어있지만 않으면 진행 가능
+  const deleteCanProceed = isLocalAccount
+    ? deleteValue.length > 0
+    : deleteValue === WITHDRAW_CONFIRM_TEXT
+
+  function closeDeleteModal() {
+    if (deleting) return
+    setDeleteOpen(false)
+    setDeleteValue('') // 재오픈 시 이전 입력 잔상 방지
+  }
+
   async function handleDelete() {
-    if (!deletePassword) return
+    if (!deleteCanProceed) return
     setDeleting(true)
     try {
-      // NOTE: 비밀번호 검증 전용 백엔드 엔드포인트가 아직 없어, 입력 확인 후 탈퇴를 호출한다.
-      //       (검증 엔드포인트가 생기면 삭제 전에 비밀번호 검증 호출을 추가)
-      await withdraw()
+      // 로컬은 password, 소셜은 confirmText 로 분기 전송 → 백엔드가 provider 보고 검증
+      await withdraw(isLocalAccount ? { password: deleteValue } : { confirmText: deleteValue })
       storeLogout()
       toast.success('계정이 삭제되었습니다.')
       navigate('/', { replace: true })
@@ -192,11 +211,6 @@ export default function SettingsPage() {
   }
 
   const avatarInitial = (user?.nickname ?? '책').slice(0, 1)
-
-  // 닉네임 옆 읽기전용 필드: 로컬 계정은 아이디(login_id), 소셜 계정은 provider(영문 대문자)
-  const isLocalAccount = user?.provider === 'LOCAL'
-  const accountFieldLabel = isLocalAccount ? '아이디' : '소셜'
-  const accountFieldValue = isLocalAccount ? (user?.loginId ?? '') : (user?.provider ?? '')
 
   return (
     <div className="min-h-screen bg-background">
@@ -487,11 +501,11 @@ export default function SettingsPage() {
         </section>
       </main>
 
-      {/* 계정 삭제 확인 모달 */}
+      {/* 계정 삭제 확인 모달 (로컬=비밀번호 / 소셜=확인 문구) */}
       {deleteOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-          onClick={() => !deleting && setDeleteOpen(false)}
+          onClick={closeDeleteModal}
         >
           <div
             className="w-full max-w-sm rounded-2xl border border-border bg-card p-6"
@@ -502,32 +516,39 @@ export default function SettingsPage() {
               <h3 className="text-lg font-semibold text-destructive">계정 삭제</h3>
             </div>
             <p className="mt-3 text-sm text-muted-foreground">
-              본인 확인을 위해 비밀번호를 입력해 주세요. 이 작업은 되돌릴 수 없습니다.
+              {isLocalAccount
+                ? '본인 확인을 위해 비밀번호를 입력해 주세요. 이 작업은 되돌릴 수 없습니다.'
+                : `본인 확인을 위해 아래에 '${WITHDRAW_CONFIRM_TEXT}'를 입력해 주세요. 이 작업은 되돌릴 수 없습니다.`}
             </p>
             <div className="mt-4 flex flex-col gap-1.5">
-              <Label htmlFor="deletePassword">비밀번호</Label>
-              <PasswordInput
-                id="deletePassword"
-                placeholder="현재 비밀번호"
-                value={deletePassword}
-                onChange={(e) => setDeletePassword(e.target.value)}
-                autoComplete="current-password"
-              />
+              <Label htmlFor="deleteValue">{isLocalAccount ? '비밀번호' : '확인 문구'}</Label>
+              {isLocalAccount ? (
+                <PasswordInput
+                  id="deleteValue"
+                  placeholder="현재 비밀번호"
+                  value={deleteValue}
+                  onChange={(e) => setDeleteValue(e.target.value)}
+                  autoComplete="current-password"
+                />
+              ) : (
+                <Input
+                  id="deleteValue"
+                  placeholder={WITHDRAW_CONFIRM_TEXT}
+                  value={deleteValue}
+                  onChange={(e) => setDeleteValue(e.target.value)}
+                  autoComplete="off"
+                />
+              )}
             </div>
             <div className="mt-6 flex justify-end gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setDeleteOpen(false)}
-                disabled={deleting}
-              >
+              <Button variant="outline" size="sm" onClick={closeDeleteModal} disabled={deleting}>
                 취소
               </Button>
               <Button
                 variant="destructive"
                 size="sm"
                 onClick={handleDelete}
-                disabled={!deletePassword || deleting}
+                disabled={!deleteCanProceed || deleting}
               >
                 {deleting ? '삭제 중...' : '삭제'}
               </Button>

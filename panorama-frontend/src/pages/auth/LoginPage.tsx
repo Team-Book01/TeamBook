@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { AuthLayout } from '@/components/auth/AuthLayout'
 import { SocialButtons } from '@/components/auth/SocialButtons'
@@ -12,6 +12,11 @@ import { useAuthStore } from '@/store/authStore'
 import { setRecentProvider } from '@/lib/recentLogin'
 import { safeRedirect } from '@/lib/authRedirect'
 
+
+const OAUTH_ERROR_MESSAGES: Record<string, string> = {
+  A014: '탈퇴한 계정입니다.',   // ← 로컬 ErrorCode와 코드 값 일치시켜야 함
+}
+
 /**
  * 로그인 화면.
  * 아이디/비밀번호 → 백엔드 POST /auth/login → 내 정보 조회 → 전역 상태(zustand) 세팅.
@@ -23,6 +28,17 @@ export default function LoginPage() {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+
+  // 소셜 로그인 실패는 리다이렉트로 ?error=코드 형태로 돌아온다.
+  // onSubmit을 안 거치므로 여기서 URL을 읽어 로컬과 같은 에러 영역에 표시.
+  useEffect(() => {
+    const code = params.get('error')
+    if (code) {
+      setSubmitError(OAUTH_ERROR_MESSAGES[code] ?? '소셜 로그인에 실패했어요.')
+      // 뒤로가기/새로고침 시 에러가 계속 남지 않게 쿼리 정리
+      navigate('/login', { replace: true })
+    }
+  }, [params, navigate])
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
