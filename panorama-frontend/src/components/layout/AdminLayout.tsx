@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
-import { Bell, Menu } from 'lucide-react'
+import { Menu } from 'lucide-react'
 import AdminSidebar, { ADMIN_NAV } from './AdminSidebar'
 
 /**
@@ -48,16 +48,6 @@ export default function AdminLayout() {
           <div className="flex items-baseline gap-2 min-w-0">
             <span className="text-admin font-bold text-[16px] truncate">{title}</span>
             <span className="hidden sm:inline text-muted-foreground text-[12px]">· {today}</span>
-          </div>
-          <div className="flex items-center gap-2 ml-auto">
-            <button
-              type="button"
-              aria-label="알림"
-              className="relative p-2 rounded-lg hover:bg-admin-light transition-colors"
-            >
-              <Bell size={18} className="text-admin-point" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
-            </button>
           </div>
         </header>
 

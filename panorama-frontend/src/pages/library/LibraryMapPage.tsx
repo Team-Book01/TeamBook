@@ -15,7 +15,7 @@ import {
   type LatLng,
   type Bounds,
 } from "./data";
-import { LocationModal, Sidebar, MapPanel } from "./components";
+import { Sidebar, MapPanel } from "./components";
 
 // ─── 위치 권한 상태 ───────────────────────────────────────────────────────────
 // checking     : Permissions API 조회 중 (아직 모름)
@@ -32,7 +32,6 @@ const DENIED_HINT = "위치가 차단되어 서울시청 기준으로 표시합�
 // ─── LibraryMapPage ───────────────────────────────────────────────────────────
 
 export default function LibraryMapPage() {
-  const [showModal, setShowModal] = useState(false);
   const [permission, setPermission] = useState<PermState>("checking");
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [hoveredId, setHoveredId] = useState<number | null>(null);
@@ -58,6 +57,14 @@ export default function LibraryMapPage() {
   const handleRegionChange = (r: string) => {
     setRegion(r);
     if (r !== "전체") setAreaBounds(null);
+  };
+
+  // "이 지도에서 검색" — 지역/이름검색을 함께 풀어 순수 지도 viewport(bounds) 기준으로 조회한다.
+  // (지역이 남아 있으면 mode 가 explore 로 고정돼 areaBounds 가 무시되는 비대칭을 없앤다)
+  const handleSearchThisArea = (b: Bounds) => {
+    setRegion("전체");
+    setSearchQuery("");
+    setAreaBounds(b);
   };
 
   // 현재 위치 요청(위치 허용 버튼 · 사이드바 타겟 버튼 · 지도 현재위치 버튼 공용).
@@ -118,16 +125,14 @@ export default function LibraryMapPage() {
   }, []);
 
   // 권한 상태가 확정되면 그에 맞게 행동한다.
-  //  - granted : 모달 없이 즉시 조회 (설정에서 허용으로 바뀐 순간의 자동 복구도 여기서 처리)
-  //  - prompt  : 우리 모달로 맥락을 설명한 뒤 사용자가 누르면 요청
-  //  - denied  : 모달을 띄워도 "위치 허용" 버튼이 아무 일도 못 하는 죽은 버튼 → 안내 배너로 대체
+  //  - granted : 즉시 조회 (설정에서 허용으로 바뀐 순간의 자동 복구도 여기서 처리)
+  //  - prompt  : 곧바로 getCurrentPosition 호출(브라우저 프롬프트 하나로 끝냄 — 커스텀 모달 없음)
+  //  - denied  : "위치 허용" 이 죽은 버튼이 되므로 안내 배너로 대체
   useEffect(() => {
     if (permission === "checking") return;
-    if (permission === "granted") {
+    if (permission === "granted" || permission === "prompt" || permission === "unknown") {
       requestLocation();
-      return;
     }
-    if (permission === "prompt" || permission === "unknown") setShowModal(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [permission]);
 
@@ -270,16 +275,6 @@ export default function LibraryMapPage() {
       className="h-[calc(100vh-68px)] flex flex-col overflow-hidden"
       style={{ fontFamily: "'Noto Sans KR', sans-serif" }}
     >
-      {showModal && (
-        <LocationModal
-          onAllow={() => {
-            requestLocation();
-            setShowModal(false);
-          }}
-          onLater={() => setShowModal(false)}
-        />
-      )}
-
       <div className="flex flex-1 overflow-hidden">
         <Sidebar
           libraries={filteredLibraries}
@@ -321,7 +316,7 @@ export default function LibraryMapPage() {
           onSelectLibrary={handleSelectLibrary}
           onHoverLibrary={setHoveredId}
           onLocate={requestLocation}
-          onSearchThisArea={setAreaBounds}
+          onSearchThisArea={handleSearchThisArea}
         />
       </div>
 

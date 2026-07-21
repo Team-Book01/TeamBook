@@ -181,7 +181,7 @@ export default function AdminInquiriesPage() {
               className="w-full pl-8 pr-3 py-2 text-sm rounded-xl border border-border bg-gray-50 text-foreground outline-none focus:border-admin" />
           </div>
           <AdminSelect value={fStatus} onChange={e => setFStatus(e.target.value as typeof fStatus)}>
-            <option value="전체">상태 전체</option><option value="PENDING">답변 대기</option><option value="ANSWERED">답변 완료</option><option value="CLOSED">종료</option><option value="DELETED">삭제됨</option>
+            <option value="전체">상태 전체</option><option value="PENDING">답변 대기</option><option value="ANSWERED">답변 완료</option><option value="DELETED">삭제됨</option>
           </AdminSelect>
           <button onClick={apply} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold text-white bg-admin hover:bg-admin-hover transition-colors">
             <Search size={13} />검색

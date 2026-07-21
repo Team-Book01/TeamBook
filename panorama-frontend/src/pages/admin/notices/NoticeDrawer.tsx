@@ -8,7 +8,7 @@ import { uploadNoticeImages } from '@/api/admin'
 import { toApiImageUrl } from '@/api/community'
 import { sanitizePostHtml } from '@/pages/community/utils'
 import ToastEditor from '@/pages/community/components/ToastEditor'
-import type { NoticeCategory, NoticeDetailResponse } from '@/types/admin'
+import type { NoticeCategory, NoticeDetailResponse, NoticeStatus } from '@/types/admin'
 import { NOTICE_CATEGORY_BADGE, NOTICE_CATEGORY_OPTIONS, NOTICE_STATUS_META, formatDate } from './noticeMeta'
 import AdminSelect from '@/components/admin/AdminSelect'
 
@@ -31,9 +31,12 @@ interface Props {
   onClose: () => void
   onEdit: () => void
   onSubmit: (form: NoticeForm) => void
+  /** 상태 변경(숨김/게시전환/삭제). 상세(view) 모드 푸터 버튼에서 호출한다. */
+  onChangeStatus?: (status: NoticeStatus) => void
+  statusPending?: boolean
 }
 
-export default function NoticeDrawer({ mode, detail, loading, submitting, submitError, onClose, onEdit, onSubmit }: Props) {
+export default function NoticeDrawer({ mode, detail, loading, submitting, submitError, onClose, onEdit, onSubmit, onChangeStatus, statusPending }: Props) {
   const [form, setForm] = useState<NoticeForm>({
     category: 'GENERAL',
     title: '',
@@ -61,6 +64,11 @@ export default function NoticeDrawer({ mode, detail, loading, submitting, submit
   }, [mode, detail])
 
   const isView = mode === 'view'
+  // 삭제는 2단계 확인(첫 클릭 경고 → 재클릭 실행). 대상/상태/모드가 바뀌면 초기화.
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  useEffect(() => {
+    setConfirmDelete(false)
+  }, [detail?.noticeId, detail?.status, mode])
   const editorRef = useRef<Editor>(null)
   // 업로드 훅은 에디터 마운트 시 클로저가 고정되어 setForm 을 쓰면 오래된 form 을 본다.
   // 키는 ref 에 모으고 저장 시점에 한 번에 읽는다.
@@ -126,13 +134,46 @@ export default function NoticeDrawer({ mode, detail, loading, submitting, submit
         {/* Footer */}
         <div className="px-6 py-4 border-t border-border shrink-0">
           {isView ? (
-            <button
-              onClick={onEdit}
-              disabled={!detail}
-              className="w-full py-2.5 bg-admin text-white rounded-lg font-semibold text-sm hover:bg-admin-hover transition-colors disabled:opacity-50"
-            >
-              수정
-            </button>
+            <div className="flex flex-col gap-2">
+              <div className="flex gap-2">
+                {/* 게시/숨김 토글 */}
+                <button
+                  onClick={() => onChangeStatus?.(detail?.status === 'ACTIVE' ? 'HIDDEN' : 'ACTIVE')}
+                  disabled={!detail || statusPending}
+                  className="flex-1 py-2.5 rounded-lg font-semibold text-sm border border-border text-foreground hover:bg-gray-50 transition-colors disabled:opacity-50"
+                >
+                  {detail?.status === 'ACTIVE' ? '숨김' : '게시로 전환'}
+                </button>
+                {/* 삭제 (2단계 확인) */}
+                {detail && detail.status !== 'DELETED' && (
+                  <button
+                    onClick={() => {
+                      if (!confirmDelete) {
+                        setConfirmDelete(true)
+                        return
+                      }
+                      onChangeStatus?.('DELETED')
+                    }}
+                    disabled={statusPending}
+                    className={cn(
+                      'flex-1 py-2.5 rounded-lg font-semibold text-sm transition-colors disabled:opacity-50',
+                      confirmDelete
+                        ? 'bg-red-600 text-white hover:bg-red-700'
+                        : 'border border-red-200 text-red-600 hover:bg-red-50',
+                    )}
+                  >
+                    {confirmDelete ? '한 번 더 눌러 삭제' : '삭제'}
+                  </button>
+                )}
+              </div>
+              <button
+                onClick={onEdit}
+                disabled={!detail || detail.status === 'DELETED'}
+                className="w-full py-2.5 bg-admin text-white rounded-lg font-semibold text-sm hover:bg-admin-hover transition-colors disabled:opacity-50"
+              >
+                수정
+              </button>
+            </div>
           ) : (
             <>
               <button
