@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/authStore'
 import { logout as logoutApi } from '@/api/auth'
 import { toast } from '@/lib/toast'
+import { queryClient } from '@/lib/queryClient'
 
 
 /**
@@ -69,6 +70,10 @@ export default function Header() {
       // 서버 로그아웃 실패해도 로컬 상태는 정리한다
     }
     storeLogout()
+    // 이전 사용자 기준으로 캐시된 쿼리(마이페이지·문의·게시글 등)를 모두 비운다.
+    // 남겨두면 로그아웃 후에도 인증 필요한 요청이 되살아나 401 → /login 강제 이동으로
+    // 홈 접근이 막히는 문제가 생긴다.
+    queryClient.clear()
     toast.success('로그아웃되었습니다.')
     navigate('/')
   }

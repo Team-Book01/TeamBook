@@ -60,6 +60,9 @@ export default function App() {
         <Route path="/library-map" element={<LibraryMapPage />} />
         <Route path="/notices" element={<NoticesPage />} />
         <Route path="/notices/:id" element={<NoticeDetailPage />} />
+        {/* 커뮤니티 목록/상세는 비로그인도 열람 가능(작성·좋아요·스크랩·신고 등은 동작 시 로그인 유도) */}
+        <Route path="/community" element={<CommunityPage />} />
+        <Route path="/community/:id" element={<CommunityDetailPage />} />
       </Route>
 
       {/* 전체화면 독립 페이지 (자체 헤더/레이아웃 보유 → 공통 Layout 미적용) */}
@@ -76,11 +79,9 @@ export default function App() {
         {/* 커뮤니티는 백엔드 전 엔드포인트가 인증 필요 → 목록/상세 포함 전체 보호 */}
         <Route element={<Layout />}>
           <Route path="/mypage" element={<MyPage />} />
-          <Route path="/community" element={<CommunityPage />} />
           <Route path="/community/my-posts" element={<CommunityMyListPage mode="posts" />} />
           <Route path="/community/my-scraps" element={<CommunityMyListPage mode="scraps" />} />
           <Route path="/community/write" element={<CommunityWritePage />} />
-          <Route path="/community/:id" element={<CommunityDetailPage />} />
           <Route path="/community/:id/edit" element={<CommunityWritePage />} />
         </Route>
         {/* 설정은 자체 헤더(뒤로가기)를 써서 Layout 미적용 */}

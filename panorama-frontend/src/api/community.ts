@@ -295,7 +295,7 @@ function nextSliceParam<T>(lastPage: SliceResponse<T>, allPages: SliceResponse<T
   return lastPage.hasNext ? allPages.length : undefined
 }
 
-/** 게시글 목록 (무한 스크롤). category 미지정 = 전체 탭 */
+/** 게시글 목록 (무한 스크롤). category 미지정 = 전체 탭. 목록 조회는 공개(비로그인 열람 가능). */
 export function usePosts(size = POST_PAGE_SIZE, category?: PostCategory) {
   return useInfiniteQuery({
     queryKey: communityKeys.list(size, category),
@@ -305,7 +305,7 @@ export function usePosts(size = POST_PAGE_SIZE, category?: PostCategory) {
   })
 }
 
-/** 인기글 목록 (무한 스크롤) */
+/** 인기글 목록 (무한 스크롤). 공개(비로그인 열람 가능). */
 export function usePopularPosts(size = POST_PAGE_SIZE) {
   return useInfiniteQuery({
     queryKey: communityKeys.popular(size),
@@ -346,8 +346,8 @@ export function useMyScraps(size = POST_PAGE_SIZE) {
     queryFn: ({ pageParam }) => getMyScraps(pageParam, size),
     initialPageParam: 0,
     getNextPageParam: nextSliceParam,
-    // 인증 필요 엔드포인트 — 복원 전에 쏘면 불필요한 401
-    enabled: authReady,
+    // 인증 필요 엔드포인트 — 복원 전이거나 비로그인이면 쏘지 않는다(401·/login 이동 방지)
+    enabled: authReady && viewerId !== 'guest',
   })
 }
 
@@ -360,8 +360,8 @@ export function useMyPosts(size = POST_PAGE_SIZE) {
     queryFn: ({ pageParam }) => getMyPosts(pageParam, size),
     initialPageParam: 0,
     getNextPageParam: nextSliceParam,
-    // 인증 필요 엔드포인트 — 복원 전에 쏘면 불필요한 401
-    enabled: authReady,
+    // 인증 필요 엔드포인트 — 복원 전이거나 비로그인이면 쏘지 않는다(401·/login 이동 방지)
+    enabled: authReady && viewerId !== 'guest',
   })
 }
 

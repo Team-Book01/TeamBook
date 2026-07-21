@@ -3,6 +3,7 @@ import { Flame, TrendingUp } from 'lucide-react'
 
 import { useAuthStore } from '@/store/authStore'
 import { usePopularPosts, useMyStats } from '@/api/community'
+import { useRequireLogin } from '@/hooks/useRequireLogin'
 import { MemberCard } from '@/components/common/MemberCard'
 
 /** 사이드바에 보여줄 인기글 개수 */
@@ -16,6 +17,7 @@ const HOT_POST_COUNT = 5
  */
 export default function CommunitySidebar() {
   const navigate = useNavigate()
+  const { ensureLoggedIn } = useRequireLogin()
   const [searchParams] = useSearchParams()
   const user = useAuthStore((s) => s.user)
   const { data, isLoading } = usePopularPosts()
@@ -40,14 +42,14 @@ export default function CommunitySidebar() {
             label: '작성한 글',
             count: user ? (stats?.postCount ?? null) : null,
             active: activeView === 'posts',
-            onClick: () => navigate('/community?view=posts'),
+            onClick: () => { if (ensureLoggedIn()) navigate('/community?view=posts') },
           },
           {
             key: 'scraps',
             label: '스크랩한 게시글',
             count: user ? (stats?.scrapCount ?? null) : null,
             active: activeView === 'scraps',
-            onClick: () => navigate('/community?view=scraps'),
+            onClick: () => { if (ensureLoggedIn()) navigate('/community?view=scraps') },
           },
         ]}
       />
