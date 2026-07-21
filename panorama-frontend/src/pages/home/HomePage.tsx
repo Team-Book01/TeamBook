@@ -4,19 +4,19 @@ import {
   Search,
   ChevronRight,
   ChevronLeft,
-  Star,
   Heart,
   Eye,
   Megaphone,
+  BookOpen,
 } from 'lucide-react'
 import {
-  POPULAR_BOOKS,
   QUICK_LINKS,
   CATEGORY_BADGE,
   HOME_TABS,
   TAB_TO_CATEGORY,
 } from './data'
 import type { TabKey } from './data'
+import { usePopularBooks } from '@/api/book'
 import { usePopularPosts, usePosts, POST_CATEGORY_LABEL } from '@/api/community'
 import { useNotices } from '@/api/notice'
 import { useCommunityStats } from '@/api/stats'
@@ -54,6 +54,9 @@ export default function HomePage() {
   // 공지사항: 공개 GET API 실데이터 (상단 몇 건만)
   const noticesQuery = useNotices({ size: HOME_NOTICE_LIMIT })
   const notices = noticesQuery.data?.content ?? []
+
+  // 인기 대출 도서(도서관정보나루 랭킹). 이미지/제목/저자만 노출, 클릭 시 isbn 상세로.
+  const { data: popularBooks = [] } = usePopularBooks()
 
   // 게시판 인기글: '전체' 탭은 인기글 API, 카테고리 탭은 해당 카테고리 최신글
   const popularQuery = usePopularPosts()
@@ -173,35 +176,30 @@ export default function HomePage() {
             className="flex gap-5 overflow-x-auto flex-1"
             style={{ scrollbarWidth: 'none' }}
           >
-            {POPULAR_BOOKS.map((book) => (
+            {popularBooks.map((book, idx) => (
               <div
-                key={book.id}
-                onClick={() => navigate(`/books/${book.id}`)}
+                key={`${book.isbn}-${idx}`}
+                onClick={() => book.isbn && navigate(`/books/${book.isbn.trim()}`)}
                 className="shrink-0 w-40 cursor-pointer group"
               >
-                <div className="relative rounded-xl overflow-hidden shadow-md bg-muted mb-3">
-                  <img
-                    src={book.cover}
-                    alt={book.title}
-                    className="w-40 h-56 object-cover group-hover:scale-105 transition duration-300"
-                  />
+                <div className="relative rounded-xl overflow-hidden shadow-md bg-muted mb-3 w-40 h-56 flex items-center justify-center">
+                  {book.image ? (
+                    <img
+                      src={book.image}
+                      alt={book.title}
+                      className="w-40 h-56 object-cover group-hover:scale-105 transition duration-300"
+                    />
+                  ) : (
+                    <BookOpen size={40} className="text-muted-foreground" />
+                  )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition" />
                 </div>
                 <p className="text-sm font-semibold text-foreground truncate">
                   {book.title}
                 </p>
-                <p className="text-xs text-muted-foreground truncate mb-1.5">
+                <p className="text-xs text-muted-foreground truncate">
                   {book.author}
                 </p>
-                <div className="flex items-center gap-1.5">
-                  <Star size={11} className="text-accent fill-accent" />
-                  <span className="text-xs text-muted-foreground">
-                    {book.rating}
-                  </span>
-                  <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
-                    {book.category}
-                  </span>
-                </div>
               </div>
             ))}
           </div>
