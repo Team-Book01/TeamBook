@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import com.teambook.panorama.domain.book.dto.search.BookSearchResponse;
 import com.teambook.panorama.domain.book.service.BookSearchService;
+import com.teambook.panorama.domain.book.service.PopularBookService;
+
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 
@@ -17,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/v1/books")
 public class BookSearchController {
   private final BookSearchService bookSearchService;
+  private final PopularBookService popularBookService;
 
 @Operation(summary = "책 검색")
 @GetMapping("/search")
@@ -28,6 +31,12 @@ public ResponseEntity<BookSearchResponse> getBooks(
 @AuthenticationPrincipal Long userId) {
     BookSearchResponse response = bookSearchService.findBooks(keyword, display, start, sort, userId);
     return ResponseEntity.ok(response);
+  }
+
+  @Operation(summary = "인기 대출 도서 목록")
+  @GetMapping("/polularBooks")
+  public ResponseEntity<BookSearchResponse> getPopularBooks() {
+    return ResponseEntity.ok(popularBookService.findPopularBooks());
   }
 
 
