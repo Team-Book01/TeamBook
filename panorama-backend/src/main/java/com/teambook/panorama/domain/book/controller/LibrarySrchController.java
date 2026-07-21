@@ -17,7 +17,7 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/api/v1/library")
 @RequiredArgsConstructor
-public class LibraryController {
+public class LibrarySrchController {
   private final LibraryService libraryService;
 
   @GetMapping("/{isbn}")
