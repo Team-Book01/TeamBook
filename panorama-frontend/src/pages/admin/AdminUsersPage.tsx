@@ -140,12 +140,9 @@ function UserDetailBody({ u, logs, reason, setReason, pending, onRun, onGuard, e
           <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">회원 처리</p>
           <textarea value={reason} onChange={e => setReason(e.target.value)} placeholder="처리 사유 (선택)" rows={2}
             className="w-full text-[12px] border border-border rounded-lg px-3 py-2 outline-none focus:border-admin resize-none" />
+          {/* 이용제한(SUSPEND)/제한해제(ACTIVATE)는 제거. 회원 조치는 강제탈퇴 하나만 둔다
+              (상태는 ACTIVE/DELETED 2가지로 운영). */}
           <div className="flex items-center gap-2">
-            {u.status === 'ACTIVE' ? (
-              <button onClick={() => onRun('SUSPEND')} disabled={pending} className="px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-amber-400 hover:bg-amber-500 text-white shadow-sm disabled:opacity-50">이용제한</button>
-            ) : (
-              <button onClick={() => onRun('ACTIVATE')} disabled={pending} className="px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-admin hover:bg-admin-hover text-white shadow-sm disabled:opacity-50">제한해제</button>
-            )}
             <button onClick={onDelete} disabled={pending} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-red-500 hover:bg-red-600 text-white shadow-sm disabled:opacity-50">
               {u.role === 'ADMIN' && <Lock size={11} strokeWidth={2.5} />}강제탈퇴
             </button>
@@ -221,7 +218,7 @@ export default function AdminUsersPage() {
               className="w-full pl-8 pr-3 py-2 text-sm rounded-xl border border-border bg-gray-50 text-foreground outline-none focus:border-admin" />
           </div>
           <AdminSelect value={fStatus} onChange={e => setFStatus(e.target.value as typeof fStatus)}>
-            <option value="전체">상태 전체</option><option value="ACTIVE">정상</option><option value="SUSPENDED">이용제한</option><option value="DELETED">탈퇴</option>
+            <option value="전체">상태 전체</option><option value="ACTIVE">정상</option><option value="DELETED">탈퇴</option>
           </AdminSelect>
           <AdminSelect value={fRole} onChange={e => setFRole(e.target.value as typeof fRole)}>
             <option value="전체">권한 전체</option><option value="USER">USER</option><option value="ADMIN">ADMIN</option>
