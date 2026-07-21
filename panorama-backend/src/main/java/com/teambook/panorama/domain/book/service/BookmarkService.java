@@ -6,13 +6,10 @@ import java.util.Optional;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import com.teambook.panorama.domain.book.client.NaverBookClient;
 import com.teambook.panorama.domain.book.dto.bookmark.BookmarkRequest;
 import com.teambook.panorama.domain.book.dto.bookmark.BookmarkResponse;
 import com.teambook.panorama.domain.book.dto.bookmark.MyBookmarkItem;
 import com.teambook.panorama.domain.book.dto.bookmark.MyBookmarkResponse;
-import com.teambook.panorama.domain.book.dto.naver.NaverBookItem;
 import com.teambook.panorama.domain.book.entity.Book;
 import com.teambook.panorama.domain.book.entity.Bookmark;
 import com.teambook.panorama.domain.book.repository.BookRepository;
