@@ -131,6 +131,9 @@ export interface PostScrapResponse {
   scrapped: boolean
 }
 
+/** 댓글 상태 (백엔드 CommentStatus). 삭제·숨김 댓글은 내용이 마스킹되어 내려온다. */
+export type CommentStatus = 'ACTIVE' | 'DELETED' | 'HIDDEN'
+
 /** 답댓글 (백엔드 PostCommentReplyResponseDto). */
 export interface PostCommentReply {
   commentId: number
@@ -139,6 +142,8 @@ export interface PostCommentReply {
   createdAt: string
   /** 답글 대상(답댓글에 단 답글) 작성자 닉네임 — 서버 도출, 대상 없으면 null */
   mentionNickname: string | null
+  /** 댓글 상태. ACTIVE 가 아니면(삭제/숨김) 수정·삭제 버튼을 노출하지 않는다. */
+  status: CommentStatus
 }
 
 /** 루트 댓글 + 답댓글 목록 (백엔드 PostCommentListResponseDto). */
@@ -147,6 +152,8 @@ export interface PostComment {
   nickname: string
   content: string
   createdAt: string
+  /** 댓글 상태. ACTIVE 가 아니면(삭제/숨김) 수정·삭제 버튼을 노출하지 않는다. */
+  status: CommentStatus
   replies: PostCommentReply[]
 }
 

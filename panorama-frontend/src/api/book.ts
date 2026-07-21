@@ -25,7 +25,6 @@ import type {
   LibraryListResponse,
   LibraryParams,
   MyBookmarkResponse,
-  MyReviewItem,
   MyReviewResponse,
   Review,
   ReviewListResponse,
@@ -196,14 +195,20 @@ export async function deleteReview(reviewId: number): Promise<void> {
 
 /**
  * GET /api/v1/reviews/myReview?isbn= — 도서 상세용 내 리뷰 단건 (로그인 필요).
- * 내가 이 책에 남긴 리뷰가 없으면 빈 응답(null) 을 돌려준다.
+ *
+ * 응답은 리뷰 목록과 같은 ReviewItem(=Review) 형태다.
+ * 내 리뷰가 없거나(REVIEW_NOT_FOUND) DB 미등록 도서(BOOK_NOT_FOUND)면 백엔드가 404 를 준다 —
+ * "내 리뷰 없음" 은 정상 상황이라 예외로 올리지 않고 null 로 흡수한다(작성 폼을 보여주면 된다).
  */
-export async function getMyReview(isbn: string): Promise<MyReviewItem | null> {
-  const { data } = await client.get<MyReviewItem | null>('/reviews/myReview', {
-    params: { isbn },
-  })
-  // 리뷰가 없으면 백엔드가 빈 본문(200)/null 을 줄 수 있어, reviewId 유무로 판별한다.
-  return data && data.reviewId ? data : null
+export async function getMyReview(isbn: string): Promise<Review | null> {
+  try {
+    const { data } = await client.get<Review>('/reviews/myReview', {
+      params: { isbn },
+    })
+    return data ?? null
+  } catch {
+    return null
+  }
 }
 
 /** GET /api/v1/reviews/myReviewList — 내 리뷰 목록 (로그인 필요) */
