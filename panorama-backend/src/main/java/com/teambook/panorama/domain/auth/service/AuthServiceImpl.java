@@ -5,6 +5,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
@@ -70,7 +72,15 @@ public class AuthServiceImpl implements AuthService {
                     .map(User::getId)
                     .orElse(null);
             loginHistoryService.recordFailLocal(userId, request.loginId(), Provider.LOCAL);
-            throw new BusinessException(ErrorCode.LOGIN_FAILED); // login 실패 기록 남기고 예외는 컨트롤러로
+
+            // 계정 상태별 사유 분리 (SUSPENDED→LockedException, DELETED→isEnabled에서 DisabledException)
+            if (e instanceof LockedException) {
+                throw new BusinessException(ErrorCode.ACCOUNT_SUSPENDED);
+            }
+            if (e instanceof DisabledException) {
+                throw new BusinessException(ErrorCode.ACCOUNT_DELETED);
+            }
+            throw new BusinessException(ErrorCode.LOGIN_FAILED); // 그 외(비번 불일치 등)는 기존 A004
         }
     }
 

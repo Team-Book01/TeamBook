@@ -35,6 +35,8 @@ public enum ErrorCode {
   EMAIL_ALREADY_USED(HttpStatus.CONFLICT, "A010", "이미 사용 중인 이메일입니다."),
   INVALID_VERIFICATION_TOKEN(HttpStatus.BAD_REQUEST, "A011", "유효하지 않은 인증 토큰입니다."),
   SOCIAL_PASSWORD_NOT_SUPPORTED(HttpStatus.BAD_REQUEST, "A012", "소셜 로그인 계정은 비밀번호를 변경할 수 없습니다."),
+  ACCOUNT_SUSPENDED(HttpStatus.FORBIDDEN, "A013", "정지된 계정입니다. 고객센터에 문의해 주세요."),
+  ACCOUNT_DELETED(HttpStatus.FORBIDDEN, "A014", "탈퇴한 계정입니다."),
 
   // report (도메인 접두어 R)
   REPORT_NOT_FOUND(HttpStatus.NOT_FOUND, "R001", "존재하지 않는 신고입니다."),
