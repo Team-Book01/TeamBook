@@ -92,4 +92,9 @@ public class Notice extends BaseTimeEntity {
   public void delete() {
     this.status = NoticeStatus.DELETED;
   }
+
+  /** 공개 상세 조회 시 호출. viewCount 는 builder 에서 항상 0L 이상으로 채워져 null 이 아니다. */
+  public void increaseViewCount() {
+    this.viewCount = this.viewCount + 1;
+  }
 }

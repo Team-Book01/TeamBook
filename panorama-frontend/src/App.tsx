@@ -17,6 +17,8 @@ import CommunityDetailPage from '@/pages/community/CommunityDetailPage'
 import CommunityWritePage from '@/pages/community/CommunityWritePage'
 import LibraryMapPage from '@/pages/library/LibraryMapPage'
 import MyPage from '@/pages/mypage/MyPage'
+import NoticesPage from '@/pages/notice/NoticesPage'
+import NoticeDetailPage from '@/pages/notice/NoticeDetailPage'
 
 // 인증
 import LoginPage from '@/pages/auth/LoginPage'
@@ -55,6 +57,8 @@ export default function App() {
         <Route path="/books" element={<BookSearchPage />} />
         <Route path="/books/:isbn" element={<BookDetailPage />} />
         <Route path="/library-map" element={<LibraryMapPage />} />
+        <Route path="/notices" element={<NoticesPage />} />
+        <Route path="/notices/:id" element={<NoticeDetailPage />} />
       </Route>
 
       {/* 전체화면 독립 페이지 (자체 헤더/레이아웃 보유 → 공통 Layout 미적용) */}

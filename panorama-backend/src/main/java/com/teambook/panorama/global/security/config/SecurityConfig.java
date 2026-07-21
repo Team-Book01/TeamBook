@@ -88,6 +88,9 @@ public class SecurityConfig {
                                 // 도서관 목록은 비로그인 열람이지만 "읽기만" 공개다.
                                 // 메서드를 안 가리면 나중에 같은 경로에 POST/DELETE 가 붙는 순간 함께 열린다.
                                 .requestMatchers(HttpMethod.GET, "/api/v1/libraries").permitAll()
+                                // 공지 목록/상세도 같은 이유로 GET 만 공개. 컨트롤러(NoticeReadController)가
+                                // 이미 ACTIVE 만 반환하지만, 인가 규칙도 GET 이외 메서드가 여기 붙는 걸 막는다.
+                                .requestMatchers(HttpMethod.GET, "/api/v1/notices", "/api/v1/notices/**").permitAll()
                                 .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                                 .requestMatchers(HttpMethod.GET, "/api/v1/books/**").permitAll()
                                 // 마이페이지 조회는 인증 필요. 아래 /reviews/** permitAll 보다 먼저 와야 한다.
