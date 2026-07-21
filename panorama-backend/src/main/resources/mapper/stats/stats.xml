@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.teambook.panorama.domain.stats.repository.StatsMapper">
+
+    <!-- 홈 커뮤니티 현황: 단일 행 서브쿼리 집계 (record → 생성자 매핑) -->
+    <resultMap id="communityStatsMap"
+               type="com.teambook.panorama.domain.stats.dto.CommunityStatsResponse">
+        <constructor>
+            <arg column="today_visitors" name="todayVisitors" javaType="java.lang.Long"/>
+            <arg column="total_posts"    name="totalPosts"    javaType="java.lang.Long"/>
+        </constructor>
+    </resultMap>
+
+    <!-- 방문자·게시글 집계는 관리자 대시보드(dashboard.xml)의 동일 서브쿼리와 정의를 맞춘다. -->
+    <select id="selectCommunityStats" resultMap="communityStatsMap">
+        SELECT
+            (SELECT COUNT(DISTINCT user_id) FROM login_histories
+                WHERE result = 'SUCCESS'
+                  AND user_id IS NOT NULL
+                  AND attempted_at &gt;= CURDATE())        AS today_visitors,
+            (SELECT COUNT(*) FROM posts
+                WHERE status &lt;&gt; 'DELETED')            AS total_posts
+    </select>
+
+</mapper>
