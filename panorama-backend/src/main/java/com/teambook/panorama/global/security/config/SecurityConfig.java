@@ -1,6 +1,8 @@
 package com.teambook.panorama.global.security.config;
 
 import com.teambook.panorama.global.security.oauth.HttpCookieOAuth2AuthorizationRequestRepository;
+import com.teambook.panorama.global.security.oauth.OAuth2FailureHandler;
+
 import lombok.RequiredArgsConstructor;
 
 import java.util.List;
@@ -40,6 +42,7 @@ public class SecurityConfig {
         private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
         private final CustomOAuth2UserService customOAuth2UserService;
         private final OAuth2SuccessHandler oAuth2SuccessHandler;
+        private final OAuth2FailureHandler oAuth2FailureHandler;
 
         /**
          * 인증 없이 접근을 허용할 Swagger / OpenAPI 관련 경로들.
@@ -120,6 +123,7 @@ public class SecurityConfig {
                                 )
                                 .userInfoEndpoint(userInfo -> userInfo.userService(customOAuth2UserService))
                                 .successHandler(oAuth2SuccessHandler)
+                                .failureHandler(oAuth2FailureHandler)
                         )
                         // JWT 인증 필터를 폼 인증 필터 앞에 등록 (요청의 Bearer 토큰을 먼저 검사)
                         .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

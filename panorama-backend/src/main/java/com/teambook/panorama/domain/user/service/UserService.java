@@ -2,6 +2,7 @@ package com.teambook.panorama.domain.user.service;
 
 import com.teambook.panorama.domain.user.dto.SignUpDto;
 import com.teambook.panorama.domain.user.dto.UserDto;
+import com.teambook.panorama.domain.user.dto.WithdrawDTO;
 
 /**
  * 유저(user) 도메인 서비스. 구현체는 {@link UserServiceImpl}.
@@ -24,5 +25,5 @@ public interface UserService {
     boolean isNicknameTaken(String nickname);
 
     /** 회원 탈퇴 (status=DELETED 처리). */
-    void withdraw(Long userId);
+    void withdraw(Long userId, WithdrawDTO.WithdrawRequest request);
 }

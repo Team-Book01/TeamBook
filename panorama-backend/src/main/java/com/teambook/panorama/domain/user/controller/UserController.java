@@ -15,6 +15,7 @@ import com.teambook.panorama.domain.auth.dto.PasswordDto;
 import com.teambook.panorama.domain.auth.service.PasswordService;
 import com.teambook.panorama.domain.user.dto.SignUpDto;
 import com.teambook.panorama.domain.user.dto.UserDto;
+import com.teambook.panorama.domain.user.dto.WithdrawDTO;
 import com.teambook.panorama.domain.user.service.UserService;
 import com.teambook.panorama.global.exception.BusinessException;
 import com.teambook.panorama.global.exception.ErrorCode;
@@ -138,8 +139,11 @@ public class UserController {
             @ApiResponse(responseCode = "404", description = "존재하지 않는 회원 (U001)")
     })
     @DeleteMapping("/me")
-    public ResponseEntity<Void> withdraw(@AuthenticationPrincipal Long userId) {
-        userService.withdraw(userId);
+    public ResponseEntity<Void> withdraw(
+        @AuthenticationPrincipal Long userId,
+        @Valid @RequestBody WithdrawDTO.WithdrawRequest request
+    ) {
+        userService.withdraw(userId, request);
         return ResponseEntity.noContent().build();
     }
 
