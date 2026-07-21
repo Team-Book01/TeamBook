@@ -21,6 +21,7 @@ import { changePassword, updateNickname, withdraw, requestEmailVerification, fet
 import { getErrorCode, getErrorMessage } from '@/api/client'
 import { useAuthStore } from '@/store/authStore'
 import { toast } from '@/lib/toast'
+import { queryClient } from '@/lib/queryClient'
 import { isValidNickname, isValidPassword, isValidEmail, NICKNAME_MAX_LENGTH } from '@/lib/validation'
 
 /**
@@ -190,6 +191,7 @@ export default function SettingsPage() {
       // 로컬은 password, 소셜은 confirmText 로 분기 전송 → 백엔드가 provider 보고 검증
       await withdraw(isLocalAccount ? { password: deleteValue } : { confirmText: deleteValue })
       storeLogout()
+      queryClient.clear() // 이전 사용자 캐시 제거 (로그아웃과 동일)
       toast.success('계정이 삭제되었습니다.')
       navigate('/', { replace: true })
     } catch (err) {
@@ -206,6 +208,7 @@ export default function SettingsPage() {
       // 서버 로그아웃이 실패해도 로컬 상태는 정리한다
     }
     storeLogout()
+    queryClient.clear() // 이전 사용자 캐시 제거 (홈/공개 화면에서 인증 쿼리 되살아남 방지)
     toast.success('로그아웃되었습니다.')
     navigate('/login', { replace: true })
   }

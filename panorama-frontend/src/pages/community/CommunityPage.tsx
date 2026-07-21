@@ -14,6 +14,7 @@ import {
   POST_PAGE_SIZE,
 } from '@/api/community'
 import { getErrorMessage } from '@/api/client'
+import { useRequireLogin } from '@/hooks/useRequireLogin'
 import CategoryBadge from './components/CategoryBadge'
 import CommunityLayout from './components/CommunityLayout'
 import { formatRelativeTime, stripHtml } from './utils'
@@ -149,6 +150,7 @@ export function PostCard({
 
 export default function CommunityPage() {
   const navigate = useNavigate()
+  const { ensureLoggedIn } = useRequireLogin()
   const [searchParams, setSearchParams] = useSearchParams()
 
   // ?view=posts|scraps 면 "내 활동" 목록, 아니면 일반 게시판 목록
@@ -246,7 +248,7 @@ export default function CommunityPage() {
         </div>
 
         <button
-          onClick={() => navigate('/community/write')}
+          onClick={() => { if (ensureLoggedIn()) navigate('/community/write') }}
           className="inline-flex items-center gap-2 text-sm font-bold px-5 py-2.5 rounded-xl transition-all"
           style={{ background: '#1E4A38', color: '#fff', boxShadow: '0 2px 8px rgba(30,74,56,0.2)' }}
         >

@@ -109,6 +109,10 @@ public class SecurityConfig {
                                 .requestMatchers(HttpMethod.GET, "/api/v1/reviews/**").permitAll()
                                 // 소장 도서관 조회는 도서 상세에 딸린 공개 정보(비로그인도 조회 가능).
                                 .requestMatchers(HttpMethod.GET, "/api/v1/library/**").permitAll()
+                                // 커뮤니티 게시글/댓글 "조회"는 비로그인 열람 허용(GET 만).
+                                // 작성·수정·삭제·좋아요·스크랩·신고(POST/PUT/DELETE)는 아래 anyRequest 로 인증 필요.
+                                // liked/scrapped 는 서비스가 userId==null 을 false 로 처리한다.
+                                .requestMatchers(HttpMethod.GET, "/api/v1/posts", "/api/v1/posts/**").permitAll()
                                 .anyRequest().authenticated()
                         )
                         // 인증/인가 실패 처리: 인증 안 됨 → 401, 권한 부족 → 403

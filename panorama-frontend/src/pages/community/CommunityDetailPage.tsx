@@ -29,6 +29,7 @@ import {
 } from '@/api/community'
 import { getErrorCode, getErrorMessage, getErrorStatus } from '@/api/client'
 import { useAuthStore } from '@/store/authStore'
+import { useRequireLogin } from '@/hooks/useRequireLogin'
 import BookCoverThumb from './components/BookCoverThumb'
 import CategoryBadge from './components/CategoryBadge'
 import CommunityLayout from './components/CommunityLayout'
@@ -164,10 +165,12 @@ function PostActions({ post }: { post: PostDetail }) {
   const [scrapped, setScrapped] = useState(post.scrapped)
   const [reportOpen, setReportOpen] = useState(false)
 
+  const { ensureLoggedIn } = useRequireLogin()
   const likeMutation = useLikePostMutation(postId)
   const scrapMutation = useScrapPostMutation(postId)
 
   const toggleLike = () => {
+    if (!ensureLoggedIn()) return // 비로그인 → 로그인 페이지로
     const prev = { liked, likeCount }
     const next = !liked
     setLiked(next) // 낙관적 반영
@@ -191,6 +194,7 @@ function PostActions({ post }: { post: PostDetail }) {
   }
 
   const toggleScrap = () => {
+    if (!ensureLoggedIn()) return // 비로그인 → 로그인 페이지로
     const next = !scrapped
     setScrapped(next)
     scrapMutation.mutate(next, {
@@ -239,7 +243,7 @@ function PostActions({ post }: { post: PostDetail }) {
 
       {/* 신고 */}
       <button
-        onClick={() => setReportOpen(true)}
+        onClick={() => { if (ensureLoggedIn()) setReportOpen(true) }}
         className="flex items-center gap-2 px-4 py-2.5 rounded-full cursor-pointer transition-all bg-white hover:bg-[#FFF5F6]"
         style={{ border: '1.5px solid rgba(0,0,0,0.12)' }}
       >
@@ -270,10 +274,12 @@ function CommentInput({
   autoFocus?: boolean
 }) {
   const [text, setText] = useState('')
+  const { ensureLoggedIn } = useRequireLogin()
   const createComment = useCreateComment(postId)
   const isReply = replyToCommentId != null
 
   const submit = () => {
+    if (!ensureLoggedIn()) return // 비로그인 → 로그인 페이지로
     const content = text.trim()
     if (!content) return
     createComment.mutate(
