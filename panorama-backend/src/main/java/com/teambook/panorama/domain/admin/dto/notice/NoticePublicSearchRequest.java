@@ -16,7 +16,7 @@ public record NoticePublicSearchRequest(
     @Schema(description = "페이지 번호 (1부터 시작). 생략하거나 1 미만이면 1 로 보정된다.", defaultValue = "1", example = "1")
     Integer page,
 
-    @Schema(description = "페이지당 개수. 생략하거나 1 미만이면 20 으로 보정된다.", defaultValue = "20", example = "20")
+    @Schema(description = "페이지당 개수. 생략하거나 1 미만이면 20, 100 초과면 100 으로 보정된다.", defaultValue = "20", example = "20")
     Integer size
 ) {
 
@@ -26,6 +26,8 @@ public record NoticePublicSearchRequest(
     }
     if (size == null || size < 1) {
       size = 20;
+    } else if (size > 100) {
+      size = 100;
     }
   }
 }
