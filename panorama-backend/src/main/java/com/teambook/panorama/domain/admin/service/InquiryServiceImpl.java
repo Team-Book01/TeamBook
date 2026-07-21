@@ -85,8 +85,40 @@ public class InquiryServiceImpl implements InquiryService {
     // 조인/마스킹이 없어 JPA로 조회. 이미지는 엔티티 그래프(lazy, 트랜잭션 내)로, 답변은 별도 조회.
     Inquiry inquiry = inquiryRepository.findById(inquiryId)
         .orElseThrow(() -> new BusinessException(ErrorCode.INQUIRY_NOT_FOUND));
+    return toDetailResponse(inquiry);
+  }
+
+  @Override
+  public PageResponse<InquiryResponse> getMyInquiries(Long userId, InquirySearchRequest request) {
+    // 검색 조건은 그대로 두되 userId 만 로그인 사용자로 강제해 본인 문의만 조회한다.
+    // 삭제된(DELETED) 문의는 사용자에게 노출하지 않는다(전용 쿼리에서 제외).
+    InquirySearchRequest scoped = new InquirySearchRequest(
+        request.searchString(), request.category(), request.status(), userId,
+        request.startAt(), request.endAt(), request.page(), request.size());
+    List<InquiryResponse> content = inquiryMapper.selectMyInquiries(scoped);
+    long totalElements = inquiryMapper.countMyInquiry(scoped);
+    return PageResponse.of(content, scoped.page(), scoped.size(), totalElements);
+  }
+
+  @Override
+  public InquiryDetailResponse getMyInquiryDetail(Long userId, Long inquiryId) {
+    Inquiry inquiry = inquiryRepository.findById(inquiryId)
+        .orElseThrow(() -> new BusinessException(ErrorCode.INQUIRY_NOT_FOUND));
+    // 남의 문의는 열람 불가.
+    if (!inquiry.getUserId().equals(userId)) {
+      throw new BusinessException(ErrorCode.ACCESS_DENIED);
+    }
+    // 삭제된 문의는 사용자에게 없는 것으로 처리(목록에서도 빠지므로 상세도 막는다).
+    if (inquiry.getStatus() == InquiryStatus.DELETED) {
+      throw new BusinessException(ErrorCode.INQUIRY_NOT_FOUND);
+    }
+    return toDetailResponse(inquiry);
+  }
+
+  /** 문의 엔티티 → 상세 응답(본문+이미지 + 답변 목록). 관리자/사용자 상세 조회 공통. */
+  private InquiryDetailResponse toDetailResponse(Inquiry inquiry) {
     List<InquiryAnswerResponse> answers = inquiryAnswerRepository
-        .findByInquiry_InquiryIdOrderByCreatedAtAsc(inquiryId).stream()
+        .findByInquiry_InquiryIdOrderByCreatedAtAsc(inquiry.getInquiryId()).stream()
         .map(InquiryAnswerResponse::from)
         .toList();
     return new InquiryDetailResponse(InquiryResponse.from(inquiry), answers);
