@@ -7,10 +7,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.teambook.panorama.domain.admin.dto.notice.NoticeCreateRequest;
 import com.teambook.panorama.domain.admin.dto.notice.NoticeDetailResponse;
+import com.teambook.panorama.domain.admin.dto.notice.NoticePublicSearchRequest;
 import com.teambook.panorama.domain.admin.dto.notice.NoticeResponse;
 import com.teambook.panorama.domain.admin.dto.notice.NoticeSearchRequest;
 import com.teambook.panorama.domain.admin.dto.notice.NoticeUpdateRequest;
+import com.teambook.panorama.domain.admin.dto.notice.PublicNoticeDetailResponse;
+import com.teambook.panorama.domain.admin.dto.notice.PublicNoticeResponse;
 import com.teambook.panorama.domain.admin.entity.Notice;
+import com.teambook.panorama.domain.admin.entity.type.NoticeStatus;
 import com.teambook.panorama.domain.admin.entity.NoticeImage;
 import com.teambook.panorama.domain.admin.repository.NoticeImageRepository;
 import com.teambook.panorama.domain.admin.repository.NoticeMapper;
@@ -91,6 +95,34 @@ public class NoticeServiceImpl implements NoticeService {
     noticeRepository.flush();   // 재조회 전 UPDATE를 DB에 반영
 
     return noticeMapper.selectNoticeDetail(noticeId)
+        .orElseThrow(() -> new BusinessException(ErrorCode.NOTICE_NOT_FOUND));
+  }
+
+  @Override
+  public PageResponse<PublicNoticeResponse> getPublicNotices(NoticePublicSearchRequest request) {
+    List<PublicNoticeResponse> contents = noticeMapper.selectPublicNotices(request);
+    long total = noticeMapper.countPublicNotices(request);
+    return PageResponse.of(contents, request.page(), request.size(), total);
+  }
+
+  /**
+   * 공개 상세 조회 + 조회수 1 증가. updateNotice 와 같은 JPA-write → flush → MyBatis-reread
+   * 순서를 쓴다 — 안 그러면 재조회가 증가 전 조회수를 읽는다.
+   *
+   * <p>JPA 로드 단계에서 status 를 ACTIVE 로 한 번 더 거른다. HIDDEN/DELETED 공지를 ID 로
+   * 찍어 들어와도 조회수가 오르지 않게 막는 것 — 재조회 쿼리도 status='ACTIVE' 를 걸고 있어
+   * 이중 방어다.</p>
+   */
+  @Override
+  @Transactional
+  public PublicNoticeDetailResponse getPublicNoticeDetail(Long noticeId) {
+    Notice notice = noticeRepository.findById(noticeId)
+        .filter(n -> n.getStatus() == NoticeStatus.ACTIVE)
+        .orElseThrow(() -> new BusinessException(ErrorCode.NOTICE_NOT_FOUND));
+    notice.increaseViewCount();
+    noticeRepository.flush();
+
+    return noticeMapper.selectPublicNoticeDetail(noticeId)
         .orElseThrow(() -> new BusinessException(ErrorCode.NOTICE_NOT_FOUND));
   }
 

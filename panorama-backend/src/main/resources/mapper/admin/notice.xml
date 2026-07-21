@@ -87,4 +87,76 @@
         WHERE n.notice_id = #{noticeId}
     </select>
 
+    <!-- ══════════════ 공개(비관리자) 조회 ══════════════
+         status = 'ACTIVE' 를 파라미터가 아니라 리터럴로 박아 둔다. 쿼리 파라미터로 받으면
+         공개 API 호출자가 HIDDEN/DELETED 까지 넘겨볼 여지가 생긴다. -->
+    <resultMap id="publicNoticeResponseMap"
+               type="com.teambook.panorama.domain.admin.dto.notice.PublicNoticeResponse">
+        <constructor>
+            <idArg column="notice_id"    name="noticeId"  javaType="java.lang.Long"/>
+            <arg   column="category"     name="category"
+                   javaType="com.teambook.panorama.domain.admin.entity.type.NoticeCategory"/>
+            <arg   column="title"        name="title"     javaType="java.lang.String"/>
+            <arg   column="is_pinned"    name="pinned"    javaType="_boolean"/>
+            <arg   column="is_important" name="important" javaType="_boolean"/>
+            <arg   column="created_at"   name="createdAt" javaType="java.time.LocalDateTime"/>
+        </constructor>
+    </resultMap>
+
+    <sql id="publicNoticeSearchWhere">
+        FROM notices n
+        <where>
+            AND n.status = 'ACTIVE'
+            <if test="category != null and category != ''">
+                AND n.category = #{category}
+            </if>
+        </where>
+    </sql>
+
+    <select id="selectPublicNotices"
+            parameterType="com.teambook.panorama.domain.admin.dto.notice.NoticePublicSearchRequest"
+            resultMap="publicNoticeResponseMap">
+        <bind name="offset" value="(page - 1) * size"/>
+        SELECT n.notice_id, n.category, n.title, n.is_pinned, n.is_important, n.created_at
+        <include refid="publicNoticeSearchWhere"/>
+        ORDER BY n.is_pinned DESC, n.is_important DESC, n.created_at DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countPublicNotices"
+            parameterType="com.teambook.panorama.domain.admin.dto.notice.NoticePublicSearchRequest"
+            resultType="long">
+        SELECT COUNT(*)
+        <include refid="publicNoticeSearchWhere"/>
+    </select>
+
+    <resultMap id="publicNoticeDetailMap"
+               type="com.teambook.panorama.domain.admin.dto.notice.PublicNoticeDetailResponse">
+        <constructor>
+            <idArg column="notice_id"    name="noticeId"  javaType="java.lang.Long"/>
+            <arg   column="category"     name="category"
+                   javaType="com.teambook.panorama.domain.admin.entity.type.NoticeCategory"/>
+            <arg   column="title"        name="title"     javaType="java.lang.String"/>
+            <arg   column="content"      name="content"   javaType="java.lang.String"/>
+            <arg   column="is_pinned"    name="pinned"    javaType="_boolean"/>
+            <arg   column="is_important" name="important" javaType="_boolean"/>
+            <arg   column="view_count"   name="viewCount" javaType="java.lang.Long"/>
+            <arg   column="nickname"     name="nickname"  javaType="java.lang.String"/>
+            <arg   column="created_at"   name="createdAt" javaType="java.time.LocalDateTime"/>
+        </constructor>
+    </resultMap>
+
+    <!-- status 를 WHERE 에 넣어 HIDDEN/DELETED 는 조회 자체가 안 된다(존재 여부도 흘리지 않음).
+         조회수 증가는 서비스 계층에서 JPA 로 먼저 flush 한 뒤 이 쿼리로 재조회한다
+         (updateNotice 와 같은 JPA-write → MyBatis-reread 방식). -->
+    <select id="selectPublicNoticeDetail" resultMap="publicNoticeDetailMap">
+        SELECT n.notice_id, n.category, n.title, n.content,
+               n.is_pinned, n.is_important, n.view_count,
+               u.nickname, n.created_at
+        FROM notices n
+        LEFT JOIN users u ON u.user_id = n.user_id
+        WHERE n.notice_id = #{noticeId}
+          AND n.status = 'ACTIVE'
+    </select>
+
 </mapper>
