@@ -93,6 +93,11 @@ public class Notice extends BaseTimeEntity {
     this.status = NoticeStatus.DELETED;
   }
 
+  /** 상태 변경 (ACTIVE 게시 / HIDDEN 숨김 / DELETED 삭제). 관리자 처리에서 사용. */
+  public void changeStatus(NoticeStatus status) {
+    this.status = status;
+  }
+
   /** 공개 상세 조회 시 호출. viewCount 는 builder 에서 항상 0L 이상으로 채워져 null 이 아니다. */
   public void increaseViewCount() {
     this.viewCount = this.viewCount + 1;

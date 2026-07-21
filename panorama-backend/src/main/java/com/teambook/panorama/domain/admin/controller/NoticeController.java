@@ -21,6 +21,7 @@ import com.teambook.panorama.domain.admin.dto.notice.NoticeDetailResponse;
 import com.teambook.panorama.domain.admin.dto.notice.NoticeImageResponse;
 import com.teambook.panorama.domain.admin.dto.notice.NoticeResponse;
 import com.teambook.panorama.domain.admin.dto.notice.NoticeSearchRequest;
+import com.teambook.panorama.domain.admin.dto.notice.NoticeStatusUpdateRequest;
 import com.teambook.panorama.domain.admin.dto.notice.NoticeUpdateRequest;
 import com.teambook.panorama.domain.admin.service.NoticeImageService;
 import com.teambook.panorama.domain.admin.service.NoticeService;
@@ -89,8 +90,16 @@ public class NoticeController {
     return ResponseEntity.ok(response);
   }
 
-  // 공지 - 처리 변경(단일/다중)
-
-  // 공지 - 삭제
+  // 공지 - 상태 변경 (게시/숨김/삭제)
+  @Operation(summary = "공지 상태 변경 (게시/숨김/삭제)",
+      description = "공지 상태를 ACTIVE(게시)/HIDDEN(숨김)/DELETED(삭제) 로 변경하고 변경된 상세를 반환한다. "
+          + "HIDDEN·DELETED 공지는 사용자 공개 목록/상세에서 제외된다.")
+  @PatchMapping("/{noticeId}/status")
+  public ResponseEntity<NoticeDetailResponse> changeNoticeStatus(
+      @PathVariable("noticeId") Long noticeId,
+      @RequestBody NoticeStatusUpdateRequest request) {
+    NoticeDetailResponse response = noticeService.changeNoticeStatus(noticeId, request.status());
+    return ResponseEntity.ok(response);
+  }
 
 }
