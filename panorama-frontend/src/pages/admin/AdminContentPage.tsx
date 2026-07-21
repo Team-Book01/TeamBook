@@ -159,20 +159,24 @@ export default function AdminContentPage() {
   const [selected, setSelected] = useState<{ type: ContentType; id: number } | null>(null)
   const [checkedRows, setCheckedRows] = useState<Set<number>>(new Set())
   const [menuId, setMenuId] = useState<number | null>(null)
-  const [menuUp, setMenuUp] = useState(false)
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  // 행 메뉴는 스크롤 컨테이너(overflow-x-auto → 세로도 auto) 안에 absolute 로 뜬다.
-  // 아래로 열 자리가 없으면 컨테이너가 그만큼 늘어나 스크롤이 생기므로, 공간이
-  // 모자랄 때는 버튼 위로 펼친다.
+  // 행 메뉴가 스크롤 컨테이너(overflow-x-auto) 안 absolute 면, 검색 결과가 적을 때 위/아래
+  // 여백이 없어 잘린다. 뷰포트 기준 fixed 로 띄워 클리핑을 피한다(버튼 좌표로 위치 계산,
+  // 아래 공간이 모자라면 위로 펼침).
   const openMenu = (e: React.MouseEvent<HTMLButtonElement>, id: number) => {
     if (menuId === id) {
       setMenuId(null)
       return
     }
     const btn = e.currentTarget.getBoundingClientRect()
-    const box = scrollRef.current?.getBoundingClientRect()
-    setMenuUp(!!box && box.bottom - btn.bottom < ROW_MENU_HEIGHT)
+    const MENU_WIDTH = 144 // w-36
+    const openUp = window.innerHeight - btn.bottom < ROW_MENU_HEIGHT
+    setMenuPos({
+      top: openUp ? btn.top - ROW_MENU_HEIGHT - 4 : btn.bottom + 4,
+      left: btn.right - MENU_WIDTH,
+    })
     setMenuId(id)
   }
   const [bulkPending, setBulkPending] = useState(false)
@@ -321,8 +325,8 @@ export default function AdminContentPage() {
                           <button onClick={e => openMenu(e, row.contentId)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
                             <MoreHorizontal size={15} className="text-muted-foreground" />
                           </button>
-                          {menuId === row.contentId && (
-                            <div className={cn('absolute right-0 w-36 bg-white rounded-xl border border-border shadow-xl z-20 overflow-hidden', menuUp ? 'bottom-8' : 'top-8')}>
+                          {menuId === row.contentId && menuPos && (
+                            <div className="fixed w-36 bg-white rounded-xl border border-border shadow-xl z-50 overflow-hidden" style={{ top: menuPos.top, left: menuPos.left }}>
                               <button onClick={() => { setSelected({ type: row.contentType, id: row.contentId }); setMenuId(null) }} className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-foreground hover:bg-gray-50"><Eye size={13} />상세보기</button>
                               {row.status === 'HIDDEN' ? (
                                 <button onClick={() => rowAction(row.contentId, 'ACTIVE')} className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-green-700 hover:bg-gray-50"><Eye size={13} />공개로 되돌리기</button>

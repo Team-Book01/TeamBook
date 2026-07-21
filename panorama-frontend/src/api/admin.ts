@@ -18,6 +18,7 @@ import type {
   NoticeCreateRequest,
   NoticeImageResponse,
   NoticeUpdateRequest,
+  NoticeStatus,
   UserResponse,
   UserDetailView,
   UserSearchRequest,
@@ -110,6 +111,11 @@ export async function updateAdminNotice(noticeId: number, body: NoticeUpdateRequ
   return data
 }
 
+export async function changeAdminNoticeStatus(noticeId: number, status: NoticeStatus): Promise<NoticeDetailResponse> {
+  const { data } = await client.patch<NoticeDetailResponse>(`/admin/notices/${noticeId}/status`, { status })
+  return data
+}
+
 export function useAdminNotices(params: NoticeSearchRequest = {}) {
   return useQuery({ queryKey: adminKeys.notices(params), queryFn: () => getAdminNotices(params) })
 }
@@ -135,6 +141,18 @@ export function useUpdateNotice() {
   return useMutation({
     mutationFn: ({ noticeId, body }: { noticeId: number; body: NoticeUpdateRequest }) =>
       updateAdminNotice(noticeId, body),
+    onSuccess: (_res, { noticeId }) => {
+      qc.invalidateQueries({ queryKey: [...adminKeys.all, 'notices'] })
+      qc.invalidateQueries({ queryKey: adminKeys.notice(noticeId) })
+    },
+  })
+}
+
+export function useChangeNoticeStatus() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ noticeId, status }: { noticeId: number; status: NoticeStatus }) =>
+      changeAdminNoticeStatus(noticeId, status),
     onSuccess: (_res, { noticeId }) => {
       qc.invalidateQueries({ queryKey: [...adminKeys.all, 'notices'] })
       qc.invalidateQueries({ queryKey: adminKeys.notice(noticeId) })

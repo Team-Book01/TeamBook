@@ -3,7 +3,7 @@ import { Search, Plus, Pin, AlertCircle, Inbox } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/authStore'
 import { getErrorMessage } from '@/api/client'
-import { useAdminNotices, useAdminNotice, useCreateNotice, useUpdateNotice } from '@/api/admin'
+import { useAdminNotices, useAdminNotice, useCreateNotice, useUpdateNotice, useChangeNoticeStatus } from '@/api/admin'
 import type { NoticeSearchRequest, NoticeCategory, NoticeStatus } from '@/types/admin'
 import NoticeDrawer, { type NoticeForm } from './notices/NoticeDrawer'
 import { NOTICE_CATEGORY_BADGE, NOTICE_CATEGORY_OPTIONS, NOTICE_STATUS_META, formatDate } from './notices/noticeMeta'
@@ -33,6 +33,7 @@ export default function AdminNoticesPage() {
   const detailQuery = useAdminNotice(drawer && drawer.mode !== 'create' ? drawer.noticeId : null)
   const createMut = useCreateNotice()
   const updateMut = useUpdateNotice()
+  const statusMut = useChangeNoticeStatus()
 
   const applyFilters = () =>
     setParams({
@@ -204,6 +205,15 @@ export default function AdminNoticesPage() {
           onClose={() => setDrawer(null)}
           onEdit={() => setDrawer(d => (d ? { ...d, mode: 'edit' } : d))}
           onSubmit={handleSubmit}
+          onChangeStatus={status => {
+            if (drawer.noticeId == null) return
+            statusMut.mutate(
+              { noticeId: drawer.noticeId, status },
+              // 삭제는 드로어를 닫고, 숨김/게시전환은 열어둔 채 상태만 갱신(invalidate 로 상세 재조회)
+              { onSuccess: () => { if (status === 'DELETED') setDrawer(null) } },
+            )
+          }}
+          statusPending={statusMut.isPending}
         />
       )}
     </div>

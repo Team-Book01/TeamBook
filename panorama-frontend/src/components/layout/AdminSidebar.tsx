@@ -8,6 +8,7 @@ import {
   Flag,
   MessageSquare,
   Megaphone,
+  Home,
   PanelLeftClose,
   PanelLeftOpen,
   ChevronsUpDown,
@@ -185,6 +186,22 @@ export default function AdminSidebar({ mobileOpen, onMobileClose }: Props) {
           </div>
         ))}
       </nav>
+
+      {/* 사용자 화면으로 */}
+      <div className="border-t border-white/8 p-2 shrink-0">
+        <Link
+          to="/"
+          onClick={onMobileClose}
+          title={collapsed ? '사용자 화면으로' : undefined}
+          className={cn(
+            'flex items-center rounded-lg text-[13px] font-medium text-white/68 hover:bg-white/[0.06] hover:text-white transition-colors gap-2.5 px-2.5 py-2',
+            collapsed && 'lg:justify-center lg:gap-0 lg:px-0 lg:py-2.5',
+          )}
+        >
+          <Home size={17} className="shrink-0" />
+          <span className={cn('whitespace-nowrap', collapsed && 'lg:hidden')}>사용자 화면으로</span>
+        </Link>
+      </div>
 
       {/* 계정 */}
       <div className="border-t border-white/8 p-2 shrink-0">

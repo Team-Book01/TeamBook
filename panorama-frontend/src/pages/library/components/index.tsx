@@ -286,16 +286,15 @@ export function LibraryCard({
       {/* Top row */}
       <div className="flex items-start justify-between gap-2 mb-1.5">
         <div className="flex items-center gap-2 min-w-0">
-          <span
-            className="text-[10px] font-semibold px-1.5 py-0.5 rounded flex-shrink-0"
-            style={
-              library.type === "국립"
-                ? { backgroundColor: "#EEF3F0", color: "#1E4A38" }
-                : { backgroundColor: "#EDF3F8", color: "#3A6E9C" }
-            }
-          >
-            {library.type}
-          </span>
+          {/* '공공'은 숨기고 '국립'만 뱃지로 표시 */}
+          {library.type === "국립" && (
+            <span
+              className="text-[10px] font-semibold px-1.5 py-0.5 rounded flex-shrink-0"
+              style={{ backgroundColor: "#EEF3F0", color: "#1E4A38" }}
+            >
+              {library.type}
+            </span>
+          )}
           <h3
             className={`text-[14px] font-bold truncate ${
               selected ? "text-[#1E4A38]" : "text-[#1A1A1A]"

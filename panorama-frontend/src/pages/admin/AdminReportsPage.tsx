@@ -228,7 +228,8 @@ function DetailPanel({ reportId, onClose }: { reportId: number; onClose: () => v
                   <div className="space-y-3">
                     <div className="space-y-1.5">
                       <label className="text-[11px] text-muted-foreground block font-medium">처리 방식</label>
-                      {DECISIONS.map(d => (
+                      {/* 유저 대상은 상태가 ACTIVE/DELETED뿐이라 '콘텐츠 숨김(HIDDEN=제재/정지)'이 무효 → 숨김 */}
+                      {DECISIONS.filter(d => !(core.targetType === 'USER' && d.value === 'HIDDEN')).map(d => (
                         <label key={d.value}
                           className={cn('flex items-start gap-2.5 px-3 py-2.5 rounded-xl border cursor-pointer transition-colors',
                             decision === d.value ? 'border-admin bg-admin-light' : 'border-border hover:bg-gray-50')}>
