@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.teambook.panorama.domain.book.dto.review.MyReviewItem;
 import com.teambook.panorama.domain.book.dto.review.MyReviewResponse;
 import com.teambook.panorama.domain.book.dto.review.ReviewItem;
 import com.teambook.panorama.domain.book.dto.review.ReviewRequest;
@@ -47,7 +48,7 @@ public class ReviewController {
   @PathVariable("isbn") String isbn,
   @AuthenticationPrincipal Long userId
   ){
-    return ResponseEntity.ok(reviewService.saveReview(request, isbn, userId));
+    return ResponseEntity.ok(reviewService.createReview(request, isbn, userId));
   }
   //리뷰 수정하기
   @Operation(summary = "리뷰 수정하기")
@@ -77,6 +78,11 @@ public class ReviewController {
   @GetMapping("/myReviewList")
   public ResponseEntity<MyReviewResponse> getMyReviews(@AuthenticationPrincipal Long userId){
     return ResponseEntity.ok(reviewService.findMyReviews(userId));
-
   }
+  //내 리뷰 단건 조회
+  @Operation(summary = "도서 상세페이지용 내 리뷰 단 건 조회")
+  public ResponseEntity<MyReviewItem> getMyReview(@AuthenticationPrincipal Long userId, String isbn) {
+    return ResponseEntity.ok(reviewService.findMyReveiw(userId, isbn));
+  }
+
 }

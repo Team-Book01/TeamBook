@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,152 +40,188 @@ public class ReviewService {
   private final NaverBookClient naverBookClient;
   private final UserRepository userRepository;
 
-  //도서 리뷰목록 조회
+  // 도서 리뷰목록 조회
   public ReviewResponse findByIsbn(String isbn, Long userId, int size, int page) {
-    
-    //offset 계산
+
+    // offset 계산
     int offset = (page - 1) * size;
-    
-    //book 없을때 빈 배열 반환
+
+    // book 없을때 빈 배열 반환
     Optional<Book> book = bookRepository.findByIsbn(isbn);
     if (book.isEmpty()) {
       return ReviewResponse.builder()
-      .page(page)
-      .size(size)
-      .total(0)
-      .reviewItems(List.of())
-      .ratingDistribution(initRatingDistribution())
-      .build();
+          .page(page)
+          .size(size)
+          .total(0)
+          .reviewItems(List.of())
+          .ratingDistribution(initRatingDistribution())
+          .build();
     }
-    //bookId로 변환
+    // bookId로 변환
     Long bookId = book.get().getBookId();
-    
-    //리뷰목록 total 계산
+
+    // 리뷰목록 total 계산
     int total = reviewMapper.selectTotalByBookId(bookId);
 
-    //리뷰리스트 가져오기
+    // 리뷰리스트 가져오기
     List<ReviewItem> reviews = reviewMapper.selectReviewsByBookId(bookId, userId, size, offset);
-    
-    //반환
+
+    // 반환
     return ReviewResponse.builder()
-    .page(page)
-    .size(size)
-    .total(total)
-    .reviewItems(reviews)
-    .ratingDistribution(calulateRatingDistribution(bookId))
-    .build();
+        .page(page)
+        .size(size)
+        .total(total)
+        .reviewItems(reviews)
+        .ratingDistribution(calulateRatingDistribution(bookId))
+        .build();
   }
-  //리뷰 생성
-  @Transactional
-  public ReviewItem saveReview(ReviewRequest request, String isbn, Long userId) {
-    //책DB있는지부터 조회 -> 생성 //예외 수정 필요
-    Book book = bookRepository.findByIsbn(isbn).orElseGet(() -> {
-      NaverBookResponse response = naverBookClient.search(isbn, 1, 1, "sim");
-      if (response.items().isEmpty()) throw new BusinessException(ErrorCode.BOOK_NOT_FOUND);
-      NaverBookItem naverBookItem = response.items().getFirst();
-      return
-      bookRepository.save(Book.builder()
-      .author(naverBookItem.author())
-      .description(naverBookItem.description())
-      .imageUrl(naverBookItem.image())
-      .isbn(isbn)
-      .pubdate(naverBookItem.pubdate())
-      .publisher(naverBookItem.publisher())
-      .shopUrl(naverBookItem.link())
-      .title(naverBookItem.title())
-      .build());
-    });
-    if(reviewRepository.existsByUserIdAndBook_BookIdAndStatus(userId, book.getBookId(), ReviewStatus.ACTIVE)) {
+
+  // 리뷰 생성 -> 외부 api로 인한 DB커넥션 분리 책 먼저 확보
+  public ReviewItem createReview(ReviewRequest request, String isbn, Long userId) {
+    // 책DB있는지부터 조회 -> 생성 //예외 수정 필요
+    Book book = findOrCreateBook(isbn);
+    if (reviewRepository.existsByUserIdAndBook_BookIdAndStatus(userId, book.getBookId(), ReviewStatus.ACTIVE)) {
       throw new BusinessException(ErrorCode.REVIEW_ALREADY_EXISTS);
     }
-    //리뷰 생성
-    BookReview review = reviewRepository.save(BookReview.builder()
-    .book(book)
-    .content(request.content())
-    .rating(request.rating())
-    .userId(userId)
-    .build());
-  //리턴 값 예외 수정 필요
-  return ReviewItem.builder()
-  .content(review.getContent())
-  .createdAt(review.getCreatedAt())
-  .isMine(true)
-  .nickname(userRepository.findById(userId).orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND)).getNickname())
-  .rating(review.getRating())
-  .reviewId(review.getReviewId())
-  .build();  
+    return saveReview(request, book, userId);
   }
-  //리뷰 수정
+
   @Transactional
-  public ReviewItem updateReview(ReviewRequest request, Long reviewId, Long userId){
-    BookReview foundReview = reviewRepository.findById(reviewId).orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_NOT_FOUND));
+  public ReviewItem saveReview(ReviewRequest request, Book book, Long userId) {
+    // 리뷰 생성
+    BookReview review = reviewRepository.save(BookReview.builder()
+        .book(book)
+        .content(request.content())
+        .rating(request.rating())
+        .userId(userId)
+        .build());
+    // 리턴 값 예외 수정 필요
+    return ReviewItem.builder()
+        .content(review.getContent())
+        .createdAt(review.getCreatedAt())
+        .isMine(true)
+        .nickname(userRepository.findById(userId).orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND))
+            .getNickname())
+        .rating(review.getRating())
+        .reviewId(review.getReviewId())
+        .build();
+  }
+
+  // 리뷰 수정
+  @Transactional
+  public ReviewItem updateReview(ReviewRequest request, Long reviewId, Long userId) {
+    BookReview foundReview = reviewRepository.findById(reviewId)
+        .orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_NOT_FOUND));
+    if (ReviewStatus.DELETED.equals(foundReview.getStatus()))
+      throw new BusinessException(ErrorCode.REVIEW_NOT_FOUND);
     if (!foundReview.getUserId().equals(userId)) {
       throw new BusinessException(ErrorCode.NOT_REVIEW_OWNER);
     }
     foundReview.update(request.rating(), request.content(), foundReview.getStatus());
-    String nickname = userRepository.findById(userId).orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND)).getNickname();
+    String nickname = userRepository.findById(userId).orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND))
+        .getNickname();
     return ReviewItem.builder()
-    .content(request.content())
-    .createdAt(foundReview.getCreatedAt())
-    .isMine(true)
-    .reviewId(reviewId)
-    .nickname(nickname)
-    .rating(request.rating())
-    .build();
+        .content(request.content())
+        .createdAt(foundReview.getCreatedAt())
+        .isMine(true)
+        .reviewId(reviewId)
+        .nickname(nickname)
+        .rating(request.rating())
+        .build();
   }
-  //리뷰 삭제하기
+
+  // 리뷰 삭제하기
   @Transactional
-  public void deleteReview(Long reviewId, Long userId){
-    BookReview foundReview = reviewRepository.findById(reviewId).orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_NOT_FOUND));
+  public void deleteReview(Long reviewId, Long userId) {
+    BookReview foundReview = reviewRepository.findById(reviewId)
+        .orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_NOT_FOUND));
+    if (ReviewStatus.DELETED.equals(foundReview.getStatus()))
+      throw new BusinessException(ErrorCode.REVIEW_NOT_FOUND);
     if (!foundReview.getUserId().equals(userId)) {
       throw new BusinessException(ErrorCode.NOT_REVIEW_OWNER);
     }
-    foundReview.update(foundReview.getRating(), foundReview.getContent(), ReviewStatus.DELETED);    
+    foundReview.update(foundReview.getRating(), foundReview.getContent(), ReviewStatus.DELETED);
   }
-  //마이페이지_리뷰개수
-  public Long findMyReviewCount(Long userId){
+
+  // 마이페이지_리뷰개수
+  public Long findMyReviewCount(Long userId) {
     return reviewRepository.countByUserIdAndStatus(userId, ReviewStatus.ACTIVE);
   }
-  //마이페이지_리뷰전체
-  public MyReviewResponse findMyReviews(Long userId){
-    //리뷰 전체 갖고오기
+
+  // 마이페이지_리뷰전체
+  public MyReviewResponse findMyReviews(Long userId) {
+    // 리뷰 전체 갖고오기
     List<BookReview> reviews = reviewRepository.findByUserIdAndStatusWithBook(userId, ReviewStatus.ACTIVE);
-    //정보 매핑(list.of myReviewItem)
+    // 정보 매핑(list.of myReviewItem)
     List<MyReviewItem> myReviewItems = reviews.stream().map(review -> {
-      return
-      MyReviewItem.builder()
-      .bookImage(review.getBook().getImageUrl())
-      .bookTitle(review.getBook().getTitle())
-      .content(review.getContent())
-      .createdAt(review.getCreatedAt())
-      .isbn(review.getBook().getIsbn())
-      .rating(review.getRating())
-      .reviewId(review.getReviewId())
-      .build();
+      return MyReviewItem.builder()
+          .bookImage(review.getBook().getImageUrl())
+          .bookTitle(review.getBook().getTitle())
+          .content(review.getContent())
+          .createdAt(review.getCreatedAt())
+          .isbn(review.getBook().getIsbn())
+          .rating(review.getRating())
+          .reviewId(review.getReviewId())
+          .build();
     }).toList();
     return new MyReviewResponse(myReviewItems.size(), myReviewItems);
   }
-  
 
+  // 해당 도서 내 리뷰 갖고오기
+  public MyReviewItem findMyReveiw(Long userId, String isbn) {
+    Book book = bookRepository.findByIsbn(isbn).orElseThrow(() -> new BusinessException(ErrorCode.BOOK_NOT_FOUND));
+    BookReview foundBookReview = reviewRepository
+        .findByBook_BookIdAndUserIdAndStatus(book.getBookId(), userId, ReviewStatus.ACTIVE)
+        .orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_NOT_FOUND));
+    return new MyReviewItem(book.getBookId(), foundBookReview.getBook().getIsbn(), foundBookReview.getBook().getTitle(),
+        foundBookReview.getBook().getImageUrl(), foundBookReview.getRating(), foundBookReview.getCreatedAt(),
+        foundBookReview.getContent());
+  }
 
-
-  //별점 분포 0으로 초기화해서 생성
+  // 별점 분포 0으로 초기화해서 생성
   private Map<BigDecimal, Integer> initRatingDistribution() {
     Map<BigDecimal, Integer> distribution = new TreeMap<>();
     for (int i = 1; i <= 10; i++) {
-        distribution.put(BigDecimal.valueOf(i * 5, 1), 0);  // 0.5, 1.0, ... 5.0
+      distribution.put(BigDecimal.valueOf(i * 5, 1), 0); // 0.5, 1.0, ... 5.0
     }
     return distribution;
-}
-  //실제 값 덮어쓰기
+  }
+
+  // 실제 값 덮어쓰기
   private Map<BigDecimal, Integer> calulateRatingDistribution(Long bookId) {
     Map<BigDecimal, Integer> distribution = initRatingDistribution();
-    reviewMapper.selectRatingCountByBookId(bookId).stream().forEach(rc ->  {
+    reviewMapper.selectRatingCountByBookId(bookId).stream().forEach(rc -> {
       distribution.put(rc.rating().setScale(1), rc.count());
     });
     return distribution;
   }
 
-
+  // 동시성 주의
+  @Transactional
+  private Book findOrCreateBook(String isbn) {
+    return bookRepository.findByIsbn(isbn)
+        .orElseGet(() -> {
+          try {
+            NaverBookResponse response = naverBookClient.search(isbn, 1, 1, "sim");
+            if (response.items().isEmpty())
+              throw new BusinessException(ErrorCode.BOOK_NOT_FOUND);
+            NaverBookItem naverBookItem = response.items().getFirst();
+            return bookRepository.save(Book.builder()
+                .author(naverBookItem.author())
+                .description(naverBookItem.description())
+                .imageUrl(naverBookItem.image())
+                .isbn(isbn)
+                .pubdate(naverBookItem.pubdate())
+                .publisher(naverBookItem.publisher())
+                .shopUrl(naverBookItem.link())
+                .title(naverBookItem.title())
+                .build());
+          } catch (DataIntegrityViolationException e) {
+            // 동시에 다른 요청이 이미 저장함 → 다시 조회하면 있음
+            return bookRepository.findByIsbn(isbn)
+                .orElseThrow(() -> e);
+          }
+        });
+  }
 
 }
