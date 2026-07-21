@@ -7,7 +7,9 @@ import org.springframework.transaction.annotation.Transactional;
 import com.teambook.panorama.domain.auth.service.AuthService;
 import com.teambook.panorama.domain.user.dto.SignUpDto;
 import com.teambook.panorama.domain.user.dto.UserDto;
+import com.teambook.panorama.domain.user.dto.WithdrawDTO;
 import com.teambook.panorama.domain.user.entity.User;
+import com.teambook.panorama.domain.user.enums.Provider;
 import com.teambook.panorama.domain.user.repository.UserRepository;
 import com.teambook.panorama.global.exception.BusinessException;
 import com.teambook.panorama.global.exception.ErrorCode;
@@ -74,10 +76,24 @@ public class UserServiceImpl implements UserService {
     }
 
     @Transactional
-    public void withdraw(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-        user.delete();   // status = DELETED (updated_at이 탈퇴시각)
-        authService.logout(userId);
+    public void withdraw(Long userId, WithdrawDTO.WithdrawRequest request) {
+    User user = userRepository.findById(userId)
+            .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+    if (user.getProvider() == Provider.LOCAL) {
+        // 기존: 비밀번호 재확인
+        if (request.password() == null ||
+            !passwordEncoder.matches(request.password(), user.getPassword())) {
+            throw new BusinessException(ErrorCode.PASSWORD_MISMATCH);   // A009
+        }
+    } else {
+        // 소셜: 확인 문구 검증 (선택지 A)
+        if (!"탈퇴합니다".equals(request.confirmText())) {
+            throw new BusinessException(ErrorCode.WITHDRAW_CONFIRM_MISMATCH);  // 신규
+        }
     }
+
+    user.delete();                    // status=DELETED (기존 정책)
+    authService.logout(userId);       // refresh 무효화 (방식 b, 기존)
+}
 }
