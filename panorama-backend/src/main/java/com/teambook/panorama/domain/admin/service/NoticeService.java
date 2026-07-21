@@ -6,6 +6,7 @@ import com.teambook.panorama.domain.admin.dto.notice.NoticePublicSearchRequest;
 import com.teambook.panorama.domain.admin.dto.notice.NoticeResponse;
 import com.teambook.panorama.domain.admin.dto.notice.NoticeSearchRequest;
 import com.teambook.panorama.domain.admin.dto.notice.NoticeUpdateRequest;
+import com.teambook.panorama.domain.admin.entity.type.NoticeStatus;
 import com.teambook.panorama.domain.admin.dto.notice.PublicNoticeDetailResponse;
 import com.teambook.panorama.domain.admin.dto.notice.PublicNoticeResponse;
 import com.teambook.panorama.global.response.PageResponse;
@@ -19,6 +20,9 @@ public interface NoticeService {
   NoticeDetailResponse getNoticeDetail(Long noticeId);
 
   NoticeDetailResponse updateNotice(Long noticeId, NoticeUpdateRequest request);
+
+  // 공지 상태 변경 (게시/숨김/삭제). 변경된 상세를 반환한다.
+  NoticeDetailResponse changeNoticeStatus(Long noticeId, NoticeStatus status);
 
   // 공개(비관리자) 목록/상세. 상세는 조회수를 1 증가시킨 뒤 그 값을 응답에 반영한다.
   PageResponse<PublicNoticeResponse> getPublicNotices(NoticePublicSearchRequest request);

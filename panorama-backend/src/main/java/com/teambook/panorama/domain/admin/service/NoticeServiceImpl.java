@@ -98,6 +98,22 @@ public class NoticeServiceImpl implements NoticeService {
         .orElseThrow(() -> new BusinessException(ErrorCode.NOTICE_NOT_FOUND));
   }
 
+  /**
+   * 공지 상태 변경(게시/숨김/삭제). updateNotice 와 같은 JPA-write → flush → MyBatis-reread 순서.
+   * HIDDEN/DELETED 공지는 공개 목록·상세 쿼리가 status='ACTIVE' 로 걸러 사용자에게 노출되지 않는다.
+   */
+  @Override
+  @Transactional
+  public NoticeDetailResponse changeNoticeStatus(Long noticeId, NoticeStatus status) {
+    Notice notice = noticeRepository.findById(noticeId)
+        .orElseThrow(() -> new BusinessException(ErrorCode.NOTICE_NOT_FOUND));
+    notice.changeStatus(status);
+    noticeRepository.flush();   // 재조회 전 UPDATE를 DB에 반영
+
+    return noticeMapper.selectNoticeDetail(noticeId)
+        .orElseThrow(() -> new BusinessException(ErrorCode.NOTICE_NOT_FOUND));
+  }
+
   @Override
   public PageResponse<PublicNoticeResponse> getPublicNotices(NoticePublicSearchRequest request) {
     List<PublicNoticeResponse> contents = noticeMapper.selectPublicNotices(request);
