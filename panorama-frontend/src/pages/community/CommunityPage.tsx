@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Search, PenLine, Eye, Heart, MessageCircle } from 'lucide-react'
 
 import type { PostCategory, PostSummary } from '@/types/community'
 import {
   usePosts,
   usePopularPosts,
+  useMyPosts,
+  useMyScraps,
   POST_CATEGORY_LABEL,
+  POST_CATEGORY_BY_LABEL,
   POST_CATEGORIES,
   POST_PAGE_SIZE,
 } from '@/api/community'
@@ -24,6 +27,26 @@ function tabLabel(tab: MainTab): string {
   if (tab === '전체' || tab === '인기') return tab
   return POST_CATEGORY_LABEL[tab]
 }
+
+/**
+ * URL ?tab= 파라미터를 MainTab 으로 변환.
+ * 홈 바로가기가 넘기는 한국어 라벨('책추천'·'독후감'·'자유게시판')과 enum 을 모두 받는다.
+ */
+function parseTabParam(raw: string | null): MainTab {
+  if (!raw) return '전체'
+  if (raw === '전체' || raw === '인기') return raw
+  if ((POST_CATEGORIES as readonly string[]).includes(raw)) return raw as PostCategory
+  // 홈 라벨 매핑: 책추천→추천, 독후감→독후감, 자유게시판→자유
+  const homeLabelToCategory: Record<string, PostCategory> = {
+    책추천: 'RECOMMEND',
+    독후감: 'REVIEW',
+    자유게시판: 'FREE',
+  }
+  return homeLabelToCategory[raw] ?? POST_CATEGORY_BY_LABEL[raw] ?? '전체'
+}
+
+// 내 활동 보기(사이드바 진입): 작성한 글 / 스크랩한 글
+type MyView = 'posts' | 'scraps'
 
 // ─── Avatar ───────────────────────────────────────────────────────────────────
 
@@ -126,9 +149,31 @@ export function PostCard({
 
 export default function CommunityPage() {
   const navigate = useNavigate()
-  const [activeTab, setActiveTab] = useState<MainTab>('전체')
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  // ?view=posts|scraps 면 "내 활동" 목록, 아니면 일반 게시판 목록
+  const rawView = searchParams.get('view')
+  const myView: MyView | null = rawView === 'posts' || rawView === 'scraps' ? rawView : null
+
+  const [activeTab, setActiveTab] = useState<MainTab>(() => parseTabParam(searchParams.get('tab')))
   const [searchQuery, setSearchQuery] = useState('')
   const [feedSearchOpen, setFeedSearchOpen] = useState(false)
+
+  // 일반 탭을 고르면 "내 활동" 보기(view 파라미터)를 해제한다.
+  const selectMainTab = (tab: MainTab) => {
+    setActiveTab(tab)
+    if (myView) {
+      const next = new URLSearchParams(searchParams)
+      next.delete('view')
+      setSearchParams(next, { replace: true })
+    }
+  }
+
+  const selectMyView = (view: MyView) => {
+    const next = new URLSearchParams(searchParams)
+    next.set('view', view)
+    setSearchParams(next, { replace: true })
+  }
 
   const isPopularTab = activeTab === '인기'
   // 카테고리 탭이면 서버 필터용 enum, 전체/인기 탭이면 undefined(=필터 없음)
@@ -216,12 +261,12 @@ export default function CommunityPage() {
           {MAIN_TABS.map((tab) => (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab)}
+              onClick={() => selectMainTab(tab)}
               className="relative px-4 py-3 text-sm font-semibold transition-colors flex-shrink-0"
-              style={{ color: activeTab === tab ? '#2E7D6B' : '#aaa' }}
+              style={{ color: activeTab === tab && !myView ? '#2E7D6B' : '#aaa' }}
             >
               {tabLabel(tab)}
-              {activeTab === tab && (
+              {activeTab === tab && !myView && (
                 <span
                   className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full"
                   style={{ background: '#2E7D6B' }}
@@ -263,6 +308,11 @@ export default function CommunityPage() {
         </div>
       </div>
 
+      {/* ── 내 활동 보기 (작성한 글 / 스크랩한 글) ─────────────── */}
+      {myView ? (
+        <MyActivitySection view={myView} onSelect={selectMyView} navigate={navigate} />
+      ) : (
+        <>
       {/* ── Post count ────────────────────────────────────────── */}
       <div className="flex items-center justify-between mt-4 mb-3">
         <p className="text-xs text-[#ccc]">
@@ -325,6 +375,86 @@ export default function CommunityPage() {
           </button>
         </div>
       ) : null}
+        </>
+      )}
     </CommunityLayout>
+  )
+}
+
+// ─── 내 활동 섹션 (작성한 글 / 스크랩한 글) ─────────────────────────────────────
+// 사이드바 회원 카드 클릭으로 진입. 탭으로 두 목록을 오갈 수 있다.
+function MyActivitySection({
+  view,
+  onSelect,
+  navigate,
+}: {
+  view: MyView
+  onSelect: (v: MyView) => void
+  navigate: (to: string) => void
+}) {
+  const postsQuery = useMyPosts()
+  const scrapsQuery = useMyScraps()
+  const query = view === 'posts' ? postsQuery : scrapsQuery
+  const { data, isLoading, isError, error, fetchNextPage, hasNextPage, isFetchingNextPage } = query
+  const items = data?.pages.flatMap((p) => p.content) ?? []
+
+  const TABS: { key: MyView; label: string }[] = [
+    { key: 'posts', label: '작성한 글' },
+    { key: 'scraps', label: '스크랩한 글' },
+  ]
+
+  return (
+    <div className="mt-2">
+      {/* 서브 탭 */}
+      <div className="flex gap-1 mb-4 bg-[#F5F5F5] rounded-lg p-1 w-fit">
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => onSelect(t.key)}
+            className={`px-4 py-1.5 text-sm font-semibold rounded-md transition-colors ${
+              view === t.key ? 'bg-white text-[#2E7D6B] shadow-sm' : 'text-[#aaa] hover:text-[#555]'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex flex-col gap-3">
+        {isLoading ? (
+          <div className="text-center py-20 text-[#ccc] text-sm">불러오는 중…</div>
+        ) : isError ? (
+          <div className="text-center py-20 text-[#ccc] text-sm">
+            {getErrorMessage(error, '목록을 불러오지 못했어요.')}
+          </div>
+        ) : items.length === 0 ? (
+          <div className="text-center py-20 text-[#ccc] text-sm">
+            {view === 'posts' ? '아직 작성한 글이 없어요.' : '아직 스크랩한 글이 없어요.'}
+          </div>
+        ) : (
+          items.map((post) => (
+            <PostCard
+              key={post.postId}
+              post={post}
+              showCounts={false}
+              onOpen={() => navigate(`/community/${post.postId}`)}
+            />
+          ))
+        )}
+      </div>
+
+      {hasNextPage && (
+        <div className="mt-8 text-center">
+          <button
+            onClick={() => fetchNextPage({ cancelRefetch: false })}
+            disabled={isFetchingNextPage}
+            className="text-sm font-semibold border rounded-xl px-8 py-3 bg-white transition-all hover:shadow-sm disabled:opacity-60"
+            style={{ color: '#2E7D6B', borderColor: '#D5EAE4' }}
+          >
+            {isFetchingNextPage ? '불러오는 중…' : '더 보기'}
+          </button>
+        </div>
+      )}
+    </div>
   )
 }

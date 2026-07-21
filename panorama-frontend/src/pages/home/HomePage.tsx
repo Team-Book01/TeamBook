@@ -11,36 +11,55 @@ import {
 } from 'lucide-react'
 import {
   POPULAR_BOOKS,
-  POSTS,
-  NOTICES,
   QUICK_LINKS,
-  TYPE_BADGE,
+  CATEGORY_BADGE,
+  HOME_TABS,
+  TAB_TO_CATEGORY,
 } from './data'
 import type { TabKey } from './data'
+import { usePopularPosts, usePosts, POST_CATEGORY_LABEL } from '@/api/community'
+import { useNotices } from '@/api/notice'
+import { useCommunityStats } from '@/api/stats'
+import { formatRelativeTime, stripHtml } from '@/pages/community/utils'
 import { cn } from '@/lib/utils'
-import { useAuthStore } from '@/store/authStore'
-import InquiryModal from './components/InquiryModal'
+
+/** 홈 인기글 목록에 노출할 개수 */
+const HOME_POST_LIMIT = 5
+/** 홈 공지 목록에 노출할 개수 */
+const HOME_NOTICE_LIMIT = 4
+/** 등록 후 이 일수 이내면 공지에 NEW 배지 */
+const NOTICE_NEW_DAYS = 7
+
+/** yyyy-mm-ddThh:mm:ss → yyyy.mm.dd */
+function formatNoticeDate(iso: string): string {
+  return iso.slice(0, 10).replaceAll('-', '.')
+}
+
+/** 등록일이 최근 NOTICE_NEW_DAYS 일 이내인지 */
+function isRecentNotice(iso: string): boolean {
+  const created = new Date(iso).getTime()
+  if (Number.isNaN(created)) return false
+  return Date.now() - created <= NOTICE_NEW_DAYS * 24 * 60 * 60 * 1000
+}
 
 export default function HomePage() {
   const navigate = useNavigate()
-  const user = useAuthStore(s => s.user)
-  const [searchMode, setSearchMode] = useState<'제목' | '저자'>('제목')
   const [query, setQuery] = useState('')
   const [activeTab, setActiveTab] = useState<TabKey>('전체')
-  const [dropdownOpen, setDropdownOpen] = useState(false)
-  const [inquiryOpen, setInquiryOpen] = useState(false)
   const carouselRef = useRef<HTMLDivElement>(null)
 
-  // 홈은 비로그인도 볼 수 있는 화면이라, 문의 팝업을 열기 전에 로그인 여부를 직접 확인해야 한다
-  // (글쓰기처럼 라우트 가드 뒤에 있는 화면이 아니다).
-  const openInquiry = () => {
-    if (!user) {
-      alert('로그인이 필요합니다.')
-      navigate('/login')
-      return
-    }
-    setInquiryOpen(true)
-  }
+  // 커뮤니티 현황(오늘 방문/게시글 수) — 공개 통계 API. 로그인 여부와 무관하게 표시된다.
+  const { data: stats } = useCommunityStats()
+
+  // 공지사항: 공개 GET API 실데이터 (상단 몇 건만)
+  const noticesQuery = useNotices({ size: HOME_NOTICE_LIMIT })
+  const notices = noticesQuery.data?.content ?? []
+
+  // 게시판 인기글: '전체' 탭은 인기글 API, 카테고리 탭은 해당 카테고리 최신글
+  const popularQuery = usePopularPosts()
+  const categoryQuery = usePosts(undefined, TAB_TO_CATEGORY[activeTab])
+  const postsQuery = activeTab === '전체' ? popularQuery : categoryQuery
+  const posts = (postsQuery.data?.pages[0]?.content ?? []).slice(0, HOME_POST_LIMIT)
 
   // 검색 실행 → 검색 결과 페이지(/books?q=)로 이동
   const handleSearch = () => {
@@ -104,12 +123,10 @@ export default function HomePage() {
 
           {/* Quick links */}
           <div className="flex items-start justify-center gap-6">
-            {QUICK_LINKS.map(({ label, icon: Icon }) => (
+            {QUICK_LINKS.map(({ label, icon: Icon, to }) => (
               <button
                 key={label}
-                // 지금은 '문의 게시판'만 실제 동작이 있다. 나머지는 아직 목업 데이터라
-                // 연결할 실제 화면이 없어 그대로 둔다.
-                onClick={label === '문의 게시판' ? openInquiry : undefined}
+                onClick={() => navigate(to)}
                 className="flex flex-col items-center gap-1.5 group cursor-pointer"
               >
                 <div
@@ -133,12 +150,12 @@ export default function HomePage() {
       <section className="max-w-6xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-lg font-bold text-foreground">독자들의 PICK</h2>
-          <a
-            href="#"
+          <button
+            onClick={() => navigate('/books')}
             className="text-sm text-primary font-medium hover:underline underline-offset-4"
           >
             더보기 →
-          </a>
+          </button>
         </div>
 
         <div className="relative flex items-center">
@@ -206,76 +223,94 @@ export default function HomePage() {
         {/* Posts */}
         <div className="lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-foreground">인기 글</h2>
-            <a
-              href="#"
+            <h2 className="text-lg font-bold text-foreground">게시판</h2>
+            <button
+              onClick={() => navigate(`/community?tab=${encodeURIComponent(activeTab)}`)}
               className="text-sm text-primary font-medium hover:underline underline-offset-4"
             >
               더보기 →
-            </a>
+            </button>
           </div>
 
           <div className="flex gap-1 mb-4 bg-muted rounded-lg p-1 w-fit">
-            {(['전체', '책추천', '독후감', '독서인증'] as TabKey[]).map(
-              (tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`px-3 py-1.5 text-sm font-medium rounded-md transition ${
-                    activeTab === tab
-                      ? 'bg-card text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  {tab}
-                </button>
-              )
-            )}
+            {HOME_TABS.map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-3 py-1.5 text-sm font-medium rounded-md transition ${
+                  activeTab === tab
+                    ? 'bg-card text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
           </div>
 
           <div className="flex flex-col gap-2">
-            {POSTS[activeTab].map((post) => (
-              <div
-                key={post.id}
-                onClick={() => navigate('/community')}
-                className="flex items-center gap-3 bg-card rounded-xl px-4 py-3.5 border border-border hover:border-primary/30 hover:shadow-sm transition group cursor-pointer"
-              >
-                <span
-                  className={`shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full ${TYPE_BADGE[post.type]}`}
+            {postsQuery.isLoading ? (
+              <div className="py-12 text-center text-sm text-muted-foreground">
+                게시글을 불러오는 중…
+              </div>
+            ) : postsQuery.isError ? (
+              <div className="py-12 text-center text-sm text-muted-foreground">
+                게시글을 불러오지 못했어요.
+              </div>
+            ) : posts.length === 0 ? (
+              <div className="py-12 text-center text-sm text-muted-foreground">
+                아직 게시글이 없어요.
+              </div>
+            ) : (
+              posts.map((post) => (
+                <div
+                  key={post.postId}
+                  onClick={() => navigate(`/community/${post.postId}`)}
+                  className="flex items-center gap-3 bg-card rounded-xl px-4 py-3.5 border border-border hover:border-primary/30 hover:shadow-sm transition group cursor-pointer"
                 >
-                  {post.type}
-                </span>
-                <span className="flex-1 text-sm font-medium text-foreground group-hover:text-primary transition truncate">
-                  {post.title}
-                </span>
-                <span className="shrink-0 text-xs text-muted-foreground hidden sm:block">
-                  {post.author}
-                </span>
-                <div className="shrink-0 flex items-center gap-3 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <Eye size={12} /> {post.views.toLocaleString()}
+                  <span
+                    className={`shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full ${CATEGORY_BADGE[post.category]}`}
+                  >
+                    {POST_CATEGORY_LABEL[post.category]}
                   </span>
-                  <span className="flex items-center gap-1">
-                    <Heart size={12} /> {post.likes}
+                  <span className="flex-1 text-sm font-medium text-foreground group-hover:text-primary transition truncate">
+                    {post.title || stripHtml(post.contentPreview)}
+                  </span>
+                  <span className="shrink-0 text-xs text-muted-foreground hidden sm:block">
+                    {post.nickname}
+                  </span>
+                  <div className="shrink-0 flex items-center gap-3 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <Eye size={12} /> {post.viewCount.toLocaleString()}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Heart size={12} /> {post.likeCount}
+                    </span>
+                  </div>
+                  <span className="shrink-0 text-xs text-muted-foreground hidden md:block">
+                    {formatRelativeTime(post.createdAt)}
                   </span>
                 </div>
-                <span className="shrink-0 text-xs text-muted-foreground hidden md:block">
-                  {post.date}
-                </span>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 
         {/* Sidebar */}
         <div className="flex flex-col gap-5">
-          {/* Community stats — compact 2 items */}
+          {/* Community stats — compact 2 items (관리자 대시보드 집계 재사용) */}
           <section className="bg-primary text-primary-foreground rounded-2xl p-5">
             <h3 className="font-bold mb-4 text-base">커뮤니티 현황</h3>
             <div className="grid grid-cols-2 gap-3">
               {[
-                { label: '오늘 방문', value: '3,291명' },
-                { label: '게시글', value: '14,320개' },
+                {
+                  label: '오늘 방문',
+                  value: stats ? `${stats.todayVisitors.toLocaleString()}명` : '—',
+                },
+                {
+                  label: '게시글',
+                  value: stats ? `${stats.totalPosts.toLocaleString()}개` : '—',
+                },
               ].map(({ label, value }) => (
                 <div
                   key={label}
@@ -297,32 +332,41 @@ export default function HomePage() {
                   공지사항
                 </h3>
               </div>
-              <a
-                href="#"
+              <button
+                onClick={() => navigate('/notices')}
                 className="text-xs text-muted-foreground hover:text-primary transition"
               >
                 전체보기
-              </a>
+              </button>
             </div>
-            <ul className="flex flex-col gap-3">
-              {NOTICES.map((n) => (
-                <li key={n.id}>
-                  <a href="#" className="flex items-start gap-2 group">
-                    {n.isNew && (
-                      <span className="shrink-0 mt-0.5 text-[10px] font-bold text-accent bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
-                        NEW
+            {noticesQuery.isLoading ? (
+              <p className="text-sm text-muted-foreground py-2">불러오는 중…</p>
+            ) : notices.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-2">등록된 공지가 없습니다.</p>
+            ) : (
+              <ul className="flex flex-col gap-3">
+                {notices.map((n) => (
+                  <li key={n.noticeId}>
+                    <button
+                      onClick={() => navigate(`/notices/${n.noticeId}`)}
+                      className="flex items-start gap-2 group text-left w-full"
+                    >
+                      {isRecentNotice(n.createdAt) && (
+                        <span className="shrink-0 mt-0.5 text-[10px] font-bold text-accent bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
+                          NEW
+                        </span>
+                      )}
+                      <span className="flex-1 text-sm text-foreground group-hover:text-primary transition leading-snug truncate">
+                        {n.title}
                       </span>
-                    )}
-                    <span className="flex-1 text-sm text-foreground group-hover:text-primary transition leading-snug">
-                      {n.title}
-                    </span>
-                  </a>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {n.date}
-                  </p>
-                </li>
-              ))}
-            </ul>
+                    </button>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {formatNoticeDate(n.createdAt)}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
           </section>
 
           {/* Summer challenge */}
@@ -339,17 +383,13 @@ export default function HomePage() {
               <p className="font-bold text-base leading-snug mb-1">
                 여름 독서 챌린지
               </p>
-              <p className="text-xs opacity-70 mb-3">
-                7월 한 달 3권 완독 시 스타벅스 쿠폰 증정!
+              <p className="text-xs opacity-80 leading-relaxed">
+                7월 한 달간 독후감 3건 이상 등록 시 투썸플레이스 기프티콘 증정
               </p>
-              <button className="bg-accent text-white text-xs font-semibold px-4 py-2 rounded-lg hover:bg-amber-600 transition">
-                지금 참여하기
-              </button>
             </div>
           </section>
         </div>
       </main>
-      {inquiryOpen && <InquiryModal onClose={() => setInquiryOpen(false)} />}
     </div>
   )
 }

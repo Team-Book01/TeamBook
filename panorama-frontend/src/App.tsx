@@ -56,6 +56,7 @@ export default function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/books" element={<BookSearchPage />} />
         <Route path="/books/:isbn" element={<BookDetailPage />} />
+        <Route path="/notices" element={<NoticesPage />} />
         <Route path="/library-map" element={<LibraryMapPage />} />
         <Route path="/notices" element={<NoticesPage />} />
         <Route path="/notices/:id" element={<NoticeDetailPage />} />
