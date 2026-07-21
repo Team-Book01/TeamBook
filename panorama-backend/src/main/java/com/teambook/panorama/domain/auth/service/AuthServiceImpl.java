@@ -20,6 +20,7 @@ import com.teambook.panorama.domain.auth.repository.RefreshTokenRepository;
 import com.teambook.panorama.domain.user.entity.User;
 import com.teambook.panorama.domain.user.enums.Provider;
 import com.teambook.panorama.domain.user.enums.Role;
+import com.teambook.panorama.domain.user.enums.Status;
 import com.teambook.panorama.domain.user.repository.UserRepository;
 import com.teambook.panorama.global.exception.BusinessException;
 import com.teambook.panorama.global.exception.ErrorCode;
@@ -106,6 +107,12 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findById(userId)
         .orElseThrow(() -> 
             new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        // 3-1. 계정 상태 가드: 탈퇴 계정은 access 만료 시점부터 재발급을 거부한다.
+        // 토큰 자체는 유효해도 상태가 DELETED면 새 access 를 내주지 않는다.
+        if (user.getStatus() == Status.DELETED) {
+            throw new BusinessException(ErrorCode.ACCOUNT_DELETED);
+        }
 
         return jwtProvider.createAccessToken(userId, user.getRole());
     }

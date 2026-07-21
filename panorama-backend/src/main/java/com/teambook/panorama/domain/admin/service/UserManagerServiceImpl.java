@@ -12,6 +12,7 @@ import com.teambook.panorama.domain.admin.dto.user.UserResponse;
 import com.teambook.panorama.domain.admin.dto.user.UserSearchRequest;
 import com.teambook.panorama.domain.admin.entity.type.UserAction;
 import com.teambook.panorama.domain.admin.repository.UserMapper;
+import com.teambook.panorama.domain.auth.repository.RefreshTokenRepository;
 import com.teambook.panorama.global.exception.BusinessException;
 import com.teambook.panorama.global.exception.ErrorCode;
 import com.teambook.panorama.global.response.PageResponse;
@@ -24,6 +25,7 @@ import lombok.RequiredArgsConstructor;
 public class UserManagerServiceImpl implements UserManagerService {
 
   private final UserMapper userMapper;   // User 엔티티가 없어 조회·제재 모두 MyBatis
+  private final RefreshTokenRepository refreshTokenRepository;   // 제재 시 세션(리프레시 토큰) 무효화용
 
   @Override
   public PageResponse<UserResponse> getUsers(UserSearchRequest request) {
@@ -48,6 +50,10 @@ public class UserManagerServiceImpl implements UserManagerService {
 
     String newStatus = toStatus(request.action());
     userMapper.updateUserStatus(userId, newStatus);
+    // 탈퇴 시 리프레시 토큰 제거 → reissue(재발급) 경로 차단 + 기존 세션 즉시 무효화.
+    if (request.action() == UserAction.DELETE) {
+      refreshTokenRepository.deleteByUserId(userId);
+    }
     userMapper.insertAdminActionLog(request.handlerUserId(), "USER", userId,
         request.action().name(), request.reason());
   }

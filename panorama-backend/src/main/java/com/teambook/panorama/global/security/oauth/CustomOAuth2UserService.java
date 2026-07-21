@@ -3,14 +3,17 @@ package com.teambook.panorama.global.security.oauth;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
+import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.teambook.panorama.domain.user.entity.SocialAccount;
 import com.teambook.panorama.domain.user.entity.User;
+import com.teambook.panorama.domain.user.enums.Status;
 import com.teambook.panorama.domain.user.repository.SocialAccountRepository;
 import com.teambook.panorama.domain.user.repository.UserRepository;
+import com.teambook.panorama.global.exception.ErrorCode;
 import com.teambook.panorama.global.util.NicknameGenerator;
 
 import lombok.RequiredArgsConstructor;
@@ -38,6 +41,15 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                 .findByProviderAndProviderUserId(attributes.getProvider(), attributes.getProviderUserId())
                 .map(SocialAccount::getUser)
                 .orElseGet(() -> createSocialUser(attributes));
+                
+        // 3-1) 탈퇴 계정 차단 (로컬 로그인의 isEnabled 검사와 대칭).
+        // 토큰이 발급되기 전 이 시점에 막아야 SuccessHandler로 넘어가지 않는다.
+        // (신규 생성 유저는 항상 ACTIVE라 통과)
+        if (user.getStatus() == Status.DELETED) {
+                throw new OAuth2AuthenticationException(
+                        new OAuth2Error(ErrorCode.ACCOUNT_DELETED.getCode()),
+                        ErrorCode.ACCOUNT_DELETED.getMessage());
+        }        
 
         // 4) 우리 userId를 담은 principal 반환
         return CustomOAuth2User.of(
