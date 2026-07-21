@@ -1,5 +1,11 @@
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { client } from './client'
+import type { PageResponse } from '@/types/common'
+import type {
+  InquiryDetailResponse,
+  InquiryResponse,
+  InquirySearchRequest,
+} from '@/types/admin'
 
 /** 관리자 문의 관리 화면(CATEGORY_LABEL)과 같은 8개 분류. */
 export const INQUIRY_CATEGORIES: { value: string; label: string }[] = [
@@ -37,8 +43,50 @@ export async function submitInquiry(request: InquirySubmitRequest, images: File[
 }
 
 export function useSubmitInquiry() {
+  const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ request, images }: { request: InquirySubmitRequest; images: File[] }) =>
       submitInquiry(request, images),
+    // 제출 후 "나의 문의" 목록/개수를 최신화한다.
+    onSuccess: () => qc.invalidateQueries({ queryKey: inquiryKeys.all }),
+  })
+}
+
+// ── 내 문의 조회 (문의게시판) ────────────────────────────────────────────────────
+// 응답 형태(InquiryResponse / InquiryDetailResponse)는 관리자 문의 목록과 동일해서
+// types/admin.ts 의 타입을 그대로 재사용한다. 다만 조회 대상은 "내가 쓴 문의" 로 한정된다.
+//
+// ⚠️ 백엔드 필요: 아래 두 GET 엔드포인트(로그인 사용자 본인 문의만 반환)는 아직 없다.
+//    현재 문의 목록/상세 API 는 /api/v1/admin/** 아래 ADMIN 전용뿐이라 일반 사용자는 못 쓴다.
+//    → 백엔드 보고 참고. (POST /api/v1/inquiries 제출은 이미 동작한다)
+export const inquiryKeys = {
+  all: ['inquiries'] as const,
+  list: (params?: InquirySearchRequest) => [...inquiryKeys.all, 'list', params ?? {}] as const,
+  detail: (id: number) => [...inquiryKeys.all, 'detail', id] as const,
+}
+
+/** GET /api/v1/inquiries — 내 문의 목록 (로그인 사용자 본인 문의) */
+export async function getMyInquiries(
+  params: InquirySearchRequest = {},
+): Promise<PageResponse<InquiryResponse>> {
+  const { data } = await client.get<PageResponse<InquiryResponse>>('/inquiries', { params })
+  return data
+}
+
+/** GET /api/v1/inquiries/{id} — 내 문의 상세 (문의 + 답변 목록) */
+export async function getMyInquiry(inquiryId: number): Promise<InquiryDetailResponse> {
+  const { data } = await client.get<InquiryDetailResponse>(`/inquiries/${inquiryId}`)
+  return data
+}
+
+export function useMyInquiries(params: InquirySearchRequest = {}) {
+  return useQuery({ queryKey: inquiryKeys.list(params), queryFn: () => getMyInquiries(params) })
+}
+
+export function useMyInquiry(inquiryId: number | null) {
+  return useQuery({
+    queryKey: inquiryKeys.detail(inquiryId ?? 0),
+    queryFn: () => getMyInquiry(inquiryId as number),
+    enabled: inquiryId != null,
   })
 }

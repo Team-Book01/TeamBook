@@ -25,6 +25,7 @@ import type {
   LibraryListResponse,
   LibraryParams,
   MyBookmarkResponse,
+  MyReviewItem,
   MyReviewResponse,
   Review,
   ReviewListResponse,
@@ -100,6 +101,9 @@ export const bookKeys = {
   myBookmarkCount: () => [...bookKeys.all, 'my', 'bookmarkCount'] as const,
   myReviews: () => [...bookKeys.all, 'my', 'reviews'] as const,
   myReviewCount: () => [...bookKeys.all, 'my', 'reviewCount'] as const,
+  // 도서 상세용 "내 리뷰 단건". 'my' 프리픽스 아래에 둬서 작성/수정/삭제 mutation 의
+  // invalidate([...all,'my']) 에 함께 걸리게 한다.
+  myReview: (isbn: string) => [...bookKeys.all, 'my', 'review', isbn] as const,
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -188,6 +192,18 @@ export async function updateReview(
 /** DELETE /api/v1/reviews/{reviewId} — 리뷰 삭제 (로그인 필요). 성공 시 204 No Content. */
 export async function deleteReview(reviewId: number): Promise<void> {
   await client.delete<void>(`/reviews/${reviewId}`)
+}
+
+/**
+ * GET /api/v1/reviews/myReview?isbn= — 도서 상세용 내 리뷰 단건 (로그인 필요).
+ * 내가 이 책에 남긴 리뷰가 없으면 빈 응답(null) 을 돌려준다.
+ */
+export async function getMyReview(isbn: string): Promise<MyReviewItem | null> {
+  const { data } = await client.get<MyReviewItem | null>('/reviews/myReview', {
+    params: { isbn },
+  })
+  // 리뷰가 없으면 백엔드가 빈 본문(200)/null 을 줄 수 있어, reviewId 유무로 판별한다.
+  return data && data.reviewId ? data : null
 }
 
 /** GET /api/v1/reviews/myReviewList — 내 리뷰 목록 (로그인 필요) */
@@ -325,6 +341,22 @@ export function useBookReviews(isbn: string, page = 1, size = 10) {
     // isbn 이 빈 값/누락(null)이어도 렌더 중 터지지 않도록 방어적으로 체크
     // + isMine 이 비로그인 값으로 굳지 않도록 세션 복원을 기다린다
     enabled: hasIsbn(isbn) && authReady,
+  })
+}
+
+/**
+ * 도서 상세용 내 리뷰 단건.
+ * - 로그인 사용자가 이 책에 남긴 리뷰가 있으면 그 리뷰를, 없으면 null 을 준다.
+ * - 비로그인 사용자는 요청하지 않는다(항상 "내 리뷰 없음" 으로 취급).
+ * - 작성/수정/삭제 mutation 이 [...all,'my'] 를 invalidate 하므로 자동으로 갱신된다.
+ */
+export function useMyReview(isbn: string) {
+  const authReady = useAuthReady()
+  const user = useAuthStore((s) => s.user)
+  return useQuery({
+    queryKey: bookKeys.myReview(isbn),
+    queryFn: () => getMyReview(isbn),
+    enabled: hasIsbn(isbn) && authReady && !!user,
   })
 }
 

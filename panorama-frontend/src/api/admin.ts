@@ -63,8 +63,12 @@ export async function getAdminDashboard(): Promise<DashboardResponse> {
   return data
 }
 
-export function useAdminDashboard() {
-  return useQuery({ queryKey: adminKeys.dashboard(), queryFn: getAdminDashboard })
+export function useAdminDashboard(options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: adminKeys.dashboard(),
+    queryFn: getAdminDashboard,
+    enabled: options?.enabled ?? true,
+  })
 }
 
 // ══ 도서관 데이터 동기화 ═════════════════════════════════════════════════════════

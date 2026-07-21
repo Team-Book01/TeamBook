@@ -3,32 +3,52 @@ import { Heart, TrendingUp } from "lucide-react";
 
 import type { Book } from "../data";
 import { ALL_BOOKS, MORE_BOOKS, POPULAR } from "../data";
+import { MemberCard } from "@/components/common/MemberCard";
 
 // ── ProfileCard ───────────────────────────────────────────────────────────────
 
-export function ProfileCard() {
+export type BookProfileView = "saved" | "rated";
+
+/**
+ * 도서검색 사이드바 회원 카드.
+ * 별명 + 아이디(그 아래) + [저장한 책 / 평가한 책] 카운트. 클릭하면 결과 영역이 전환된다.
+ */
+export function ProfileCard({
+  nickname,
+  handle,
+  savedCount,
+  ratedCount,
+  activeView,
+  onSelect,
+}: {
+  nickname: string;
+  handle?: string;
+  savedCount: number | null;
+  ratedCount: number | null;
+  activeView: BookProfileView | null;
+  onSelect: (view: BookProfileView) => void;
+}) {
   return (
-    <div className="bg-white border border-[#EAEAEA] rounded-2xl overflow-hidden">
-      <div className="px-5 pt-5 pb-5">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-12 h-12 rounded-full flex items-center justify-center text-white text-base font-bold flex-shrink-0" style={{ background: "#2E7D6B" }}>달</div>
-          <div>
-            <p className="text-sm font-bold text-[#1A1A1A] leading-none">달빛독서가</p>
-            <p className="text-xs text-[#aaa] mt-1">열정적인 독서인 · Lv.12</p>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-2 pt-3 border-t border-[#F0F0F0]">
-          <a href="#" className="text-center group py-1">
-            <p className="text-xl font-bold leading-none" style={{ color: "#1E4A38" }}>12</p>
-            <p className="text-xs text-[#aaa] mt-1 group-hover:text-[#2E7D6B] transition-colors">내가 쓴 글</p>
-          </a>
-          <a href="#" className="text-center group py-1">
-            <p className="text-xl font-bold leading-none" style={{ color: "#1E4A38" }}>5</p>
-            <p className="text-xs text-[#aaa] mt-1 group-hover:text-[#2E7D6B] transition-colors">스크랩한 글</p>
-          </a>
-        </div>
-      </div>
-    </div>
+    <MemberCard
+      nickname={nickname}
+      handle={handle}
+      items={[
+        {
+          key: "saved",
+          label: "저장한 책",
+          count: savedCount,
+          active: activeView === "saved",
+          onClick: () => onSelect("saved"),
+        },
+        {
+          key: "rated",
+          label: "평가한 책",
+          count: ratedCount,
+          active: activeView === "rated",
+          onClick: () => onSelect("rated"),
+        },
+      ]}
+    />
   );
 }
 

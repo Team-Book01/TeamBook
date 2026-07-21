@@ -5,6 +5,7 @@ import {
   useBookReviews,
   useCreateReview,
   useDeleteReview,
+  useMyReview,
   useUpdateReview,
 } from "@/api/book";
 import { getErrorMessage } from "@/api/client";
@@ -48,11 +49,15 @@ export function ReviewSection({
   const [page, setPage] = useState(1);
   const { data, isLoading, isError, error } = useBookReviews(isbn, page, PER_PAGE);
 
+  // 내가 이 책에 남긴 리뷰(단건). 있으면 작성 폼 대신 "내 리뷰" 카드를 보여준다.
+  const { data: myReview } = useMyReview(isbn);
+
   const { ensureLoggedIn } = useRequireLogin();
   const createReview = useCreateReview(isbn);
   const updateReview = useUpdateReview(isbn);
   const deleteReview = useDeleteReview(isbn);
 
+  // 목록은 서버가 준 순서 그대로. (내 리뷰를 맨 위로 올리는 처리는 제거)
   const reviews = data?.reviewItems ?? [];
   const total = data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
@@ -75,6 +80,11 @@ export function ReviewSection({
   const [editRating, setEditRating] = useState(0);
   const [editContent, setEditContent] = useState("");
 
+  // ── 내 리뷰 카드 수정 폼 (작성 폼 자리) ──
+  const [myEditing, setMyEditing] = useState(false);
+  const [myEditRating, setMyEditRating] = useState(0);
+  const [myEditContent, setMyEditContent] = useState("");
+
   const pending = createReview.isPending || updateReview.isPending || deleteReview.isPending;
   const mutationError =
     createReview.error ?? updateReview.error ?? deleteReview.error ?? null;
@@ -92,6 +102,28 @@ export function ReviewSection({
         },
       },
     );
+  };
+
+  // 내 리뷰 카드: 수정 시작 / 저장 / 삭제
+  const startMyEdit = () => {
+    if (!myReview) return;
+    setMyEditRating(Number(myReview.rating));
+    setMyEditContent(myReview.content ?? "");
+    setMyEditing(true);
+  };
+
+  const handleMyUpdate = () => {
+    if (!myReview || myEditRating <= 0) return;
+    updateReview.mutate(
+      { reviewId: myReview.reviewId, body: { rating: myEditRating, content: myEditContent.trim() || undefined } },
+      { onSuccess: () => setMyEditing(false) },
+    );
+  };
+
+  const handleMyDelete = () => {
+    if (!myReview) return;
+    if (!window.confirm("이 리뷰를 삭제할까요?")) return;
+    deleteReview.mutate(myReview.reviewId, { onSuccess: () => setMyEditing(false) });
   };
 
   const startEdit = (reviewId: number, rating: number, content: string) => {
@@ -172,45 +204,127 @@ export function ReviewSection({
           </div>
         </div>
 
-        {/* Write review */}
+        {/* 내 리뷰 영역: 이미 남긴 리뷰가 있으면 별점 채워진 카드, 없으면 작성 폼 */}
         <div className="mb-8 pb-8 border-b border-[#F5F5F5]">
-          <p className="text-[13px] font-semibold text-[#1A1A1A] mb-3">내 평가</p>
-          <StarRating value={myRating} onChange={setMyRating} size={32} />
-          {myRating > 0 && (
-            <div className="mt-4">
-              <textarea
-                value={myContent}
-                onChange={(e) => setMyContent(e.target.value.slice(0, MAX_CONTENT))}
-                rows={3}
-                placeholder="이 책에 대한 생각을 남겨주세요. (선택, 최대 500자)"
-                className="w-full resize-none rounded-xl border border-[#EAEAEA] px-4 py-3 text-[13px] text-[#1A1A1A] focus:border-[#2E7D6B] focus:outline-none"
-              />
-              <div className="mt-2 flex items-center justify-between">
-                <span className="text-[11px] text-[#aaa]">
-                  {myContent.length} / {MAX_CONTENT}
-                </span>
-                <div className="flex items-center gap-2">
+          {myReview && !myEditing ? (
+            // ── 내 리뷰 카드 (별점 채워진 상태) ──
+            <>
+              <div className="mb-3 flex items-center justify-between">
+                <p className="text-[13px] font-semibold text-[#1A1A1A]">내 리뷰</p>
+                <div className="flex items-center gap-1">
                   <button
                     type="button"
-                    onClick={() => {
-                      setMyRating(0);
-                      setMyContent("");
-                    }}
-                    className="rounded-lg border border-[#EAEAEA] px-3 py-1.5 text-[12px] text-[#555] hover:bg-[#F9F9F9] transition-colors"
+                    onClick={startMyEdit}
+                    className="flex items-center gap-1 rounded-md px-2 py-1 text-[12px] text-[#777] hover:text-[#2E7D6B] hover:bg-[#F5F5F5] transition-colors"
                   >
-                    취소
+                    <Pencil size={13} /> 수정
                   </button>
                   <button
                     type="button"
-                    onClick={handleCreate}
+                    onClick={handleMyDelete}
                     disabled={pending}
-                    className="rounded-lg bg-[#1E4A38] px-4 py-1.5 text-[12px] font-semibold text-white hover:bg-[#2E7D6B] disabled:opacity-60 transition-colors"
+                    className="flex items-center gap-1 rounded-md px-2 py-1 text-[12px] text-[#777] hover:text-rose-500 hover:bg-[#FFF0F0] disabled:opacity-40 transition-colors"
                   >
-                    {createReview.isPending ? "등록 중…" : "등록"}
+                    <Trash2 size={13} /> 삭제
                   </button>
                 </div>
               </div>
-            </div>
+              <div className="rounded-xl border border-[#EAEAEA] bg-[#FAFBFB] p-4">
+                <div className="mb-2 flex items-center gap-2">
+                  <StarRating value={Number(myReview.rating)} readOnly size={18} />
+                  <span className="text-[13px] font-bold text-[#1E4A38]">
+                    {Number(myReview.rating).toFixed(1)}
+                  </span>
+                  <span className="text-[11px] text-[#aaa]">{formatDate(myReview.createdAt)}</span>
+                </div>
+                {myReview.content ? (
+                  <p className="text-[13px] text-[#555] leading-relaxed whitespace-pre-wrap">
+                    {myReview.content}
+                  </p>
+                ) : (
+                  <p className="text-[13px] text-[#bbb]">남긴 코멘트가 없습니다.</p>
+                )}
+              </div>
+            </>
+          ) : myReview && myEditing ? (
+            // ── 내 리뷰 수정 폼 ──
+            <>
+              <p className="text-[13px] font-semibold text-[#1A1A1A] mb-3">내 리뷰 수정</p>
+              <StarRating value={myEditRating} onChange={setMyEditRating} size={32} />
+              <div className="mt-4">
+                <textarea
+                  value={myEditContent}
+                  onChange={(e) => setMyEditContent(e.target.value.slice(0, MAX_CONTENT))}
+                  rows={3}
+                  placeholder="이 책에 대한 생각을 남겨주세요. (선택, 최대 500자)"
+                  className="w-full resize-none rounded-xl border border-[#EAEAEA] px-4 py-3 text-[13px] text-[#1A1A1A] focus:border-[#2E7D6B] focus:outline-none"
+                />
+                <div className="mt-2 flex items-center justify-between">
+                  <span className="text-[11px] text-[#aaa]">
+                    {myEditContent.length} / {MAX_CONTENT}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setMyEditing(false)}
+                      className="rounded-lg border border-[#EAEAEA] px-3 py-1.5 text-[12px] text-[#555] hover:bg-[#F9F9F9] transition-colors"
+                    >
+                      취소
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleMyUpdate}
+                      disabled={pending || myEditRating <= 0}
+                      className="rounded-lg bg-[#1E4A38] px-4 py-1.5 text-[12px] font-semibold text-white hover:bg-[#2E7D6B] disabled:opacity-60 transition-colors"
+                    >
+                      {updateReview.isPending ? "저장 중…" : "저장"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            // ── 작성 폼 (내 리뷰 없음) ──
+            <>
+              <p className="text-[13px] font-semibold text-[#1A1A1A] mb-3">내 평가</p>
+              <StarRating value={myRating} onChange={setMyRating} size={32} />
+              {myRating > 0 && (
+                <div className="mt-4">
+                  <textarea
+                    value={myContent}
+                    onChange={(e) => setMyContent(e.target.value.slice(0, MAX_CONTENT))}
+                    rows={3}
+                    placeholder="이 책에 대한 생각을 남겨주세요. (선택, 최대 500자)"
+                    className="w-full resize-none rounded-xl border border-[#EAEAEA] px-4 py-3 text-[13px] text-[#1A1A1A] focus:border-[#2E7D6B] focus:outline-none"
+                  />
+                  <div className="mt-2 flex items-center justify-between">
+                    <span className="text-[11px] text-[#aaa]">
+                      {myContent.length} / {MAX_CONTENT}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMyRating(0);
+                          setMyContent("");
+                        }}
+                        className="rounded-lg border border-[#EAEAEA] px-3 py-1.5 text-[12px] text-[#555] hover:bg-[#F9F9F9] transition-colors"
+                      >
+                        취소
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleCreate}
+                        disabled={pending}
+                        className="rounded-lg bg-[#1E4A38] px-4 py-1.5 text-[12px] font-semibold text-white hover:bg-[#2E7D6B] disabled:opacity-60 transition-colors"
+                      >
+                        {createReview.isPending ? "등록 중…" : "등록"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
           )}
           {mutationError && (
             <p className="mt-3 text-[12px] text-rose-500">
