@@ -336,6 +336,7 @@ function CommentBody({
   commentId,
   content,
   isMine,
+  canManage = true,
   mentionNickname,
   onDeleted,
 }: {
@@ -343,6 +344,8 @@ function CommentBody({
   commentId: number
   content: string
   isMine: boolean
+  /** 수정·삭제 가능 여부. 삭제/숨김(ACTIVE 아님) 댓글은 false 로 내려 버튼을 감춘다. */
+  canManage?: boolean
   /** 답글 대상 닉네임 뱃지 (서버 도출 mentionNickname, null 이면 미표시) */
   mentionNickname?: string | null
   onDeleted?: () => void
@@ -418,7 +421,7 @@ function CommentBody({
         )}
         {content}
       </p>
-      {isMine && (
+      {isMine && canManage && (
         <div className="flex items-center gap-3 mt-2">
           <button
             onClick={() => setEditing(true)}
@@ -466,17 +469,21 @@ function ReplyItem({
             commentId={reply.commentId}
             content={reply.content}
             isMine={myNickname != null && reply.nickname === myNickname}
+            canManage={reply.status === 'ACTIVE'}
             mentionNickname={reply.mentionNickname}
           />
-          <div className="flex items-center gap-4 mt-2">
-            <button
-              onClick={() => setShowReply(!showReply)}
-              className="flex items-center gap-1 text-xs text-[#888] cursor-pointer"
-            >
-              <MessageCircle size={11} color="#AAAAAA" />
-              답글 달기
-            </button>
-          </div>
+          {/* 삭제/숨김 댓글은 대댓글 작성이 막혀 있어(백엔드에서도 차단) 답글 버튼을 감춘다. */}
+          {reply.status === 'ACTIVE' && (
+            <div className="flex items-center gap-4 mt-2">
+              <button
+                onClick={() => setShowReply(!showReply)}
+                className="flex items-center gap-1 text-xs text-[#888] cursor-pointer"
+              >
+                <MessageCircle size={11} color="#AAAAAA" />
+                답글 달기
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -524,16 +531,20 @@ function CommentItem({
             commentId={comment.commentId}
             content={comment.content}
             isMine={myNickname != null && comment.nickname === myNickname}
+            canManage={comment.status === 'ACTIVE'}
           />
-          <div className="flex items-center gap-4 mt-3">
-            <button
-              onClick={() => setShowReply(!showReply)}
-              className="flex items-center gap-1 text-[13px] text-[#888] cursor-pointer"
-            >
-              <MessageCircle size={13} color="#AAAAAA" />
-              답글 달기
-            </button>
-          </div>
+          {/* 삭제/숨김 댓글은 대댓글 작성이 막혀 있어(백엔드에서도 차단) 답글 버튼을 감춘다. */}
+          {comment.status === 'ACTIVE' && (
+            <div className="flex items-center gap-4 mt-3">
+              <button
+                onClick={() => setShowReply(!showReply)}
+                className="flex items-center gap-1 text-[13px] text-[#888] cursor-pointer"
+              >
+                <MessageCircle size={13} color="#AAAAAA" />
+                답글 달기
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

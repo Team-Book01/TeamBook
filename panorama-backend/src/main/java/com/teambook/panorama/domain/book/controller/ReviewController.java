@@ -82,7 +82,7 @@ public class ReviewController {
   //내 리뷰 단건 조회
   @Operation(summary = "도서 상세페이지용 내 리뷰 단 건 조회")
   @GetMapping("/myReview")
-  public ResponseEntity<MyReviewItem> getMyReview(@AuthenticationPrincipal Long userId, @RequestParam(value = "isbn") String isbn) {
+  public ResponseEntity<ReviewItem> getMyReview(@AuthenticationPrincipal Long userId, @RequestParam(value = "isbn") String isbn) {
     return ResponseEntity.ok(reviewService.findMyReveiw(userId, isbn));
   }
 

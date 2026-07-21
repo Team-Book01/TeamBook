@@ -80,12 +80,14 @@ public class PostCommentServiceImpl implements PostCommentService {
     for (PostComment reply : replies) {
       box.computeIfAbsent(reply.getParent().getCommentId(), k -> new ArrayList<>()).add(new PostCommentReplyResponseDto(
           reply.getCommentId(), reply.getUser().getNickname(), maskComment(reply), reply.getCreatedAt(),
-          reply.getMentionUser() != null ? reply.getMentionUser().getNickname() : null));
+          reply.getMentionUser() != null ? reply.getMentionUser().getNickname() : null,
+          reply.getStatus().name()));
     }
 
     // slice(루트 댓글 목록)를 루트 DTO로 변환하고, 루트가 box에서 답글 꺼내서 붙이기
     return slice.map(rootComment -> new PostCommentListResponseDto(rootComment.getCommentId(),
         rootComment.getUser().getNickname(), maskComment(rootComment), rootComment.getCreatedAt(),
+        rootComment.getStatus().name(),
         box.getOrDefault(rootComment.getCommentId(), new ArrayList<>())));
   }
 

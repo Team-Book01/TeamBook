@@ -75,15 +75,10 @@ export function ReviewSection({
   const [myRating, setMyRating] = useState(0);
   const [myContent, setMyContent] = useState("");
 
-  // ── 수정 폼 (인라인) ──
-  const [editingId, setEditingId] = useState<number | null>(null);
+  // ── 내 리뷰 카드 수정 폼 (수정/삭제는 이 카드에서만 처리) ──
+  const [cardEditing, setCardEditing] = useState(false);
   const [editRating, setEditRating] = useState(0);
   const [editContent, setEditContent] = useState("");
-
-  // ── 내 리뷰 카드 수정 폼 (작성 폼 자리) ──
-  const [myEditing, setMyEditing] = useState(false);
-  const [myEditRating, setMyEditRating] = useState(0);
-  const [myEditContent, setMyEditContent] = useState("");
 
   const pending = createReview.isPending || updateReview.isPending || deleteReview.isPending;
   const mutationError =
@@ -104,53 +99,26 @@ export function ReviewSection({
     );
   };
 
-  // 내 리뷰 카드: 수정 시작 / 저장 / 삭제
-  const startMyEdit = () => {
+  // 내 리뷰 카드: 수정 시작 / 저장 / 삭제 (단건 조회의 reviewId 사용)
+  const startCardEdit = () => {
     if (!myReview) return;
-    setMyEditRating(Number(myReview.rating));
-    setMyEditContent(myReview.content ?? "");
-    setMyEditing(true);
+    setEditRating(Number(myReview.rating));
+    setEditContent(myReview.content ?? "");
+    setCardEditing(true);
   };
 
-  const handleMyUpdate = () => {
-    if (!myReview || myEditRating <= 0) return;
+  const handleCardUpdate = () => {
+    if (!myReview || editRating <= 0) return;
     updateReview.mutate(
-      { reviewId: myReview.reviewId, body: { rating: myEditRating, content: myEditContent.trim() || undefined } },
-      { onSuccess: () => setMyEditing(false) },
+      { reviewId: myReview.reviewId, body: { rating: editRating, content: editContent.trim() || undefined } },
+      { onSuccess: () => setCardEditing(false) },
     );
   };
 
-  const handleMyDelete = () => {
+  const handleCardDelete = () => {
     if (!myReview) return;
     if (!window.confirm("이 리뷰를 삭제할까요?")) return;
-    deleteReview.mutate(myReview.reviewId, { onSuccess: () => setMyEditing(false) });
-  };
-
-  const startEdit = (reviewId: number, rating: number, content: string) => {
-    if (!ensureLoggedIn()) return;
-    setEditingId(reviewId);
-    setEditRating(rating);
-    setEditContent(content ?? "");
-  };
-
-  const handleUpdate = () => {
-    if (editingId === null || editRating <= 0) return;
-    updateReview.mutate(
-      { reviewId: editingId, body: { rating: editRating, content: editContent.trim() || undefined } },
-      { onSuccess: () => setEditingId(null) },
-    );
-  };
-
-  const handleDelete = (reviewId: number) => {
-    if (!ensureLoggedIn()) return;
-    if (!window.confirm("이 리뷰를 삭제할까요?")) return;
-    deleteReview.mutate(reviewId, {
-      onSuccess: () => {
-        if (editingId === reviewId) setEditingId(null);
-        // 마지막 항목을 지워 현재 페이지가 비면 이전 페이지로
-        if (reviews.length === 1 && page > 1) setPage((p) => p - 1);
-      },
-    });
+    deleteReview.mutate(myReview.reviewId, { onSuccess: () => setCardEditing(false) });
   };
 
   return (
@@ -204,24 +172,61 @@ export function ReviewSection({
           </div>
         </div>
 
-        {/* 내 리뷰 영역: 이미 남긴 리뷰가 있으면 별점 채워진 카드, 없으면 작성 폼 */}
+        {/* 내 리뷰 영역: 이미 남긴 리뷰가 있으면 별점 채워진 카드(수정/삭제는 여기서만), 없으면 작성 폼. */}
         <div className="mb-8 pb-8 border-b border-[#F5F5F5]">
-          {myReview && !myEditing ? (
-            // ── 내 리뷰 카드 (별점 채워진 상태) ──
+          {myReview && cardEditing ? (
+            // ── 내 리뷰 수정 폼 ──
+            <>
+              <p className="text-[13px] font-semibold text-[#1A1A1A] mb-3">내 리뷰 수정</p>
+              <StarRating value={editRating} onChange={setEditRating} size={32} />
+              <div className="mt-4">
+                <textarea
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value.slice(0, MAX_CONTENT))}
+                  rows={3}
+                  placeholder="이 책에 대한 생각을 남겨주세요. (선택, 최대 500자)"
+                  className="w-full resize-none rounded-xl border border-[#EAEAEA] px-4 py-3 text-[13px] text-[#1A1A1A] focus:border-[#2E7D6B] focus:outline-none"
+                />
+                <div className="mt-2 flex items-center justify-between">
+                  <span className="text-[11px] text-[#aaa]">
+                    {editContent.length} / {MAX_CONTENT}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setCardEditing(false)}
+                      className="rounded-lg border border-[#EAEAEA] px-3 py-1.5 text-[12px] text-[#555] hover:bg-[#F9F9F9] transition-colors"
+                    >
+                      취소
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCardUpdate}
+                      disabled={pending || editRating <= 0}
+                      className="rounded-lg bg-[#1E4A38] px-4 py-1.5 text-[12px] font-semibold text-white hover:bg-[#2E7D6B] disabled:opacity-60 transition-colors"
+                    >
+                      {updateReview.isPending ? "저장 중…" : "저장"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : myReview ? (
+            // ── 내 리뷰 카드 (별점 채워진 상태 + 수정/삭제) ──
             <>
               <div className="mb-3 flex items-center justify-between">
                 <p className="text-[13px] font-semibold text-[#1A1A1A]">내 리뷰</p>
                 <div className="flex items-center gap-1">
                   <button
                     type="button"
-                    onClick={startMyEdit}
+                    onClick={startCardEdit}
                     className="flex items-center gap-1 rounded-md px-2 py-1 text-[12px] text-[#777] hover:text-[#2E7D6B] hover:bg-[#F5F5F5] transition-colors"
                   >
                     <Pencil size={13} /> 수정
                   </button>
                   <button
                     type="button"
-                    onClick={handleMyDelete}
+                    onClick={handleCardDelete}
                     disabled={pending}
                     className="flex items-center gap-1 rounded-md px-2 py-1 text-[12px] text-[#777] hover:text-rose-500 hover:bg-[#FFF0F0] disabled:opacity-40 transition-colors"
                   >
@@ -244,43 +249,6 @@ export function ReviewSection({
                 ) : (
                   <p className="text-[13px] text-[#bbb]">남긴 코멘트가 없습니다.</p>
                 )}
-              </div>
-            </>
-          ) : myReview && myEditing ? (
-            // ── 내 리뷰 수정 폼 ──
-            <>
-              <p className="text-[13px] font-semibold text-[#1A1A1A] mb-3">내 리뷰 수정</p>
-              <StarRating value={myEditRating} onChange={setMyEditRating} size={32} />
-              <div className="mt-4">
-                <textarea
-                  value={myEditContent}
-                  onChange={(e) => setMyEditContent(e.target.value.slice(0, MAX_CONTENT))}
-                  rows={3}
-                  placeholder="이 책에 대한 생각을 남겨주세요. (선택, 최대 500자)"
-                  className="w-full resize-none rounded-xl border border-[#EAEAEA] px-4 py-3 text-[13px] text-[#1A1A1A] focus:border-[#2E7D6B] focus:outline-none"
-                />
-                <div className="mt-2 flex items-center justify-between">
-                  <span className="text-[11px] text-[#aaa]">
-                    {myEditContent.length} / {MAX_CONTENT}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setMyEditing(false)}
-                      className="rounded-lg border border-[#EAEAEA] px-3 py-1.5 text-[12px] text-[#555] hover:bg-[#F9F9F9] transition-colors"
-                    >
-                      취소
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleMyUpdate}
-                      disabled={pending || myEditRating <= 0}
-                      className="rounded-lg bg-[#1E4A38] px-4 py-1.5 text-[12px] font-semibold text-white hover:bg-[#2E7D6B] disabled:opacity-60 transition-colors"
-                    >
-                      {updateReview.isPending ? "저장 중…" : "저장"}
-                    </button>
-                  </div>
-                </div>
               </div>
             </>
           ) : (
@@ -365,64 +333,10 @@ export function ReviewSection({
                     )}
                     <StarRating value={r.rating} readOnly size={11} />
                     <span className="text-[11px] text-[#aaa]">{formatDate(r.createdAt)}</span>
-                    {r.isMine && editingId !== r.reviewId && (
-                      <div className="flex items-center gap-0.5 ml-auto flex-shrink-0">
-                        <button
-                          type="button"
-                          title="수정"
-                          onClick={() => startEdit(r.reviewId, r.rating, r.content)}
-                          className="p-1 rounded-md text-[#bbb] hover:text-[#2E7D6B] hover:bg-[#F5F5F5] transition-colors"
-                        >
-                          <Pencil size={13} />
-                        </button>
-                        <button
-                          type="button"
-                          title="삭제"
-                          onClick={() => handleDelete(r.reviewId)}
-                          disabled={pending}
-                          className="p-1 rounded-md text-[#bbb] hover:text-rose-400 hover:bg-[#FFF0F0] disabled:opacity-40 transition-colors"
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      </div>
-                    )}
                   </div>
 
-                  {editingId === r.reviewId ? (
-                    <div className="mt-2">
-                      <StarRating value={editRating} onChange={setEditRating} size={20} />
-                      <textarea
-                        value={editContent}
-                        onChange={(e) => setEditContent(e.target.value.slice(0, MAX_CONTENT))}
-                        rows={3}
-                        className="mt-2 w-full resize-none rounded-xl border border-[#EAEAEA] px-3 py-2 text-[13px] text-[#1A1A1A] focus:border-[#2E7D6B] focus:outline-none"
-                      />
-                      <div className="mt-2 flex items-center justify-between">
-                        <span className="text-[11px] text-[#aaa]">
-                          {editContent.length} / {MAX_CONTENT}
-                        </span>
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setEditingId(null)}
-                            className="rounded-lg border border-[#EAEAEA] px-3 py-1.5 text-[12px] text-[#555] hover:bg-[#F9F9F9] transition-colors"
-                          >
-                            취소
-                          </button>
-                          <button
-                            type="button"
-                            onClick={handleUpdate}
-                            disabled={pending || editRating <= 0}
-                            className="rounded-lg bg-[#1E4A38] px-4 py-1.5 text-[12px] font-semibold text-white hover:bg-[#2E7D6B] disabled:opacity-60 transition-colors"
-                          >
-                            {updateReview.isPending ? "저장 중…" : "저장"}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-[13px] text-[#555] leading-relaxed">{r.content}</p>
-                  )}
+                  {/* 목록은 읽기 전용. 내 리뷰 수정/삭제는 상단 "내 리뷰" 카드에서만 처리한다. */}
+                  <p className="text-[13px] text-[#555] leading-relaxed">{r.content}</p>
                 </div>
               </div>
             ))}

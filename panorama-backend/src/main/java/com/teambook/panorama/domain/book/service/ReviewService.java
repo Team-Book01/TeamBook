@@ -24,6 +24,7 @@ import com.teambook.panorama.domain.book.entity.ReviewStatus;
 import com.teambook.panorama.domain.book.mapper.ReviewMapper;
 import com.teambook.panorama.domain.book.repository.BookRepository;
 import com.teambook.panorama.domain.book.repository.ReviewRepository;
+import com.teambook.panorama.domain.user.entity.User;
 import com.teambook.panorama.domain.user.repository.UserRepository;
 import com.teambook.panorama.global.exception.BusinessException;
 import com.teambook.panorama.global.exception.ErrorCode;
@@ -168,14 +169,13 @@ public class ReviewService {
   }
 
   // 해당 도서 내 리뷰 갖고오기
-  public MyReviewItem findMyReveiw(Long userId, String isbn) {
+  public ReviewItem findMyReveiw(Long userId, String isbn) {
     Book book = bookRepository.findByIsbn(isbn).orElseThrow(() -> new BusinessException(ErrorCode.BOOK_NOT_FOUND));
     BookReview foundBookReview = reviewRepository
         .findByBook_BookIdAndUserIdAndStatus(book.getBookId(), userId, ReviewStatus.ACTIVE)
         .orElseThrow(() -> new BusinessException(ErrorCode.REVIEW_NOT_FOUND));
-    return new MyReviewItem(book.getBookId(), foundBookReview.getBook().getIsbn(), foundBookReview.getBook().getTitle(),
-        foundBookReview.getBook().getImageUrl(), foundBookReview.getRating(), foundBookReview.getCreatedAt(),
-        foundBookReview.getContent());
+    User user = userRepository.findById(userId).orElseThrow(()-> new BusinessException(ErrorCode.USER_NOT_FOUND));
+    return new ReviewItem(foundBookReview.getReviewId(), user.getNickname(), foundBookReview.getRating(), foundBookReview.getContent(), foundBookReview.getCreatedAt(), true);
   }
 
   // 별점 분포 0으로 초기화해서 생성
