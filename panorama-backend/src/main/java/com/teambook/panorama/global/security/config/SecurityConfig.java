@@ -91,13 +91,17 @@ public class SecurityConfig {
                                 // 공지 목록/상세도 같은 이유로 GET 만 공개. 컨트롤러(NoticeReadController)가
                                 // 이미 ACTIVE 만 반환하지만, 인가 규칙도 GET 이외 메서드가 여기 붙는 걸 막는다.
                                 .requestMatchers(HttpMethod.GET, "/api/v1/notices", "/api/v1/notices/**").permitAll()
+                                // 홈 커뮤니티 현황(오늘 방문/게시글 수)은 비로그인도 보는 공개 통계 → GET 만 공개.
+                                .requestMatchers(HttpMethod.GET, "/api/v1/stats/**").permitAll()
                                 .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                                 .requestMatchers(HttpMethod.GET, "/api/v1/books/**").permitAll()
-                                // 마이페이지 조회는 인증 필요. 아래 /reviews/** permitAll 보다 먼저 와야 한다.
+                                // 마이페이지·도서 상세용 내 리뷰 조회는 인증 필요(userId 기반).
+                                // 아래 /reviews/** permitAll 보다 먼저 와야 한다.
                                 // (Spring Security 는 먼저 매칭된 규칙이 적용되므로 순서를 바꾸면 뚫린다)
                                 .requestMatchers(HttpMethod.GET,
                                                 "/api/v1/reviews/myReviewList",
-                                                "/api/v1/reviews/myReviewCount").authenticated()
+                                                "/api/v1/reviews/myReviewCount",
+                                                "/api/v1/reviews/myReview").authenticated()
                                 // 리뷰 목록 조회는 공개(도서 상세와 동일). 작성/수정/삭제는 인증 필요.
                                 .requestMatchers(HttpMethod.GET, "/api/v1/reviews/**").permitAll()
                                 // 소장 도서관 조회는 도서 상세에 딸린 공개 정보(비로그인도 조회 가능).

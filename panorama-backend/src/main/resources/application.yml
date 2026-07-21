@@ -64,5 +64,5 @@ data4library:
 
 vision:
   api:
-    key: ${VISION_API_KEY:}
+    key: ${VISION_API_KEY}
 
