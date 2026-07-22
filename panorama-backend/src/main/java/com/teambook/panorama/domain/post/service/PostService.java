@@ -18,6 +18,9 @@ public interface PostService {
 
   Slice<PostSummaryResponseDto> findActivePosts(PostCategory category, String isbn, Pageable pageable);
 
+  /** 특정 책(isbn)으로 작성된 ACTIVE 게시글 수 (도서 상세 "게시글 수" 용, DB 조회). */
+  long countActivePostsByIsbn(String isbn);
+
   PostResponseDto updatePost(Long postId, Long userId, PostRequestDto request);
 
   void deletePost(Long postId, Long userId);

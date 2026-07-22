@@ -342,7 +342,9 @@ export function useBook(isbn: string) {
     queryFn: () => getBook(isbn),
     // 세션 복원 전에는 대기 (useAuthReady 주석 참고)
     enabled: hasIsbn(isbn) && authReady,
-    initialData: cached?.data,
+    // 검색 캐시 항목은 BookItem 이지만 BookDetail 로 그대로 쓸 수 있다(postCount 만 optional 로 더 있음).
+    // 캐스팅하지 않으면 react-query 가 데이터 타입을 BookItem 으로 좁혀 postCount 접근이 막힌다.
+    initialData: cached?.data as BookDetail | undefined,
     initialDataUpdatedAt: cached?.updatedAt,
   })
 }

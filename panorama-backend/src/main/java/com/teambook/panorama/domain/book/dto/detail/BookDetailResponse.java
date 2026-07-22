@@ -23,6 +23,6 @@ public record BookDetailResponse(
   boolean isBookmarked
 ) {
   public static BookDetailResponse of(BookSearchItem item) {
-   return new BookDetailResponse(item.isbn(), item.title(), item.author(), item.publisher(), item.pubdate(), item.image(), item.link(), item.discount(), item.description(), item.avgRating(), item.reviewCount(), item.bookmarkCount(), 0, item.isBookmarked()); 
+   return new BookDetailResponse(item.isbn(), item.title(), item.author(), item.publisher(), item.pubdate(), item.image(), item.link(), item.discount(), item.description(), item.avgRating(), item.reviewCount(), item.bookmarkCount(), item.postCount(), item.isBookmarked()); 
   }
 }

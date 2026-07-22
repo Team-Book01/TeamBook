@@ -86,10 +86,11 @@ export function toApiImageUrl(imageUrl: string): string {
 export const communityKeys = {
   all: ['community'] as const,
   lists: () => [...communityKeys.all, 'list'] as const,
-  // category 를 키에 포함해야 탭마다 캐시·페이지 커서가 분리된다 (없으면 전체 탭 커서를 공유)
-  list: (size: number, category?: PostCategory) =>
-    [...communityKeys.lists(), { size, category: category ?? null }] as const,
+  // category·isbn 를 키에 포함해야 탭/책 필터마다 캐시·페이지 커서가 분리된다
+  list: (size: number, category?: PostCategory, isbn?: string) =>
+    [...communityKeys.lists(), { size, category: category ?? null, isbn: isbn ?? null }] as const,
   popular: (size: number) => [...communityKeys.all, 'popular', { size }] as const,
+  postCount: (isbn: string) => [...communityKeys.all, 'postCount', isbn] as const,
   details: (postId: number) => [...communityKeys.all, 'detail', postId] as const,
   detail: (postId: number, viewerId: ViewerId) =>
     [...communityKeys.details(postId), viewerId] as const,
@@ -135,9 +136,10 @@ export async function getPosts(
   page = 0,
   size = POST_PAGE_SIZE,
   category?: PostCategory,
+  isbn?: string,
 ): Promise<SliceResponse<PostSummary>> {
   const { data } = await client.get<SliceResponse<PostSummary>>('/posts', {
-    params: { page, size, ...(category ? { category } : {}) },
+    params: { page, size, ...(category ? { category } : {}), ...(isbn ? { isbn } : {}) },
   })
   return data
 }
@@ -295,11 +297,11 @@ function nextSliceParam<T>(lastPage: SliceResponse<T>, allPages: SliceResponse<T
   return lastPage.hasNext ? allPages.length : undefined
 }
 
-/** 게시글 목록 (무한 스크롤). category 미지정 = 전체 탭. 목록 조회는 공개(비로그인 열람 가능). */
-export function usePosts(size = POST_PAGE_SIZE, category?: PostCategory) {
+/** 게시글 목록 (무한 스크롤). category 미지정 = 전체 탭. isbn 지정 = 그 책 관련 글만. 공개 조회. */
+export function usePosts(size = POST_PAGE_SIZE, category?: PostCategory, isbn?: string) {
   return useInfiniteQuery({
-    queryKey: communityKeys.list(size, category),
-    queryFn: ({ pageParam }) => getPosts(pageParam, size, category),
+    queryKey: communityKeys.list(size, category, isbn),
+    queryFn: ({ pageParam }) => getPosts(pageParam, size, category, isbn),
     initialPageParam: 0,
     getNextPageParam: nextSliceParam,
   })
@@ -312,6 +314,21 @@ export function usePopularPosts(size = POST_PAGE_SIZE) {
     queryFn: ({ pageParam }) => getPopularPosts(pageParam, size),
     initialPageParam: 0,
     getNextPageParam: nextSliceParam,
+  })
+}
+
+/** GET /api/v1/posts/count?isbn= — 이 책 게시글 수. DB 조회라 네이버 상세 응답과 무관하게 빠르다. */
+export async function getBookPostCount(isbn: string): Promise<number> {
+  const { data } = await client.get<number>('/posts/count', { params: { isbn } })
+  return data
+}
+
+/** 도서 상세의 "게시글 수" 전용 조회(공개). 글 작성/수정/삭제 시 무효화되어 즉시 반영된다. */
+export function useBookPostCount(isbn: string) {
+  return useQuery({
+    queryKey: communityKeys.postCount(isbn),
+    queryFn: () => getBookPostCount(isbn),
+    enabled: !!isbn,
   })
 }
 
@@ -392,6 +409,8 @@ export function useCreatePost() {
       queryClient.invalidateQueries({ queryKey: communityKeys.lists() })
       queryClient.invalidateQueries({ queryKey: [...communityKeys.all, 'popular'] })
       queryClient.invalidateQueries({ queryKey: [...communityKeys.all, 'myStats'] })
+      // 책 첨부/해제로 도서별 게시글 수가 바뀌므로 모든 책의 postCount 를 갱신
+      queryClient.invalidateQueries({ queryKey: [...communityKeys.all, 'postCount'] })
     },
   })
 }
@@ -406,6 +425,8 @@ export function useUpdatePost(postId: number) {
       queryClient.invalidateQueries({ queryKey: communityKeys.details(postId) })
       queryClient.invalidateQueries({ queryKey: communityKeys.lists() })
       queryClient.invalidateQueries({ queryKey: [...communityKeys.all, 'popular'] })
+      // 첨부 책이 바뀌거나 해제되면 도서별 게시글 수가 변한다(예: 해제 시 -1)
+      queryClient.invalidateQueries({ queryKey: [...communityKeys.all, 'postCount'] })
     },
   })
 }
@@ -420,6 +441,8 @@ export function useDeletePost() {
       queryClient.invalidateQueries({ queryKey: communityKeys.lists() })
       queryClient.invalidateQueries({ queryKey: [...communityKeys.all, 'popular'] })
       queryClient.invalidateQueries({ queryKey: [...communityKeys.all, 'myStats'] })
+      // 삭제되면 그 글이 참조하던 책의 게시글 수가 -1 된다
+      queryClient.invalidateQueries({ queryKey: [...communityKeys.all, 'postCount'] })
     },
   })
 }

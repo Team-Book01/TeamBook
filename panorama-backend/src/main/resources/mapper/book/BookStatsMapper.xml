@@ -7,6 +7,7 @@
 <select id="selectBookStatsByIsbns" resultType="BookStatsDto">
  SELECT b.isbn AS isbn, (SELECT count(*) FROM bookmarks WHERE book_id = b.book_id) AS bookmarkCount,
  (SELECT count(*) FROM book_reviews WHERE book_id = b.book_id AND status = 'ACTIVE') AS reviewCount,
+ (SELECT count(*) FROM posts WHERE book_id = b.book_id AND status = 'ACTIVE') AS postCount,
  (SELECT AVG(rating) FROM book_reviews WHERE book_id = b.book_id AND status = 'ACTIVE') AS avgRating
  FROM books b
  WHERE b.isbn IN <foreach item="isbn" collection="isbns" open="(" separator="," close=")">#{isbn}</foreach>

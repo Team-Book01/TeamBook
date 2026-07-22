@@ -86,4 +86,10 @@ public class PostController {
     Slice<PostSummaryResponseDto> posts = postService.findPopularPosts(pageable);
     return ResponseEntity.ok(SliceResponse.of(posts));
   }
+
+  // 도서 상세의 "게시글 수" 를 DB 만으로 빠르게 조회한다(네이버 상세 응답 대기 없이 별도 표시).
+  @GetMapping("/count")
+  public ResponseEntity<Long> countByBook(@RequestParam("isbn") String isbn) {
+    return ResponseEntity.ok(postService.countActivePostsByIsbn(isbn));
+  }
 }
