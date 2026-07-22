@@ -14,6 +14,7 @@ public record BookDetailResponse(
   String image,
   //shop_url
   String link,
+  String discount,
   String description,
   BigDecimal avgRating,
   int reviewCount,
@@ -22,6 +23,6 @@ public record BookDetailResponse(
   boolean isBookmarked
 ) {
   public static BookDetailResponse of(BookSearchItem item) {
-   return new BookDetailResponse(item.isbn(), item.title(), item.author(), item.publisher(), item.pubdate(), item.image(), item.link(), item.description(), item.avgRating(), item.reviewCount(), item.bookmarkCount(), 0, item.isBookmarked()); 
+   return new BookDetailResponse(item.isbn(), item.title(), item.author(), item.publisher(), item.pubdate(), item.image(), item.link(), item.discount(), item.description(), item.avgRating(), item.reviewCount(), item.bookmarkCount(), 0, item.isBookmarked()); 
   }
 }

@@ -41,17 +41,18 @@ export interface QuickLink {
   to: string
 }
 
-export type TabKey = '전체' | '책추천' | '독후감' | '자유게시판'
+export type TabKey = '전체' | '인기' | '책추천' | '독후감' | '자유게시판'
 
-/** 홈 인기글 탭 → 커뮤니티 카테고리(enum). '전체'는 카테고리 없음(인기글 전체). */
+/** 홈 게시판 탭 → 커뮤니티 카테고리(enum). '전체'·'인기'는 카테고리 없음. */
 export const TAB_TO_CATEGORY: Record<TabKey, PostCategory | undefined> = {
   전체: undefined,
+  인기: undefined,
   책추천: 'RECOMMEND',
   독후감: 'REVIEW',
   자유게시판: 'FREE',
 }
 
-export const HOME_TABS: TabKey[] = ['전체', '책추천', '독후감', '자유게시판']
+export const HOME_TABS: TabKey[] = ['전체', '인기', '책추천', '독후감', '자유게시판']
 
 export const POPULAR_BOOKS: Book[] = [
   { id: 1, title: '파친코', author: '이민진', cover: 'https://images.unsplash.com/photo-1555252586-d77e8c828e41?w=180&h=260&fit=crop&auto=format', rating: 4.8, category: '소설' },

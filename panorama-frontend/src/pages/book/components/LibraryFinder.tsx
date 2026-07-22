@@ -277,7 +277,14 @@ export function LibraryFinder({ isbn }: { isbn: string }) {
                 >
                   <ChevronLeft size={14} />
                 </button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
+                {(() => {
+                  // 페이지가 많아도 현재 페이지 주변 최대 5개만 노출(현재가 가운데로 이동, 양끝에선 붙음)
+                  const WINDOW = 5;
+                  let start = Math.max(1, page - Math.floor(WINDOW / 2));
+                  const end = Math.min(totalPages, start + WINDOW - 1);
+                  start = Math.max(1, end - WINDOW + 1);
+                  return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+                })().map((n) => (
                   <button
                     key={n}
                     onClick={() => setPage(n)}

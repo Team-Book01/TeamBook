@@ -54,16 +54,16 @@ export default function CommunitySidebar() {
         ]}
       />
 
-      {/* Hot posts (인기글 API 상위 5건) */}
-      <div className="bg-white border border-[#EAEAEA] rounded-2xl p-5">
+      {/* Hot posts (인기글 API 상위 5건). @container + cqi 로 카드 폭에 맞춰 글씨 유동 스케일. */}
+      <div className="@container bg-white border border-[#EAEAEA] rounded-2xl p-5">
         <div className="flex items-center gap-2 mb-4">
-          <Flame size={16} color="#E07B00" />
-          <h3 className="text-sm font-bold text-[#1A1A1A]">인기글</h3>
+          <Flame size={16} color="#E07B00" className="shrink-0" />
+          <h3 className="text-[clamp(12px,5.2cqi,14px)] font-bold text-[#1A1A1A]">인기글</h3>
         </div>
         {isLoading ? (
-          <p className="text-xs text-[#ccc] py-2">불러오는 중…</p>
+          <p className="text-[clamp(10px,4.4cqi,12px)] text-[#ccc] py-2">불러오는 중…</p>
         ) : hotPosts.length === 0 ? (
-          <p className="text-xs text-[#ccc] py-2">아직 인기글이 없어요.</p>
+          <p className="text-[clamp(10px,4.4cqi,12px)] text-[#ccc] py-2">아직 인기글이 없어요.</p>
         ) : (
           <ol className="divide-y divide-[#F5F5F5]">
             {hotPosts.map((post, idx) => (
@@ -73,21 +73,21 @@ export default function CommunitySidebar() {
                 className="flex items-start gap-3 py-3 group cursor-pointer first:pt-0 last:pb-0"
               >
                 <span
-                  className="text-sm font-black w-5 text-center flex-shrink-0 mt-0.5"
+                  className="text-[clamp(12px,5.2cqi,14px)] font-black w-5 text-center flex-shrink-0 mt-0.5"
                   style={{ color: idx < 3 ? '#F5B301' : '#ccc' }}
                 >
                   {idx + 1}
                 </span>
                 <div className="flex-1 min-w-0">
                   <p
-                    className="text-xs text-[#444] line-clamp-2 group-hover:text-[#2E7D6B] transition-colors"
+                    className="text-[clamp(10px,4.4cqi,12px)] text-[#444] line-clamp-2 group-hover:text-[#2E7D6B] transition-colors"
                     style={{ lineHeight: 1.6 }}
                   >
                     {post.title}
                   </p>
                   <div className="flex items-center gap-1 mt-1.5">
-                    <TrendingUp size={10} color="#2E7D6B" />
-                    <span className="text-[11px] text-[#bbb]">조회 {post.viewCount.toLocaleString()}</span>
+                    <TrendingUp size={10} color="#2E7D6B" className="shrink-0" />
+                    <span className="text-[clamp(9.5px,4.1cqi,11px)] text-[#bbb]">조회 {post.viewCount.toLocaleString()}</span>
                   </div>
                 </div>
               </li>

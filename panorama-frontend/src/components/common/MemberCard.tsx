@@ -26,19 +26,20 @@ export function MemberCard({
   items: MemberCardItem[]
 }) {
   const initial = nickname.trim()?.[0] ?? '?'
+  // @container + cqi 로 카드 폭에 맞춰 글씨가 유동적으로 줄고 는다(폭이 좁아져도 잘리지 않음).
   return (
-    <div className="bg-white border border-[#EAEAEA] rounded-2xl overflow-hidden">
-      <div className="px-5 pt-5 pb-5">
+    <div className="@container bg-white border border-[#EAEAEA] rounded-2xl overflow-hidden">
+      <div className="px-[clamp(14px,5cqi,20px)] pt-5 pb-5">
         <div className="flex items-center gap-3 mb-4">
           <div
-            className="w-12 h-12 rounded-full flex items-center justify-center text-white text-base font-bold flex-shrink-0"
+            className="w-[clamp(38px,15cqi,48px)] h-[clamp(38px,15cqi,48px)] rounded-full flex items-center justify-center text-white text-[clamp(13px,5.5cqi,16px)] font-bold flex-shrink-0"
             style={{ background: '#2E7D6B' }}
           >
             {initial}
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-bold text-[#1A1A1A] leading-none truncate">{nickname}</p>
-            {handle && <p className="text-xs text-[#aaa] mt-1.5 truncate">{handle}</p>}
+            <p className="text-[clamp(12px,5.2cqi,14px)] font-bold text-[#1A1A1A] leading-none truncate">{nickname}</p>
+            {handle && <p className="text-[clamp(10px,4.4cqi,12px)] text-[#aaa] mt-1.5 truncate">{handle}</p>}
           </div>
         </div>
         <div className="grid grid-cols-2 gap-2 pt-3 border-t border-[#F0F0F0]">
@@ -50,13 +51,13 @@ export function MemberCard({
               className="text-center group py-1 rounded-lg transition-colors hover:bg-[#F9F9F9]"
             >
               <p
-                className="text-xl font-bold leading-none"
+                className="text-[clamp(16px,7.4cqi,20px)] font-bold leading-none"
                 style={{ color: it.active ? '#2E7D6B' : '#1E4A38' }}
               >
                 {it.count ?? '–'}
               </p>
               <p
-                className={`text-xs mt-1 transition-colors ${
+                className={`text-[clamp(10px,4.4cqi,12px)] mt-1 transition-colors ${
                   it.active
                     ? 'text-[#2E7D6B] font-semibold'
                     : 'text-[#aaa] group-hover:text-[#2E7D6B]'
