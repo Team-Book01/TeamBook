@@ -159,8 +159,9 @@ export default function BookSearchPage() {
   const viewTitle = view === "saved" ? "저장한 책" : view === "rated" ? "평가한 책" : null;
 
   return (
-    <main className="max-w-[1440px] mx-auto px-10 py-8">
-      <div className="flex gap-7" style={{ alignItems: "flex-start" }}>
+    <main className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 py-8">
+      {/* 좁은 화면에선 세로로 쌓이고(사이드바가 본문 아래로), lg+ 에서 좌:본문 / 우:308px 사이드바 */}
+      <div className="flex flex-col lg:flex-row gap-7 lg:items-start">
         {/* Left */}
         <div className="flex-1 min-w-0">
           {/* 헤더: 검색 결과 or 회원 활동(저장/평가) */}
@@ -290,8 +291,12 @@ export default function BookSearchPage() {
           )}
         </div>
 
-        {/* Sidebar */}
-        <aside className="w-[308px] flex-shrink-0 sticky top-[84px] flex flex-col gap-5">
+        {/* Sidebar — 좁은 화면: 본문 아래 전체폭. lg+: 우측 폭 유동(240~308px) + sticky, 자체 스크롤.
+            카드 글씨는 이 폭에 맞춰 컨테이너쿼리(cqi)로 스케일된다.
+            ⚠️ [&>*]:shrink-0 필수: max-h + flex-col 에서 카드(overflow-hidden → flex 최소크기 0)가
+               세로로 찌부러져 글씨가 잘리는 걸 막는다. 대신 넘치면 aside 가 스크롤된다.
+            (Tailwind 임의값의 공백은 '_' 로 써야 calc 이 'calc(100vh - 104px)' 로 유효해진다) */}
+        <aside className="w-full lg:w-[clamp(240px,22vw,308px)] lg:flex-shrink-0 lg:sticky lg:top-[84px] lg:max-h-[calc(100vh_-_104px)] lg:overflow-y-auto flex flex-col gap-5 [&>*]:shrink-0">
           <ProfileCard
             nickname={user?.nickname ?? "로그인이 필요해요"}
             handle={user ? (user.loginId ? `@${user.loginId}` : (user.provider ?? "")) : ""}

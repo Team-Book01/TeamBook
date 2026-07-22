@@ -199,22 +199,22 @@ export default function AdminInquiriesPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-gray-50">
-                  {['분류', '제목', '상태', '접수일'].map(h => (
+                  {['분류', '제목', '작성자', '상태', '접수일'].map(h => (
                     <th key={h} className="px-4 py-3 text-xs font-semibold text-left whitespace-nowrap text-muted-foreground">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr><td colSpan={4} className="px-4 py-16 text-center text-sm text-muted-foreground">불러오는 중…</td></tr>
+                  <tr><td colSpan={5} className="px-4 py-16 text-center text-sm text-muted-foreground">불러오는 중…</td></tr>
                 ) : isError ? (
-                  <tr><td colSpan={4} className="px-4 py-16 text-center">
+                  <tr><td colSpan={5} className="px-4 py-16 text-center">
                     <AlertCircle size={22} className="mx-auto mb-2 text-red-400" />
                     <p className="text-sm text-red-600 mb-3">{getErrorMessage(error, '문의 목록을 불러오지 못했습니다.')}</p>
                     <button onClick={() => refetch()} className="px-3 py-1.5 text-xs font-semibold border border-border rounded-lg hover:bg-gray-50">다시 시도</button>
                   </td></tr>
                 ) : items.length === 0 ? (
-                  <tr><td colSpan={4} className="px-4 py-16 text-center"><Inbox size={22} className="mx-auto mb-2 text-gray-300" /><p className="text-sm text-muted-foreground">조건에 맞는 문의가 없습니다.</p></td></tr>
+                  <tr><td colSpan={5} className="px-4 py-16 text-center"><Inbox size={22} className="mx-auto mb-2 text-gray-300" /><p className="text-sm text-muted-foreground">조건에 맞는 문의가 없습니다.</p></td></tr>
                 ) : (
                   items.map(inq => (
                     <tr key={inq.inquiryId} onClick={() => setSelectedId(inq.inquiryId)}
@@ -227,6 +227,7 @@ export default function AdminInquiriesPage() {
                         </div>
                         <div className="text-[10px] text-muted-foreground/70 font-mono mt-0.5">#{inq.inquiryId}</div>
                       </td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">회원 #{inq.userId}</td>
                       <td className="px-4 py-3"><StatBadge status={inq.status} /></td>
                       <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{fmt(inq.createdAt).slice(0, 10)}</td>
                     </tr>

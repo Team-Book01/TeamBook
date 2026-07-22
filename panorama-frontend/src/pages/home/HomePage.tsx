@@ -58,10 +58,10 @@ export default function HomePage() {
   // 인기 대출 도서(도서관정보나루 랭킹). 이미지/제목/저자만 노출, 클릭 시 isbn 상세로.
   const { data: popularBooks = [] } = usePopularBooks()
 
-  // 게시판 인기글: '전체' 탭은 인기글 API, 카테고리 탭은 해당 카테고리 최신글
+  // 게시판 탭: '인기'는 인기글 API, 그 외('전체'/카테고리)는 목록 API(카테고리 필터)
   const popularQuery = usePopularPosts()
-  const categoryQuery = usePosts(undefined, TAB_TO_CATEGORY[activeTab])
-  const postsQuery = activeTab === '전체' ? popularQuery : categoryQuery
+  const listQuery = usePosts(undefined, TAB_TO_CATEGORY[activeTab])
+  const postsQuery = activeTab === '인기' ? popularQuery : listQuery
   const posts = (postsQuery.data?.pages[0]?.content ?? []).slice(0, HOME_POST_LIMIT)
 
   // 검색 실행 → 검색 결과 페이지(/books?q=)로 이동
@@ -223,7 +223,11 @@ export default function HomePage() {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold text-foreground">게시판</h2>
             <button
-              onClick={() => navigate(`/community?tab=${encodeURIComponent(activeTab)}`)}
+              onClick={() => {
+                // 홈 탭 → 커뮤니티 탭 매핑. 전체/인기는 동명 탭, 카테고리는 해당 enum 으로 이동.
+                const tabParam = activeTab === '인기' ? '인기' : (TAB_TO_CATEGORY[activeTab] ?? '전체')
+                navigate(`/community?tab=${encodeURIComponent(tabParam)}`)
+              }}
               className="text-sm text-primary font-medium hover:underline underline-offset-4"
             >
               더보기 →
@@ -350,7 +354,7 @@ export default function HomePage() {
                       className="flex items-start gap-2 group text-left w-full"
                     >
                       {isRecentNotice(n.createdAt) && (
-                        <span className="shrink-0 mt-0.5 text-[10px] font-bold text-accent bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
+                        <span className="shrink-0 mt-0.5 text-[10px] font-bold text-white bg-red-500 px-1.5 py-0.5 rounded">
                           NEW
                         </span>
                       )}

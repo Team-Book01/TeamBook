@@ -59,17 +59,18 @@ export function PopularBooksCard({ onSelect }: { onSelect: (isbn: string) => voi
   // 백엔드가 랭킹순으로 내려주므로 그대로 상위 10건만 노출한다.
   const books = (data ?? []).slice(0, 10);
 
+  // @container + cqi 로 카드 폭에 맞춰 글씨가 유동적으로 스케일된다.
   return (
-    <div className="bg-white border border-[#EAEAEA] rounded-2xl overflow-hidden">
+    <div className="@container bg-white border border-[#EAEAEA] rounded-2xl overflow-hidden">
       <div className="flex items-center gap-2 px-5 py-4 border-b border-[#EAEAEA]">
-        <TrendingUp size={16} className="text-[#2E7D6B]" />
-        <span className="text-sm font-bold text-[#1A1A1A]">인기 도서</span>
+        <TrendingUp size={16} className="text-[#2E7D6B] shrink-0" />
+        <span className="text-[clamp(12px,5.2cqi,14px)] font-bold text-[#1A1A1A]">인기 도서</span>
       </div>
       <div className="px-4 py-3 flex flex-col gap-1">
         {isLoading ? (
-          <p className="text-[12px] text-[#aaa] px-2 py-3 text-center">불러오는 중…</p>
+          <p className="text-[clamp(10px,4.4cqi,12px)] text-[#aaa] px-2 py-3 text-center">불러오는 중…</p>
         ) : books.length === 0 ? (
-          <p className="text-[12px] text-[#aaa] px-2 py-3 text-center">인기 도서가 없습니다.</p>
+          <p className="text-[clamp(10px,4.4cqi,12px)] text-[#aaa] px-2 py-3 text-center">인기 도서가 없습니다.</p>
         ) : (
           books.map((book, idx) => {
             const rank = idx + 1;
@@ -77,17 +78,17 @@ export function PopularBooksCard({ onSelect }: { onSelect: (isbn: string) => voi
             return (
               <div
                 key={`${book.isbn}-${idx}`}
-                className="flex items-center gap-3 px-2 py-2 rounded-xl cursor-pointer hover:bg-[#F9F9F9] transition-colors"
+                className="flex items-center gap-2.5 px-2 py-2 rounded-xl cursor-pointer hover:bg-[#F9F9F9] transition-colors"
                 onMouseEnter={() => setHovered(rank)}
                 onMouseLeave={() => setHovered(null)}
                 onClick={() => book.isbn && onSelect(book.isbn.trim())}
               >
-                <span className="text-sm font-black w-5 text-center flex-shrink-0" style={{ color: isTop3 ? "#F5B301" : "#aaa" }}>{rank}</span>
+                <span className="text-[clamp(12px,5.2cqi,14px)] font-black w-5 text-center flex-shrink-0" style={{ color: isTop3 ? "#F5B301" : "#aaa" }}>{rank}</span>
                 <div className="flex-1 min-w-0">
-                  <p className={`text-[13px] font-semibold truncate transition-colors ${hovered === rank ? "text-[#2E7D6B]" : "text-[#1A1A1A]"}`}>{book.title}</p>
-                  <p className="text-[11px] text-[#aaa] truncate">{book.author}</p>
+                  <p className={`text-[clamp(11px,4.8cqi,13px)] font-semibold truncate transition-colors ${hovered === rank ? "text-[#2E7D6B]" : "text-[#1A1A1A]"}`}>{book.title}</p>
+                  <p className="text-[clamp(9.5px,4.1cqi,11px)] text-[#aaa] truncate">{book.author}</p>
                 </div>
-                <span className="text-[11px] text-[#888] tabular-nums flex-shrink-0">대출 {Number(book.loanCount ?? 0).toLocaleString()}</span>
+                <span className="text-[clamp(9.5px,4.1cqi,11px)] text-[#888] tabular-nums flex-shrink-0">대출 {Number(book.loanCount ?? 0).toLocaleString()}</span>
               </div>
             );
           })

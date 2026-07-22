@@ -25,20 +25,30 @@ export default function LoginPage() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const setLogin = useAuthStore((s) => s.login)
+  const user = useAuthStore((s) => s.user)
+  const token = useAuthStore((s) => s.token)
+  const authReady = useAuthStore((s) => s.authReady)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
-  // 소셜 로그인 실패는 리다이렉트로 ?error=코드 형태로 돌아온다.
-  // onSubmit을 안 거치므로 여기서 URL을 읽어 로컬과 같은 에러 영역에 표시.
-  useEffect(() => {
-    const code = params.get('error')
-    if (code) {
-      setSubmitError(OAUTH_ERROR_MESSAGES[code] ?? '소셜 로그인에 실패했어요.')
-      // 뒤로가기/새로고침 시 에러가 계속 남지 않게 쿼리 정리
-      navigate('/login', { replace: true })
-    }
-  }, [params, navigate])
+// 1) 소셜 로그인 실패는 리다이렉트로 ?error=코드 형태로 돌아온다.
+//    onSubmit을 안 거치므로 여기서 URL을 읽어 로컬과 같은 에러 영역에 표시.
+// 2) 이미 로그인된 상태로 로그인 페이지에 온 경우(예: 다른 탭발 401 → /login 강제 이동 후
+//    세션 복원 성공) 폼에 멈춰 있지 않도록 복귀 경로/기본 경로로 내보낸다.
+useEffect(() => {
+  const code = params.get('error')
+  if (code) {
+    setSubmitError(OAUTH_ERROR_MESSAGES[code] ?? '소셜 로그인에 실패했어요.')
+    // 뒤로가기/새로고침 시 에러가 계속 남지 않게 쿼리 정리
+    navigate('/login', { replace: true })
+    return
+  }
+
+  if (!authReady || !token) return
+  const redirect = safeRedirect(params.get('redirect'))
+  navigate(redirect ?? (user?.role === 'ADMIN' ? '/admin' : '/'), { replace: true })
+}, [authReady, token, user, params, navigate])
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -71,6 +81,18 @@ export default function LoginPage() {
     } finally {
       setSubmitting(false)
     }
+  }
+
+  // 인증됐거나(토큰 보유 → 위 effect 가 리다이렉트) 세션 복원 중(persist 된 user 있고 아직 미확정)
+  // 이면 로그인 폼 대신 로딩을 보여준다. (복원 실패 시 authReady=true·token 없음 → 아래 폼 노출)
+  if (token || (!authReady && user)) {
+    return (
+      <AuthLayout eyebrow="다시 만나서 반가워요" title="로그인" subtitle="로그인 상태를 확인하는 중이에요.">
+        <div className="flex justify-center py-10">
+          <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        </div>
+      </AuthLayout>
+    )
   }
 
   return (
