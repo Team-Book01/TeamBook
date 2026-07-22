@@ -19,6 +19,8 @@ import com.teambook.panorama.domain.admin.repository.InquiryAnswerRepository;
 import com.teambook.panorama.domain.admin.repository.InquiryImageRepository;
 import com.teambook.panorama.domain.admin.repository.InquiryMapper;
 import com.teambook.panorama.domain.admin.repository.InquiryRepository;
+import com.teambook.panorama.domain.user.repository.UserRepository;
+import com.teambook.panorama.domain.user.entity.User;
 import com.teambook.panorama.global.exception.BusinessException;
 import com.teambook.panorama.global.exception.ErrorCode;
 import com.teambook.panorama.global.response.PageResponse;
@@ -36,6 +38,7 @@ public class InquiryServiceImpl implements InquiryService {
   private final InquiryMapper inquiryMapper; // 문의 목록 조회(MyBatis)
   private final InquiryAnswerRepository inquiryAnswerRepository;  // 문의 답변(JPA)
   private final InquiryImageRepository inquiryImageRepository;  // 문의 첨부 이미지(JPA)
+  private final UserRepository userRepository;  // 작성자 닉네임 조회(상세) — 목록은 MyBatis 조인
   private final ImageStorageService imageStorageService;  // 검증·디스크 저장 공통 처리
 
   /**
@@ -117,11 +120,16 @@ public class InquiryServiceImpl implements InquiryService {
 
   /** 문의 엔티티 → 상세 응답(본문+이미지 + 답변 목록). 관리자/사용자 상세 조회 공통. */
   private InquiryDetailResponse toDetailResponse(Inquiry inquiry) {
+    // 작성자 닉네임은 엔티티에 없어 users 에서 별도 조회(목록은 MyBatis 조인으로 채운다).
+    // 작성자 계정이 삭제돼 없으면 null.
+    String authorNickname = userRepository.findById(inquiry.getUserId())
+        .map(User::getNickname)
+        .orElse(null);
     List<InquiryAnswerResponse> answers = inquiryAnswerRepository
         .findByInquiry_InquiryIdOrderByCreatedAtAsc(inquiry.getInquiryId()).stream()
         .map(InquiryAnswerResponse::from)
         .toList();
-    return new InquiryDetailResponse(InquiryResponse.from(inquiry), answers);
+    return new InquiryDetailResponse(InquiryResponse.from(inquiry, authorNickname), answers);
   }
 
   @Override

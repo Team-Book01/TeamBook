@@ -269,6 +269,7 @@ export interface InquiryImageResponse {
 export interface InquiryResponse {
   inquiryId: number
   userId: number
+  authorNickname: string | null
   category: string
   title: string
   content: string
