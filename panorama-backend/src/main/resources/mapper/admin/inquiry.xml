@@ -40,9 +40,10 @@
     <resultMap id="inquiryResponseMap"
                type="com.teambook.panorama.domain.admin.dto.inquiry.InquiryResponse">
         <constructor>
-            <idArg column="inquiry_id" name="inquiryId" javaType="java.lang.Long"/>
-            <arg   column="user_id"    name="userId"    javaType="java.lang.Long"/>
-            <arg   column="category"   name="category"  javaType="java.lang.String"/>
+            <idArg column="inquiry_id"      name="inquiryId"      javaType="java.lang.Long"/>
+            <arg   column="user_id"         name="userId"         javaType="java.lang.Long"/>
+            <arg   column="author_nickname" name="authorNickname" javaType="java.lang.String"/>
+            <arg   column="category"        name="category"       javaType="java.lang.String"/>
             <arg   column="title"      name="title"     javaType="java.lang.String"/>
             <arg   column="content"    name="content"   javaType="java.lang.String"/>
             <arg   column="status"     name="status"
@@ -80,9 +81,11 @@
         </if>
     </sql>
 
-    <!-- 관리자용: 삭제(DELETED) 포함 전체 -->
+    <!-- 관리자용: 삭제(DELETED) 포함 전체.
+         작성자 닉네임은 users 조인으로 채운다(user_id 1:1 LEFT JOIN이라 count에는 영향 없음). -->
     <sql id="inquirySearchWhere">
         FROM inquiries q
+        LEFT JOIN users u ON u.user_id = q.user_id
         <where>
             <include refid="inquiryConditions"/>
         </where>
@@ -91,6 +94,7 @@
     <!-- 사용자(문의게시판)용: 삭제된 문의는 노출하지 않는다 -->
     <sql id="myInquirySearchWhere">
         FROM inquiries q
+        LEFT JOIN users u ON u.user_id = q.user_id
         <where>
             <include refid="inquiryConditions"/>
             AND q.status &lt;&gt; 'DELETED'
@@ -101,7 +105,8 @@
             parameterType="com.teambook.panorama.domain.admin.dto.inquiry.InquirySearchRequest"
             resultMap="inquiryResponseMap">
         <bind name="offset" value="(page - 1) * size"/>
-        SELECT q.inquiry_id, q.user_id, q.category, q.title, q.content, q.status,
+        SELECT q.inquiry_id, q.user_id, u.nickname AS author_nickname,
+               q.category, q.title, q.content, q.status,
                q.created_at, q.updated_at
         <include refid="inquirySearchWhere"/>
         ORDER BY q.created_at DESC
@@ -120,7 +125,8 @@
             parameterType="com.teambook.panorama.domain.admin.dto.inquiry.InquirySearchRequest"
             resultMap="inquiryResponseMap">
         <bind name="offset" value="(page - 1) * size"/>
-        SELECT q.inquiry_id, q.user_id, q.category, q.title, q.content, q.status,
+        SELECT q.inquiry_id, q.user_id, u.nickname AS author_nickname,
+               q.category, q.title, q.content, q.status,
                q.created_at, q.updated_at
         <include refid="myInquirySearchWhere"/>
         ORDER BY q.created_at DESC

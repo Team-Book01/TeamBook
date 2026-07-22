@@ -20,6 +20,9 @@ public record InquiryResponse(
     @Schema(description = "작성자 사용자 ID", example = "7")
     Long userId,
 
+    @Schema(description = "작성자 닉네임 (users 조인)", example = "홍길동")
+    String authorNickname,
+
     @Schema(description = "문의 유형", example = "결제")
     String category,
 
@@ -42,7 +45,11 @@ public record InquiryResponse(
     LocalDateTime updatedAt
 ) {
 
-  public static InquiryResponse from(Inquiry inquiry) {
+  /**
+   * 엔티티 → 응답. authorNickname 은 users 조인으로만 얻는 값이라 엔티티에서 못 만든다.
+   * 호출부(서비스)에서 조회해 넘긴다. (목록은 MyBatis 조인으로 직접 채운다)
+   */
+  public static InquiryResponse from(Inquiry inquiry, String authorNickname) {
     List<InquiryImageResponse> images = inquiry.getImages().stream()
         .map(InquiryImageResponse::from)
         .toList();
@@ -50,6 +57,7 @@ public record InquiryResponse(
     return new InquiryResponse(
         inquiry.getInquiryId(),
         inquiry.getUserId(),
+        authorNickname,
         inquiry.getCategory(),
         inquiry.getTitle(),
         inquiry.getContent(),

@@ -227,7 +227,7 @@ export default function AdminInquiriesPage() {
                         </div>
                         <div className="text-[10px] text-muted-foreground/70 font-mono mt-0.5">#{inq.inquiryId}</div>
                       </td>
-                      <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">회원 #{inq.userId}</td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{inq.authorNickname ?? '(탈퇴 회원)'}</td>
                       <td className="px-4 py-3"><StatBadge status={inq.status} /></td>
                       <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">{fmt(inq.createdAt).slice(0, 10)}</td>
                     </tr>
