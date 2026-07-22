@@ -40,6 +40,8 @@ public class Book extends BaseTimeEntity {
   @Column(name = "pubdate", nullable = true)
   private String pubdate;
 
+  @Column(name = "discount", nullable = false)
+  private Integer discount;
   
   @Column(name = "description", nullable = true, columnDefinition = "TEXT")
   private String description;
@@ -52,7 +54,7 @@ public class Book extends BaseTimeEntity {
 
   @Builder
   public Book(String isbn, String title, String author, String publisher, String pubdate, String description,
-      String imageUrl, String shopUrl) {
+      String imageUrl, String shopUrl, String postCount, String discount) {
     this.isbn = isbn;
     this.title = title;
     this.author = author;
@@ -61,8 +63,17 @@ public class Book extends BaseTimeEntity {
     this.description = description;
     this.imageUrl = imageUrl;
     this.shopUrl = shopUrl;
+    this.discount = parseDiscount(discount);
   }
 
-  
+  /** 네이버 판매가 문자열("12800" 또는 빈값)을 안전하게 Integer 로. 없거나 숫자가 아니면 null. */
+  private static Integer parseDiscount(String discount) {
+    if (discount == null || discount.isBlank()) return 0;
+    try {
+      return Integer.parseInt(discount.trim());
+    } catch (NumberFormatException e) {
+      return null;
+    }
+  }
 
 }

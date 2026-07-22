@@ -85,6 +85,7 @@ public class BookmarkService {
     .pubdate(request.pubdate())
     .publisher(request.publisher())
     .shopUrl(request.link())
+    .discount(request.discount())
     .title(request.title())
     .build();
     

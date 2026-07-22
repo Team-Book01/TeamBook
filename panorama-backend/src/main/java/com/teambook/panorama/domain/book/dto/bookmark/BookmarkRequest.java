@@ -15,6 +15,7 @@ public record BookmarkRequest(
   String image,
   //shop_url
   String link,
-  String description
+  String description,
+  String discount
 ) {
 }
