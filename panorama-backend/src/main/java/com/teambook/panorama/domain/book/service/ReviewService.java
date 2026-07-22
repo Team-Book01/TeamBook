@@ -215,6 +215,7 @@ public class ReviewService {
                 .publisher(naverBookItem.publisher())
                 .shopUrl(naverBookItem.link())
                 .title(naverBookItem.title())
+                .discount(naverBookItem.discount())
                 .build());
           } catch (DataIntegrityViolationException e) {
             // 동시에 다른 요청이 이미 저장함 → 다시 조회하면 있음
