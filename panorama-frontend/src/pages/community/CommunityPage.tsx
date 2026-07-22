@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Search, PenLine, Eye, Heart, MessageCircle } from 'lucide-react'
+import { Search, PenLine, Eye, Heart, MessageCircle, X } from 'lucide-react'
 
 import type { PostCategory, PostSummary } from '@/types/community'
 import {
@@ -177,15 +177,19 @@ export default function CommunityPage() {
     setSearchParams(next, { replace: true })
   }
 
+  // 도서 상세의 "이 책 게시글 N개" 링크(?isbn=)로 진입하면 그 책 관련 글만 필터한다.
+  const isbnFilter = searchParams.get('isbn') || undefined
+
   const isPopularTab = activeTab === '인기'
   // 카테고리 탭이면 서버 필터용 enum, 전체/인기 탭이면 undefined(=필터 없음)
   const categoryParam = activeTab === '전체' || activeTab === '인기' ? undefined : activeTab
 
   // 전체/카테고리 탭 = GET /posts, 인기 탭 = GET /posts/popular
-  // categoryParam 이 바뀌면 쿼리 키가 바뀌어 탭별로 커서·hasNextPage 가 독립적으로 관리된다.
-  const allQuery = usePosts(POST_PAGE_SIZE, categoryParam)
+  // categoryParam·isbn 이 바뀌면 쿼리 키가 바뀌어 탭/책 필터별로 커서·hasNextPage 가 독립 관리된다.
+  const allQuery = usePosts(POST_PAGE_SIZE, categoryParam, isbnFilter)
   const popularQuery = usePopularPosts()
-  const query = isPopularTab ? popularQuery : allQuery
+  // 책 필터가 있으면 인기글 API(isbn 미지원) 대신 항상 목록 API(isbn 필터)를 쓴다.
+  const query = isPopularTab && !isbnFilter ? popularQuery : allQuery
   const {
     isLoading,
     isError,
@@ -256,6 +260,25 @@ export default function CommunityPage() {
           새 글 작성
         </button>
       </div>
+
+      {/* 도서 상세에서 넘어온 "이 책 관련 글" 필터 배너 */}
+      {isbnFilter && !myView && (
+        <div className="flex items-center justify-between gap-3 mb-4 rounded-xl border border-[#D5EAE4] bg-[#F7FAF9] px-4 py-3">
+          <p className="text-sm text-[#333] m-0 min-w-0 truncate">
+            <span className="font-bold text-[#2E7D6B]">{posts[0]?.bookTitle ?? '선택한 책'}</span> 관련 게시글
+          </p>
+          <button
+            onClick={() => {
+              const next = new URLSearchParams(searchParams)
+              next.delete('isbn')
+              setSearchParams(next, { replace: true })
+            }}
+            className="flex items-center gap-1 text-xs font-semibold text-[#888] hover:text-[#2E7D6B] whitespace-nowrap flex-shrink-0 cursor-pointer"
+          >
+            <X size={12} /> 전체 글 보기
+          </button>
+        </div>
+      )}
 
       {/* ── Tab bar + Search ─────────────────────────────────── */}
       <div className="flex items-center border-b border-[#EAEAEA]">

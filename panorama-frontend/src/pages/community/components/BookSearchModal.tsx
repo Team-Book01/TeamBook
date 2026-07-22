@@ -97,6 +97,11 @@ export default function BookSearchModal({
                             title: book.title,
                             author: book.author,
                             imageUrl: book.image,
+                            description: book.description,
+                            pubdate: book.pubdate,
+                            publisher: book.publisher,
+                            shopUrl: book.link,
+                            discount: book.discount,
                           })
                         }
                         className="flex items-center gap-3 w-full text-left py-3 px-2 rounded-xl hover:bg-[#F7FAF9] transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-default"

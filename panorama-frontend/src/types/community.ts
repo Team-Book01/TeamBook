@@ -65,6 +65,12 @@ export interface PostDetail {
   bookAuthor: string | null
   bookImageUrl: string | null
   isbn: string | null
+  /** 첨부 책 부가정보 (백엔드 PostDetailResponseDto). 수정 모드에서 첨부 카드 복원·재저장에 사용 */
+  pubdate: string | null
+  publisher: string | null
+  description: string | null
+  shopUrl: string | null
+  discount: string | null
 }
 
 /**
@@ -82,14 +88,26 @@ export interface PostRequest {
   bookTitle?: string
   bookAuthor?: string
   bookImageUrl?: string
+  // DB 에 없는 책이면 서버가 find-or-create 로 저장하므로, 검색 결과의 부가 정보도 함께 넘긴다.
+  description?: string
+  pubdate?: string
+  publisher?: string
+  shopUrl?: string
+  discount?: string
 }
 
-/** 글쓰기 화면에서 첨부 선택된 책 (PostRequest 의 책 4필드 원천) */
+/** 글쓰기 화면에서 첨부 선택된 책 (PostRequest 의 책 필드 원천) */
 export interface AttachedBook {
   isbn: string
   title: string
   author: string
   imageUrl: string
+  // find-or-create 용 부가 정보 (검색 결과에서 채움, 없을 수 있음)
+  description?: string
+  pubdate?: string
+  publisher?: string
+  shopUrl?: string
+  discount?: string
 }
 
 // ── 신고 ────────────────────────────────────────────────────────────────────

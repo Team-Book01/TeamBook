@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Star, Heart, ChevronLeft, ChevronUp, BookOpen } from "lucide-react";
+import { Star, Heart, ChevronLeft, ChevronUp, BookOpen, MessageSquareText } from "lucide-react";
 
 import { hasIsbn, NO_ISBN_MESSAGE, useBook, useBookmarkMutation } from "@/api/book";
+import { useBookPostCount } from "@/api/community";
 import { getErrorMessage } from "@/api/client";
+import { toast } from "@/lib/toast";
 import { useRequireLogin } from "@/hooks/useRequireLogin";
 import { LibraryFinder, ReviewSection } from "./components";
 
@@ -27,6 +29,8 @@ export default function BookDetailPage() {
 
   const { data: book, isLoading, isError, error, isFetching } = useBook(isbn);
   const bookmark = useBookmarkMutation();
+  // 게시글 수는 DB 전용 경량 조회로 별도로 받아 빠르게/최신으로 표시한다(네이버 상세 대기와 무관).
+  const postCountQuery = useBookPostCount(isbn);
   const { ensureLoggedIn } = useRequireLogin();
 
   const [showTop, setShowTop] = useState(false);
@@ -59,16 +63,20 @@ export default function BookDetailPage() {
     if (!book || !hasIsbn(isbn)) return;
     // 프론트 토큰 검증: 없으면 로그인으로, 있으면 요청 발사 → 백엔드 토글
     if (!ensureLoggedIn()) return;
-    bookmark.mutate({
-      isbn: book.isbn || isbn, // 응답 isbn 이 비어도 URL 파라미터로 보정
-      title: book.title,
-      author: book.author,
-      publisher: book.publisher,
-      pubdate: book.pubdate,
-      image: book.image,
-      link: book.link,
-      description: book.description,
-    });
+    bookmark.mutate(
+      {
+        isbn: book.isbn || isbn, // 응답 isbn 이 비어도 URL 파라미터로 보정
+        title: book.title,
+        author: book.author,
+        publisher: book.publisher,
+        pubdate: book.pubdate,
+        image: book.image,
+        link: book.link,
+        description: book.description,
+      },
+      // 실패 시 낙관적 하트가 조용히 되돌아가면 "동작 안 함" 으로 보인다 → 원인을 토스트로 노출.
+      { onError: (e) => toast.error(getErrorMessage(e, "북마크 처리에 실패했어요.")) },
+    );
   };
 
   // const BackButton = (
@@ -192,8 +200,8 @@ export default function BookDetailPage() {
               </span>
             </button>
 
-            {/* Book description */}
-            <p className="text-[13px] text-[#555] leading-[1.85] border-t border-[#F5F5F5] pt-3 whitespace-pre-line">
+            {/* Book description — 너무 길면 일정 높이 이상부터 자체 스크롤 */}
+            <p className="text-[13px] text-[#555] leading-[1.85] border-t border-[#F5F5F5] pt-3 whitespace-pre-line max-h-[260px] overflow-y-auto pr-1">
               {book.description || "등록된 책 소개가 없습니다."}
             </p>
 
@@ -229,6 +237,18 @@ export default function BookDetailPage() {
                 />
                 {book.isBookmarked ? "저장됨" : "저장"}
                 <span className="text-[12px] opacity-60">({book.bookmarkCount.toLocaleString()})</span>
+              </button>
+
+              {/* 이 책 게시글 수 — 저장 버튼과 같은 네모난 스타일. 클릭 시 이 책 관련 글 목록으로 */}
+              <button
+                onClick={() => navigate(`/community?isbn=${encodeURIComponent(book.isbn || isbn)}`)}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-[#EAEAEA] text-[#555] text-[13px] font-medium transition-all hover:bg-[#EFF6F2] hover:border-[#2E7D6B]/40 hover:text-[#2E7D6B]"
+              >
+                <MessageSquareText size={15} />
+                게시글
+                <span className="text-[12px] opacity-60">
+                  ({(postCountQuery.data ?? book.postCount ?? 0).toLocaleString()})
+                </span>
               </button>
 
               {/* 백그라운드 갱신 표시 (initialData 재사용 후 최신화 중) */}

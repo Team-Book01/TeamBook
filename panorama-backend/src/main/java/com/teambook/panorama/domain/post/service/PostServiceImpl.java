@@ -78,18 +78,39 @@ public class PostServiceImpl implements PostService {
 
     Book book = post.getBook();
 
-    return new PostDetailResponseDto(postId, (book != null ? book.getBookId() : null),
-      post.getUser().getId(), post.getUser().getNickname(), post.getCategory(), post.getTitle(), post.getContent(),
-      post.getViewCount(), post.getCreatedAt(), liked, scrapped, likeCount,
-      (book != null ? book.getTitle() : null),
-      (book != null ? book.getAuthor() : null),
-      (book != null ? book.getImageUrl() : null),
-      (book != null ? book.getIsbn() : null));
+return new PostDetailResponseDto(
+    postId,
+    book != null ? book.getBookId() : null,
+    post.getUser().getId(),
+    post.getUser().getNickname(),
+    post.getCategory(),
+    post.getTitle(),
+    post.getContent(),
+    post.getViewCount(),
+    post.getCreatedAt(),
+    liked,
+    scrapped,
+    likeCount,
+    book != null ? book.getTitle() : null,
+    book != null ? book.getAuthor() : null,
+    book != null ? book.getImageUrl() : null,
+    book != null ? book.getIsbn() : null,
+    book != null ? book.getPubdate() : null,
+    book != null ? book.getPublisher() : null,
+    book != null ? book.getDescription() : null,
+    book != null ? book.getShopUrl() : null,
+    (book != null && book.getDiscount() != null) ? book.getDiscount().toString() : null
+);
   }
 
   @Transactional(readOnly = true)
   public Slice<PostSummaryResponseDto> findActivePosts(PostCategory category, String isbn, Pageable pageable) {
     return postRepository.findActiveSummaries(PostStatus.ACTIVE, category, isbn, pageable);
+  }
+
+  @Transactional(readOnly = true)
+  public long countActivePostsByIsbn(String isbn) {
+    return postRepository.countByBook_IsbnAndStatus(isbn, PostStatus.ACTIVE);
   }
 
   @Transactional
@@ -162,6 +183,16 @@ public class PostServiceImpl implements PostService {
       return null;
     }
     return bookRepository.findByIsbn(request.isbn())
-    .orElseGet(() -> bookRepository.save(Book.builder().isbn(request.isbn()).title(request.bookTitle()).author(request.bookAuthor()).imageUrl(request.bookImageUrl()).build()));
+    .orElseGet(() -> bookRepository.save(Book.builder()
+    .isbn(request.isbn())
+    .title(request.bookTitle())
+    .author(request.bookAuthor())
+    .imageUrl(request.bookImageUrl())
+    .pubdate(request.pubdate())
+    .description(request.description())
+    .publisher(request.publisher())
+    .shopUrl(request.shopUrl())
+    .discount(request.discount())
+    .build()));
   }
 }

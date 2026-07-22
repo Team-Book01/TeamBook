@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import type Editor from '@toast-ui/editor'
-import { ChevronRight, X } from 'lucide-react'
+import { ChevronRight, X, BookPlus } from 'lucide-react'
 
 import type { AttachedBook, PostCategory, PostDetail } from '@/types/community'
 import {
@@ -53,6 +53,12 @@ function WriteForm({ post }: { post?: PostDetail }) {
           title: post.bookTitle,
           author: post.bookAuthor ?? '',
           imageUrl: post.bookImageUrl ?? '',
+          // 부가정보도 상세 응답에서 복원해 재저장 시 그대로 유지되게 한다.
+          description: post.description ?? undefined,
+          pubdate: post.pubdate ?? undefined,
+          publisher: post.publisher ?? undefined,
+          shopUrl: post.shopUrl ?? undefined,
+          discount: post.discount ?? undefined,
         }
       : null,
   )
@@ -92,6 +98,11 @@ function WriteForm({ post }: { post?: PostDetail }) {
       title: book.title,
       author: book.author,
       imageUrl: book.image,
+      description: book.description,
+      pubdate: book.pubdate,
+      publisher: book.publisher,
+      shopUrl: book.link,
+      discount: book.discount,
     })
   }
 
@@ -110,13 +121,19 @@ function WriteForm({ post }: { post?: PostDetail }) {
     if (trimmedTitle.length > 255) return alert('제목은 255자 이내로 입력해주세요.')
     if (isEmptyHtml(content)) return alert('내용을 입력해주세요.')
 
-    // 첨부 책 4필드 — 미첨부면 모두 미포함 (수정 PUT 에서 미포함이면 서버가 기존 첨부를 해제한다)
+    // 첨부 책 필드 — 미첨부면 모두 미포함 (수정 PUT 에서 미포함이면 서버가 기존 첨부를 해제한다)
+    // DB 에 없는 책이면 서버가 이 정보로 find-or-create 하므로 부가 정보(설명/출간일/출판사/구매URL)도 함께 보낸다.
     const bookFields = attachedBook
       ? {
           isbn: attachedBook.isbn,
           bookTitle: attachedBook.title, // isbn 을 실으면 bookTitle 필수
           bookAuthor: attachedBook.author,
           bookImageUrl: attachedBook.imageUrl,
+          description: attachedBook.description,
+          pubdate: attachedBook.pubdate,
+          publisher: attachedBook.publisher,
+          shopUrl: attachedBook.shopUrl,
+          discount: attachedBook.discount,
         }
       : {}
 
@@ -148,8 +165,9 @@ function WriteForm({ post }: { post?: PostDetail }) {
 
   return (
     <>
-      {/* 첨부된 책 카드 — 상세 화면과 동일하게 제목 줄 위에 놓는다 */}
-      {attachedBook && (
+      {/* 첨부된 책 카드 — 상세 화면과 동일하게 제목 줄 위에 놓는다.
+          미첨부면 책 검색 모달을 여는 버튼을 보여준다(기존엔 '교체' 로만 열려 첫 첨부 진입점이 없었다). */}
+      {attachedBook ? (
         <div className="flex items-center gap-3 border border-[#D5EAE4] bg-[#F7FAF9] rounded-xl px-4 py-3">
           <BookCoverThumb imageUrl={attachedBook.imageUrl} title={attachedBook.title} width={44} height={62} />
           <div className="min-w-0 flex-1">
@@ -169,6 +187,13 @@ function WriteForm({ post }: { post?: PostDetail }) {
             <X size={12} /> 첨부 해제
           </button>
         </div>
+      ) : (
+        <button
+          onClick={() => setBookModalOpen(true)}
+          className="flex items-center justify-center gap-1.5 w-full border border-dashed border-[#D5EAE4] bg-[#F7FAF9] rounded-xl px-4 py-3 text-sm font-semibold text-[#2E7D6B] cursor-pointer hover:bg-[#EFF6F2] transition-colors"
+        >
+          <BookPlus size={16} /> 책 검색해서 첨부
+        </button>
       )}
 
       {/* 카테고리 + 제목 — 카테고리는 min-w-[140px] 로 하한을 두고, 라벨이 길어지면 내용만큼 늘어난다 */}

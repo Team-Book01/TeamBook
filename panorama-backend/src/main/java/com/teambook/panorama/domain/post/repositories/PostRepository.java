@@ -21,6 +21,9 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
   long countByUser_IdAndStatus(Long userId, PostStatus status);
 
+  /** 특정 책(isbn)으로 작성된 게시글 수(상태별). 도서 상세의 "게시글 수" 를 DB 만으로 빠르게 조회. */
+  long countByBook_IsbnAndStatus(String isbn, PostStatus status);
+
   @Query("SELECT new com.teambook.panorama.domain.post.dto.PostSummaryResponseDto(" +
     "p.postId, b.bookId, u.nickname, p.category, p.title, SUBSTRING(p.content, 1, 101), " +
     "p.viewCount, p.createdAt, b.title, b.author, " +

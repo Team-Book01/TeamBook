@@ -46,6 +46,8 @@ export interface BookItem {
   reviewCount: number
   bookmarkCount: number
   isBookmarked: boolean
+  /** 이 책으로 작성된 커뮤니티 게시글 수 (검색/상세 공통 집계). 상세 진입 initialData 로도 재사용 */
+  postCount?: number
   /** 인기 대출 도서 응답 전용(일반 검색엔 없음): 랭킹 / 대출 횟수(숫자 문자열) */
   ranking?: string
   loanCount?: string
@@ -67,7 +69,7 @@ export interface BookSearchResponse {
  * discount 는 상세 응답에 없으므로 optional 인 BookItem 정의를 그대로 쓴다.
  */
 export interface BookDetail extends BookItem {
-  /** 커뮤니티 글 수 (백엔드 미구현 — 항상 0) */
+  /** 이 책으로 작성된 커뮤니티 게시글 수 (ACTIVE 기준, 백엔드 집계) */
   postCount?: number
 }
 

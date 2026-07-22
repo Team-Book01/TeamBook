@@ -73,23 +73,9 @@ function PostMeta({ post, isMine }: { post: PostDetail; isMine: boolean }) {
 
   return (
     <div>
-      {/* 카테고리 & 도서 정보 */}
+      {/* 카테고리 (첨부 책은 본문 바로 위 카드로 이동) */}
       <div className="flex items-center gap-3 mb-5">
         <CategoryBadge category={post.category} />
-        {post.bookTitle != null && (
-          <div className="flex items-center gap-2 min-w-0">
-            <BookCoverThumb imageUrl={post.bookImageUrl} title={post.bookTitle} width={27} height={40} />
-            <span className="text-[13px] font-semibold text-[#1A1A1A] truncate max-w-[220px]">
-              {post.bookTitle}
-            </span>
-            {post.bookAuthor && (
-              <>
-                <span className="text-[13px] text-[#CCCCCC]">·</span>
-                <span className="text-[13px] text-[#888] truncate max-w-[120px]">{post.bookAuthor}</span>
-              </>
-            )}
-          </div>
-        )}
       </div>
 
       {/* 제목 */}
@@ -149,6 +135,37 @@ function PostMeta({ post, isMine }: { post: PostDetail; isMine: boolean }) {
 
       <hr className="border-0 border-t border-black/[0.07] mt-5" />
     </div>
+  )
+}
+
+// ─── 첨부 책 카드 (본문 바로 위, 클릭 시 도서 상세로 이동) ─────────────────────
+function AttachedBookCard({ post }: { post: PostDetail }) {
+  const navigate = useNavigate()
+  if (post.bookTitle == null) return null
+  const canOpen = post.isbn != null && post.isbn.trim().length > 0
+  return (
+    <button
+      type="button"
+      onClick={canOpen ? () => navigate(`/books/${post.isbn!.trim()}`) : undefined}
+      disabled={!canOpen}
+      className={`mt-7 flex items-center gap-3.5 w-full text-left rounded-xl border border-[#D5EAE4] bg-[#F7FAF9] px-4 py-3.5 transition-colors group ${
+        canOpen ? 'hover:bg-[#EFF6F2] hover:border-[#2E7D6B]/40 cursor-pointer' : 'cursor-default'
+      }`}
+    >
+      <BookCoverThumb imageUrl={post.bookImageUrl} title={post.bookTitle} width={44} height={62} />
+      <div className="min-w-0 flex-1">
+        <p className="text-[11px] font-semibold text-[#2E7D6B] mb-0.5 m-0">이 글이 다루는 책</p>
+        <p
+          className={`text-sm font-bold text-[#1A1A1A] truncate m-0 transition-colors ${canOpen ? 'group-hover:text-[#2E7D6B]' : ''}`}
+        >
+          {post.bookTitle}
+        </p>
+        {post.bookAuthor && <p className="text-xs text-[#999] truncate mt-0.5 m-0">{post.bookAuthor}</p>}
+      </div>
+      {canOpen && (
+        <ChevronRight size={16} className="shrink-0 text-[#ccc] group-hover:text-[#2E7D6B] transition-colors" />
+      )}
+    </button>
   )
 }
 
@@ -671,9 +688,11 @@ export default function CommunityDetailPage() {
         <>
           <article className="bg-white rounded-2xl border border-[#EAEAEA] shadow-[0_2px_16px_rgba(0,0,0,0.04)] mb-5 px-6 py-8 md:px-[52px] md:py-10">
             <PostMeta post={post} isMine={isMine} />
+            {/* 첨부 책 카드 — 본문 바로 위, 클릭 시 도서 상세로 */}
+            <AttachedBookCard post={post} />
             {/* 에디터 산출 HTML 본문 (sanitize 적용) */}
             <div
-              className="toastui-editor-contents pt-9 text-[#2C2C2C]"
+              className="toastui-editor-contents pt-7 text-[#2C2C2C]"
               style={{ lineHeight: 1.85, fontSize: 16, overflowWrap: 'break-word' }}
               dangerouslySetInnerHTML={{ __html: safeHtml }}
             />

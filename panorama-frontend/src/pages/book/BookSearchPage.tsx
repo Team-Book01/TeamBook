@@ -13,6 +13,7 @@ import {
   useMyReviewCount,
 } from "@/api/book";
 import { getErrorMessage } from "@/api/client";
+import { toast } from "@/lib/toast";
 import { useAuthStore } from "@/store/authStore";
 import { useRequireLogin } from "@/hooks/useRequireLogin";
 import { BookCard, ProfileCard, PopularBooksCard, StarRating } from "./components";
@@ -127,16 +128,19 @@ export default function BookSearchPage() {
   const handleToggleBookmark = (book: BookItem) => {
     if (!hasIsbn(book.isbn)) return;
     if (!ensureLoggedIn()) return;
-    bookmark.mutate({
-      isbn: book.isbn.trim(),
-      title: book.title,
-      author: book.author,
-      publisher: book.publisher,
-      pubdate: book.pubdate,
-      image: book.image,
-      link: book.link,
-      description: book.description,
-    });
+    bookmark.mutate(
+      {
+        isbn: book.isbn.trim(),
+        title: book.title,
+        author: book.author,
+        publisher: book.publisher,
+        pubdate: book.pubdate,
+        image: book.image,
+        link: book.link,
+        description: book.description,
+      },
+      { onError: (e) => toast.error(getErrorMessage(e, "북마크 처리에 실패했어요.")) },
+    );
   };
 
   // 회원 카드 클릭: 같은 항목 재클릭이면 검색 화면으로 복귀(토글)
