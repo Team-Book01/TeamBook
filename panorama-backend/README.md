@@ -88,7 +88,7 @@ spring:
 
 # openssl rand -base64 32
 jwt:
-  secret-key: <openssl rand -base64 32 결과>
+  secret-key: <토큰 검증을 위한 키값>
   access-token-expiration: 900000        # 15분
   refresh-token-expiration: 1209600000   # 14일
 
