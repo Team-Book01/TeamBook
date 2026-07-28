@@ -8,6 +8,7 @@ import {
   Eye,
   Megaphone,
   BookOpen,
+  Star,
 } from 'lucide-react'
 import {
   QUICK_LINKS,
@@ -200,6 +201,14 @@ export default function HomePage() {
                 <p className="text-xs text-muted-foreground truncate">
                   {book.author}
                 </p>
+                {book.avgRating > 0 && (
+                  <div className="flex items-center gap-1 mt-1">
+                    <Star size={13} className="fill-amber-400 text-amber-400" />
+                    <span className="text-xs font-semibold text-foreground">
+                      {Number(book.avgRating).toFixed(1)}
+                    </span>
+                  </div>
+                )}
               </div>
             ))}
           </div>

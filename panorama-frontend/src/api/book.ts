@@ -150,6 +150,15 @@ export async function getPopularBooks(): Promise<BookItem[]> {
   return data.items
 }
 
+/**
+ * POST /api/v1/books/syncPopularBooks — 인기 대출 도서 목록 데이터 동기화(수동 실행).
+ * 정보나루 인기대출 목록을 조회해 갱신한다. 응답 본문은 없다(204).
+ */
+export async function syncPopularBooks(): Promise<void> {
+  // 외부 API 전체 조회라 기본 타임아웃으로는 부족 → 이 요청만 넉넉히(5분) 늘린다.
+  await client.post('/books/syncPopularBooks', null, { timeout: 300_000 })
+}
+
 /** POST /api/v1/bookmark/toggle — 북마크 토글 (로그인 필요) */
 export async function toggleBookmark(body: BookmarkRequest): Promise<BookmarkResponse> {
   const { data } = await client.post<BookmarkResponse>('/bookmark/toggle', body)
@@ -356,6 +365,15 @@ export function usePopularBooks() {
     queryFn: getPopularBooks,
     // 인기 대출 집계는 자주 바뀌지 않으므로 오래 신선하게 둔다.
     staleTime: 60 * 60_000,
+  })
+}
+
+/** 인기 대출 도서 목록 동기화(수동 실행). 완료 후 인기도서 캐시를 무효화한다. */
+export function useSyncPopularBooks() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: syncPopularBooks,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: bookKeys.popular() }),
   })
 }
 

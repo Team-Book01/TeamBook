@@ -3,6 +3,7 @@ package com.teambook.panorama.domain.book.controller;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -37,6 +38,13 @@ public ResponseEntity<BookSearchResponse> getBooks(
   @GetMapping("/popularBooks")
   public ResponseEntity<BookSearchResponse> getPopularBooks() {
     return ResponseEntity.ok(popularBookService.findPopularBooks());
+  }
+
+  @Operation(summary = "인기대출도서 목록 데이터 동기화 ")
+  @PostMapping("/syncPopularBooks")
+  public ResponseEntity<Void> syncPopularBooks() {
+    popularBookService.syncPopularBooks();
+    return ResponseEntity.noContent().build();
   }
 
 
