@@ -76,7 +76,7 @@ public class PopularBookService {
         .build();
   }
 
-  @Transactional
+  //외부 api호출 비트랜잭션 메서드에서 사용
   public void syncPopularBooks() {
     LocalDate startDate = LocalDate.now().minusMonths(2);
     PopularBookResponseWrapper apiResponse = libraryClient.getPopularBooks(startDate);
@@ -91,27 +91,33 @@ public class PopularBookService {
     List<String> isbns = bookResponse.docs().stream().map(PopularBookDocWrapper::doc).map(doc -> {
       return doc.isbn();
     }).toList();
-    List<PopularBookDoc> docs = bookResponse.docs().stream().map(PopularBookDocWrapper::doc).toList();
-    Map<String, PopularBookDoc> docsMap = docs.stream().collect(Collectors.toMap(PopularBookDoc::isbn, doc -> doc));
 
-    //책 목록
+    List<PopularBookDoc> docs = bookResponse.docs().stream().map(PopularBookDocWrapper::doc).toList();
+
+    Map<String, PopularBookDoc> docsMap = docs.stream().collect(Collectors.toMap(PopularBookDoc::isbn, doc -> doc));
+    
     List<Book> books = findOrCreateBooks(isbns);
 
-    // 재동기화 시 ranking 중복 행이 쌓이지 않도록 기존 인기도서를 먼저 비운다.
-    // (외부 API·네이버 조회가 모두 성공한 뒤에 삭제 → 실패 시 @Transactional 로 롤백)
-    popularBookRepository.deleteAllInBatch();
-
-    books.stream().forEach(book -> {
+    List<PopularBook> popularBooks = books.stream().map(book -> {
       String isbn = book.getIsbn();
-      PopularBook popularBook = PopularBook.builder()
+      return PopularBook.builder()
       .book(book)
       .loanCount(docsMap.get(isbn).loanCount())
       .ranking(Integer.parseInt(docsMap.get(isbn).ranking()))
       .build();
+    }).toList();
+
+
+  }
+
+  @Transactional
+  public void savePopularBooks(List<PopularBook> popularBooks) {
+    //재동기화 시 ranking 중복 행이 쌓이지 않도록 기존 인기도서를 먼저 비운다.
+    popularBookRepository.deleteAllInBatch();
+    //새로 저장
+    popularBooks.stream().forEach(popularBook -> {
       popularBookRepository.save(popularBook);
     });
-    
-
   }
 
   

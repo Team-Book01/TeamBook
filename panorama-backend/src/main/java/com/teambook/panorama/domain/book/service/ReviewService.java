@@ -8,6 +8,7 @@ import java.util.TreeMap;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.teambook.panorama.domain.book.client.NaverBookClient;
@@ -195,18 +196,10 @@ public class ReviewService {
     });
     return distribution;
   }
-
-  // 동시성 주의
-  @Transactional
-  private Book findOrCreateBook(String isbn) {
-    return bookRepository.findByIsbn(isbn)
-        .orElseGet(() -> {
-          try {
-            NaverBookResponse response = naverBookClient.search(isbn, 1, 1, "sim");
-            if (response.items().isEmpty())
-              throw new BusinessException(ErrorCode.BOOK_NOT_FOUND);
-            NaverBookItem naverBookItem = response.items().getFirst();
-            return bookRepository.save(Book.builder()
+  //트랜잭셔널 따로빼기(db저장부분)
+  @Transactional(propagation = Propagation.REQUIRES_NEW)
+  public Book saveBook(String isbn, NaverBookItem naverBookItem) {
+    return bookRepository.save(Book.builder()
                 .author(naverBookItem.author())
                 .description(naverBookItem.description())
                 .imageUrl(naverBookItem.image())
@@ -217,6 +210,18 @@ public class ReviewService {
                 .title(naverBookItem.title())
                 .discount(naverBookItem.discount())
                 .build());
+  }
+
+  // 동시성 주의 -> 분할할 것
+  private Book findOrCreateBook(String isbn) {
+    return bookRepository.findByIsbn(isbn)
+        .orElseGet(() -> {
+          try {
+            NaverBookResponse response = naverBookClient.search(isbn, 1, 1, "sim");
+            if (response.items().isEmpty())
+              throw new BusinessException(ErrorCode.BOOK_NOT_FOUND);
+            NaverBookItem naverBookItem = response.items().getFirst();
+            return saveBook(isbn, naverBookItem);
           } catch (DataIntegrityViolationException e) {
             // 동시에 다른 요청이 이미 저장함 → 다시 조회하면 있음
             return bookRepository.findByIsbn(isbn)
