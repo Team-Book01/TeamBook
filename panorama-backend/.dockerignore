@@ -1,0 +1,72 @@
+# ==============================
+# Git
+# ==============================
+.git
+.gitignore
+
+# ==============================
+# Sensitive / Local configuration
+# ==============================
+src/main/resources/application-supabase.yml
+src/main/resources/application-local.yml
+src/main/resources/application-secret.yml
+
+.env
+*.env
+
+# ==============================
+# Documentation / Scripts
+# ==============================
+docs/
+scripts/
+
+# ==============================
+# Gradle
+# ==============================
+.gradle
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# ==============================
+# IDE
+# ==============================
+.idea
+.vscode
+*.iws
+*.iml
+*.ipr
+
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+bin/
+out/
+
+# ==============================
+# Build output
+# ==============================
+**/build/
+**/bin/
+**/out/
+
+# ==============================
+# Logs
+# ==============================
+*.log
+logs/
+
+# ==============================
+# OS
+# ==============================
+.DS_Store
+Thumbs.db
+
+# ==============================
+# Other
+# ==============================
+HELP.md
